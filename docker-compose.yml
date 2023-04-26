@@ -4,7 +4,7 @@
 version: '3.7'
 
 services:
-  frr-left:
+  frr-riyadh:
     image: quay.io/frrouting/frr:8.5.0
     cap_add:
       - NET_ADMIN
@@ -14,19 +14,25 @@ services:
     stdin_open: true
     tty: true
     volumes:
-      - ./conf:/etc/frr
-      - /var/run
+      - ./conf/frr_riyadh.conf:/etc/frr/frr.conf
     networks:
-      internet:
-        ipv4_address: 192.168.200.210
-      intranet:
-        ipv4_address: 10.1.0.2
-    command: './charon'
+      - r2m
+      - r2d
+    command: |
+      sh -x -c 'touch /etc/frr/vtysh.conf && \
+            sed -i "s/ospfd=no/ospfd=yes/g" /etc/frr/daemons && \
+            ip link add name loop0 type dummy && \
+            ip link add lan1 type bridge && \
+            ip link add lan2 type bridge && \
+            ifconfig loop0 10.0.0.1 netmask 255.255.255.255 up && \
+            ifconfig lan1 192.168.4.1 netmask 255.255.255.0 up && \
+            ifconfig lan1 192.168.5.1 netmask 255.255.255.0 up && \
+            /etc/init.d/frr stop && \
+            /usr/lib/frr/watchfrr -d -F traditional zebra ospfd staticd && \
+            sleep infinity'
 
-  frr-right:
+  frr-medina:
     image: quay.io/frrouting/frr:8.5.0
-    depends_on:
-      - frr-left
     cap_add:
       - NET_ADMIN
       - SYS_ADMIN
@@ -35,44 +41,83 @@ services:
     stdin_open: true
     tty: true
     volumes:
-      - ./conf:/etc/frr
-      - /var/run
+      - ./conf/frr_medina.conf:/etc/frr/frr.conf
     networks:
-      internet:
-        ipv4_address: 192.168.200.200
-    command: './charon'
+      - r2m
+    command: |
+      sh -x -c 'touch /etc/frr/vtysh.conf && \
+            sed -i "s/ospfd=no/ospfd=yes/g" /etc/frr/daemons && \
+            ip link add name loop0 type dummy && \
+            ip link add lan1 type bridge && \
+            ip link add lan2 type bridge && \
+            ifconfig loop0 10.0.0.2 netmask 255.255.255.255 up && \
+            ifconfig lan1 192.168.0.1 netmask 255.255.255.0 up && \
+            ifconfig lan1 192.168.1.1 netmask 255.255.255.0 up && \
+            /etc/init.d/frr stop && \
+            /usr/lib/frr/watchfrr -d -F traditional zebra ospfd staticd && \
+            sleep infinity'
 
-  opi-evpn-server:
-    build:
-      context: .
-    depends_on:
-      - frr-left
-    volumes_from:
-      - frr-left
+  frr-dammam:
+    image: quay.io/frrouting/frr:8.5.0
+    cap_add:
+      - NET_ADMIN
+      - SYS_ADMIN
+      - SYS_MODULE
+      - CAP_NET_RAW
+    stdin_open: true
+    tty: true
+    volumes:
+      - ./conf/frr_dammam.conf:/etc/frr/frr.conf
     networks:
-      - internet
-      - intranet
-    command: /opi-evpn-bridge -port=50151
-    healthcheck:
-      test: grpcurl -plaintext localhost:50151 list || exit 1
+      - r2d
+    command: |
+      sh -x -c 'touch /etc/frr/vtysh.conf && \
+            sed -i "s/ospfd=no/ospfd=yes/g" /etc/frr/daemons && \
+            ip link add name loop0 type dummy && \
+            ip link add lan1 type bridge && \
+            ip link add lan2 type bridge && \
+            ifconfig loop0 10.0.0.3 netmask 255.255.255.255 up && \
+            ifconfig lan1 192.168.2.1 netmask 255.255.255.0 up && \
+            ifconfig lan1 192.168.3.1 netmask 255.255.255.0 up && \
+            /etc/init.d/frr stop && \
+            /usr/lib/frr/watchfrr -d -F traditional zebra ospfd staticd && \
+            sleep infinity'
+
+  # opi-evpn-bridge:
+  #   build:
+  #     context: .
+  #   depends_on:
+  #     - frr-riyadh
+  #   volumes_from:
+  #     - frr-riyadh
+  #   networks:
+  #     - r2d
+  #     - r2m
+  #   command: /opi-evpn-bridge -port=50151
+  #   healthcheck:
+  #     test: grpcurl -plaintext localhost:50151 list || exit 1
 
   opi-test:
-    image: ghcr.io/opiproject/godpu:main@sha256:8baff1ae55a29a03499474717c25812fbe54225daf137f13230d1c2dea16fe3d
-    network_mode: service:frr-left
+    image: alpine:3.17
+  #   image: ghcr.io/opiproject/godpu:main@sha256:8baff1ae55a29a03499474717c25812fbe54225daf137f13230d1c2dea16fe3d
+    network_mode: service:frr-riyadh
     depends_on:
-      opi-evpn-server:
-        condition: service_healthy
-    command: test --addr=opi-evpn-server:50151 --pingaddr=10.3.0.1
-
+      - frr-riyadh
+      - frr-medina
+      - frr-dammam
+  #     opi-evpn-bridge:
+  #       condition: service_healthy
+  #   command: test --addr=opi-evpn-server:50151 --pingaddr=10.3.0.1
+    command: sh -x -c 'sleep 60 && ping -c 3 10.0.0.2'
 
 networks:
-  internet:
+  r2d:
     ipam:
       driver: default
       config:
-        - subnet: 192.168.200.0/24
-  intranet:
+        - subnet: 10.0.200.0/24
+  r2m:
     ipam:
       driver: default
       config:
-        - subnet: 10.1.0.0/16
+        - subnet: 10.0.201.0/24
