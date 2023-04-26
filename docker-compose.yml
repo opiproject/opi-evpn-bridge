@@ -4,17 +4,17 @@
 version: '3.7'
 
 services:
-  vpn-server:
-    image: strongx509/strongswan:5.9.10
+  frr-left:
+    image: quay.io/frrouting/frr:8.5.0
     cap_add:
       - NET_ADMIN
       - SYS_ADMIN
       - SYS_MODULE
+      - CAP_NET_RAW
     stdin_open: true
     tty: true
     volumes:
-      - ./conf/server:/etc/swanctl
-      - ./conf/strongswan-server.conf:/etc/strongswan.conf
+      - ./conf:/etc/frr
       - /var/run
     networks:
       internet:
@@ -23,32 +23,32 @@ services:
         ipv4_address: 10.1.0.2
     command: './charon'
 
-  vpn-client:
-    image: strongx509/strongswan:5.9.10
+  frr-right:
+    image: quay.io/frrouting/frr:8.5.0
     depends_on:
-      - vpn-server
+      - frr-left
     cap_add:
       - NET_ADMIN
       - SYS_ADMIN
       - SYS_MODULE
+      - CAP_NET_RAW
     stdin_open: true
     tty: true
     volumes:
-      - ./conf/client:/etc/swanctl
-      - ./conf/strongswan-client.conf:/etc/strongswan.conf
+      - ./conf:/etc/frr
       - /var/run
     networks:
       internet:
         ipv4_address: 192.168.200.200
     command: './charon'
 
-  opi-security-server:
+  opi-evpn-server:
     build:
       context: .
     depends_on:
-      - vpn-client
+      - frr-left
     volumes_from:
-      - vpn-client:rw
+      - frr-left
     networks:
       - internet
       - intranet
@@ -58,11 +58,11 @@ services:
 
   opi-test:
     image: ghcr.io/opiproject/godpu:main@sha256:8baff1ae55a29a03499474717c25812fbe54225daf137f13230d1c2dea16fe3d
-    network_mode: service:vpn-server
+    network_mode: service:frr-left
     depends_on:
-      opi-security-server:
+      opi-evpn-server:
         condition: service_healthy
-    command: test --addr=opi-security-server:50151 --pingaddr=10.3.0.1
+    command: test --addr=opi-evpn-server:50151 --pingaddr=10.3.0.1
 
 
 networks:

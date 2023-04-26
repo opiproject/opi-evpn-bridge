@@ -10,7 +10,7 @@ import (
 	"log"
 	"net"
 
-	server "github.com/opiproject/opi-strongswan-bridge/pkg/ipsec"
+	server "github.com/opiproject/opi-evpn-bridge/pkg/evpn"
 
 	pb "github.com/opiproject/opi-api/security/v1/gen/go"
 	"google.golang.org/grpc"
@@ -29,6 +29,7 @@ func main() {
 	}
 	s := grpc.NewServer()
 
+	// TODO: replace ipsec -> evpn
 	pb.RegisterIPsecServer(s, &server.Server{})
 
 	reflection.Register(s)
