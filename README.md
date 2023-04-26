@@ -30,4 +30,3 @@ Run `docker-compose up -d`
 ## Architecture Diagram
 
 ![OPI EVPN Bridge Architcture Diagram](./OPI-EVPN-GW-FRR-bridge.png)
-
