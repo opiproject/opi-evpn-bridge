@@ -1,0 +1,78 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2022-2023 Dell Inc, or its subsidiaries.
+---
+version: '3.7'
+
+services:
+  vpn-server:
+    image: strongx509/strongswan:5.9.10
+    cap_add:
+      - NET_ADMIN
+      - SYS_ADMIN
+      - SYS_MODULE
+    stdin_open: true
+    tty: true
+    volumes:
+      - ./conf/server:/etc/swanctl
+      - ./conf/strongswan-server.conf:/etc/strongswan.conf
+      - /var/run
+    networks:
+      internet:
+        ipv4_address: 192.168.200.210
+      intranet:
+        ipv4_address: 10.1.0.2
+    command: './charon'
+
+  vpn-client:
+    image: strongx509/strongswan:5.9.10
+    depends_on:
+      - vpn-server
+    cap_add:
+      - NET_ADMIN
+      - SYS_ADMIN
+      - SYS_MODULE
+    stdin_open: true
+    tty: true
+    volumes:
+      - ./conf/client:/etc/swanctl
+      - ./conf/strongswan-client.conf:/etc/strongswan.conf
+      - /var/run
+    networks:
+      internet:
+        ipv4_address: 192.168.200.200
+    command: './charon'
+
+  opi-security-server:
+    build:
+      context: .
+    depends_on:
+      - vpn-client
+    volumes_from:
+      - vpn-client:rw
+    networks:
+      - internet
+      - intranet
+    command: /opi-evpn-bridge -port=50151
+    healthcheck:
+      test: grpcurl -plaintext localhost:50151 list || exit 1
+
+  opi-test:
+    image: ghcr.io/opiproject/godpu:main@sha256:8baff1ae55a29a03499474717c25812fbe54225daf137f13230d1c2dea16fe3d
+    network_mode: service:vpn-server
+    depends_on:
+      opi-security-server:
+        condition: service_healthy
+    command: test --addr=opi-security-server:50151 --pingaddr=10.3.0.1
+
+
+networks:
+  internet:
+    ipam:
+      driver: default
+      config:
+        - subnet: 192.168.200.0/24
+  intranet:
+    ipam:
+      driver: default
+      config:
+        - subnet: 10.1.0.0/16
