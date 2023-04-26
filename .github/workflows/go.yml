@@ -1,0 +1,13 @@
+name: Go
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  call:
+    uses: opiproject/opi-smbios-bridge/.github/workflows/go.yml@main
+    secrets: inherit

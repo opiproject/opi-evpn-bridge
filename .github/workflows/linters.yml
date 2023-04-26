@@ -1,0 +1,13 @@
+name: Linters
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  call:
+    uses: opiproject/opi-smbios-bridge/.github/workflows/linters.yml@main
+    secrets: inherit
