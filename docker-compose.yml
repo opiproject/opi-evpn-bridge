@@ -26,7 +26,7 @@ services:
             ip link add lan2 type bridge && \
             ifconfig loop0 10.0.0.1 netmask 255.255.255.255 up && \
             ifconfig lan1 192.168.4.1 netmask 255.255.255.0 up && \
-            ifconfig lan1 192.168.5.1 netmask 255.255.255.0 up && \
+            ifconfig lan2 192.168.5.1 netmask 255.255.255.0 up && \
             /etc/init.d/frr stop && \
             /usr/lib/frr/watchfrr -d -F traditional zebra ospfd staticd && \
             sleep infinity'
@@ -52,7 +52,7 @@ services:
             ip link add lan2 type bridge && \
             ifconfig loop0 10.0.0.2 netmask 255.255.255.255 up && \
             ifconfig lan1 192.168.0.1 netmask 255.255.255.0 up && \
-            ifconfig lan1 192.168.1.1 netmask 255.255.255.0 up && \
+            ifconfig lan2 192.168.1.1 netmask 255.255.255.0 up && \
             /etc/init.d/frr stop && \
             /usr/lib/frr/watchfrr -d -F traditional zebra ospfd staticd && \
             sleep infinity'
@@ -78,7 +78,7 @@ services:
             ip link add lan2 type bridge && \
             ifconfig loop0 10.0.0.3 netmask 255.255.255.255 up && \
             ifconfig lan1 192.168.2.1 netmask 255.255.255.0 up && \
-            ifconfig lan1 192.168.3.1 netmask 255.255.255.0 up && \
+            ifconfig lan2 192.168.3.1 netmask 255.255.255.0 up && \
             /etc/init.d/frr stop && \
             /usr/lib/frr/watchfrr -d -F traditional zebra ospfd staticd && \
             sleep infinity'
@@ -108,7 +108,7 @@ services:
   #     opi-evpn-bridge:
   #       condition: service_healthy
   #   command: test --addr=opi-evpn-server:50151 --pingaddr=10.3.0.1
-    command: sh -x -c 'sleep 60 && ping -c 3 10.0.0.2'
+    command: sh -x -c 'sleep 60 && ping -c 3 10.0.0.2 && ping -c 3 192.168.0.1 && ping -c 3 192.168.2.1'
 
 networks:
   r2d:
