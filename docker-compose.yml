@@ -5,7 +5,7 @@ version: '3.7'
 
 services:
   frr-riyadh:
-    image: quay.io/frrouting/frr:8.5.0
+    image: quay.io/frrouting/frr:8.5.1
     cap_add:
       - NET_ADMIN
       - SYS_ADMIN
@@ -32,7 +32,7 @@ services:
             sleep infinity'
 
   frr-medina:
-    image: quay.io/frrouting/frr:8.5.0
+    image: quay.io/frrouting/frr:8.5.1
     cap_add:
       - NET_ADMIN
       - SYS_ADMIN
@@ -58,7 +58,7 @@ services:
             sleep infinity'
 
   frr-dammam:
-    image: quay.io/frrouting/frr:8.5.0
+    image: quay.io/frrouting/frr:8.5.1
     cap_add:
       - NET_ADMIN
       - SYS_ADMIN
