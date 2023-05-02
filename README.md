@@ -33,4 +33,4 @@ Run `docker-compose up -d`
 
 ## POC diagram
 
-![OPI EVPN Bridge POC Diagram for CI/CD](https://miro.medium.com/v2/resize:fit:1400/format:webp/1*HDbf76KTc8TRtoRH_mFFtw.png)
+![OPI EVPN Bridge POC Diagram for CI/CD](./OPI-EVPN-PoC.png)
