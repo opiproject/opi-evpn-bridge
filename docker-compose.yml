@@ -50,17 +50,17 @@ services:
             sed -i "s/bgpdd=no/bgpd=yes/g" /etc/frr/daemons && \
             ip link add name lo0 type dummy && \
             ifconfig lo0 10.0.0.2 netmask 255.255.255.255 up && \
-            #ip link add blue type vrf table 1000 && \
-            #ip link set blue up && \
-            #ip link add br100 type bridge && \
-            #ip link set br100 master blue addrgenmode none && \
-            #ip link set br100 addr aa:bb:cc:00:00:01 && \
-            #ip link add vni100 type vxlan local 10.0.0.2 dstport 4789 id 100 nolearning && \
-            #ip link set vni100 master br100 addrgenmode none && \
-            #ip link set vni100 type bridge_slave neigh_suppress on learning off && \
-            #ip link set vni100 up && \
-            #ip link set br100 up && \
+            ip link add blue type vrf table 1000 && \
+            ip link set blue up && \
 
+            ip link add br100 type bridge && \
+            ip link set br100 master blue addrgenmode none && \
+            ip link set br100 addr aa:bb:cc:00:00:01 && \
+            ip link add vni100 type vxlan local 10.0.0.2 dstport 4789 id 100 nolearning && \
+            ip link set vni100 master br100 addrgenmode none && \
+            ip link set vni100 type bridge_slave neigh_suppress on learning off && \
+            ip link set vni100 up && \
+            ip link set br100 up && \
 
             ip link add br10 type bridge && \
             ip link set br10 addr aa:bb:cc:00:00:11 && \
@@ -71,16 +71,15 @@ services:
             ip link set vni10 up && \
             ip link set br10 up && \
 
-            #ip link add br20 type bridge && \
-            #ip link set br20 master blue addrgenmode none && \
-            #ip link set br20 addr aa:bb:cc:00:00:21 && \
-            #ip addr add 20.20.20.2/24 dev br20 && \
-            #ip link add vni20 type vxlan local 10.0.0.2 dstport 4789 id 20 nolearning && \
-            #ip link set vni20 master br20 addrgenmode none && \
-            #ip link set vni20 type bridge_slave neigh_suppress on learning off && \
-            #ip link set vni20 up && \
-            #ip link set br20 up && \
-
+            ip link add br20 type bridge && \
+            ip link set br20 master blue addrgenmode none && \
+            ip link set br20 addr aa:bb:cc:00:00:21 && \
+            ip addr add 20.20.20.2/24 dev br20 && \
+            ip link add vni20 type vxlan local 10.0.0.2 dstport 4789 id 20 nolearning && \
+            ip link set vni20 master br20 addrgenmode none && \
+            ip link set vni20 type bridge_slave neigh_suppress on learning off && \
+            ip link set vni20 up && \
+            ip link set br20 up && \
 
             /etc/init.d/frr stop && \
             /usr/lib/frr/watchfrr -d -F traditional zebra bgpd staticd && \
@@ -107,17 +106,18 @@ services:
             sed -i "s/bgpdd=no/bgpd=yes/g" /etc/frr/daemons && \
             ip link add name lo0 type dummy && \
             ifconfig lo0 10.0.0.3 netmask 255.255.255.255 up && \
-            #ip link add blue type vrf table 1000 && \
-            #ip link set blue up && \
-            #ip link set eth1 master blue && \
-            #ip link add br100 type bridge && \
-            #ip link set br100 master blue addrgenmode none && \
-            #ip link set br100 addr aa:bb:cc:00:00:33 && \
-            #ip link add vni100 type vxlan local 10.0.0.3 dstport 4789 id 100 nolearning && \
-            #ip link set vni100 master br100 addrgenmode none && \
-            #ip link set vni100 type bridge_slave neigh_suppress on learning off && \
-            #ip link set vni100 up && \
-            #ip link set br100 up && \
+            ip link add blue type vrf table 1000 && \
+            ip link set blue up && \
+            ip link set eth1 master blue && \
+
+            ip link add br100 type bridge && \
+            ip link set br100 master blue addrgenmode none && \
+            ip link set br100 addr aa:bb:cc:00:00:33 && \
+            ip link add vni100 type vxlan local 10.0.0.3 dstport 4789 id 100 nolearning && \
+            ip link set vni100 master br100 addrgenmode none && \
+            ip link set vni100 type bridge_slave neigh_suppress on learning off && \
+            ip link set vni100 up && \
+            ip link set br100 up && \
 
             /etc/init.d/frr stop && \
             /usr/lib/frr/watchfrr -d -F traditional zebra bgpd staticd && \
@@ -142,16 +142,17 @@ services:
             sed -i "s/bgpdd=no/bgpd=yes/g" /etc/frr/daemons && \
             ip link add name lo0 type dummy && \
             ifconfig lo0 10.0.0.4 netmask 255.255.255.255 up && \
-            #ip link add blue type vrf table 1000 && \
-            #ip link set blue up && \
-            #ip link add br100 type bridge && \
-            #ip link set br100 master blue addrgenmode none && \
-            #ip link set br100 addr aa:bb:cc:00:00:02 && \
-            #ip link add vni100 type vxlan local 10.0.0.4 dstport 4789 id 100 nolearning && \
-            #ip link set vni100 master br100 addrgenmode none && \
-            #ip link set vni100 type bridge_slave neigh_suppress on learning off && \
-            #ip link set vni100 up && \
-            #ip link set br100 up && \
+            ip link add blue type vrf table 1000 && \
+            ip link set blue up && \
+
+            ip link add br100 type bridge && \
+            ip link set br100 master blue addrgenmode none && \
+            ip link set br100 addr aa:bb:cc:00:00:02 && \
+            ip link add vni100 type vxlan local 10.0.0.4 dstport 4789 id 100 nolearning && \
+            ip link set vni100 master br100 addrgenmode none && \
+            ip link set vni100 type bridge_slave neigh_suppress on learning off && \
+            ip link set vni100 up && \
+            ip link set br100 up && \
 
             ip link add br10 type bridge && \
             ip link set br10 addr aa:bb:cc:00:00:22 && \
@@ -162,16 +163,15 @@ services:
             ip link set vni10 up && \
             ip link set br10 up && \
 
-            #ip link add br20 type bridge && \
-            #ip link set br20 master blue addrgenmode none && \
-            #ip link set br20 addr aa:bb:cc:00:00:23 && \
-            #ip addr add 20.20.20.3/24 dev br20 && \
-            #ip link add vni20 type vxlan local 10.0.0.4 dstport 4789 id 20 nolearning && \
-            #ip link set vni20 master br20 addrgenmode none && \
-            #ip link set vni20 type bridge_slave neigh_suppress on learning off && \
-            #ip link set vni20 up && \
-            #ip link set br20 up && \
-
+            ip link add br20 type bridge && \
+            ip link set br20 master blue addrgenmode none && \
+            ip link set br20 addr aa:bb:cc:00:00:23 && \
+            ip addr add 20.20.20.3/24 dev br20 && \
+            ip link add vni20 type vxlan local 10.0.0.4 dstport 4789 id 20 nolearning && \
+            ip link set vni20 master br20 addrgenmode none && \
+            ip link set vni20 type bridge_slave neigh_suppress on learning off && \
+            ip link set vni20 up && \
+            ip link set br20 up && \
 
             /etc/init.d/frr stop && \
             /usr/lib/frr/watchfrr -d -F traditional zebra bgpd staticd && \
@@ -208,8 +208,7 @@ services:
     # L2 VXLAN - VLAN10 stretched with VNI10 to leaf2 from leaf1 (ping 10.10.10.3)
     # L3VXLAN Asymmetric IRB - VLAN20 stretched with VNI20 to leaf2 from leaf1 (ping 20.20.20.3) on blue VRF
     # L3VXLAN Symmetric IRB - L3VNI 100 is used for borderleaf connectivity to reach the internet
-    # command: sh -x -c 'sleep 60 && ping -c 3 5.5.5.5 -I br100 && ping -c 3 10.10.10.3 && ping -c 3 20.20.20.3 -I br20'
-    command: sh -x -c 'sleep 60 && ping -c 3 10.10.10.3'
+    command: sh -x -c 'sleep 60 && ping -c 3 5.5.5.5 -I br100 && ping -c 3 10.10.10.3 && ping -c 3 20.20.20.3 -I br20'
 
 networks:
   l1tos1:
