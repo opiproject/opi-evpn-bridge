@@ -4,7 +4,7 @@
 version: '3.7'
 
 services:
-  frr-riyadh:
+  spine1:
     image: quay.io/frrouting/frr:8.5.0
     cap_add:
       - NET_ADMIN
@@ -14,24 +14,24 @@ services:
     stdin_open: true
     tty: true
     volumes:
-      - ./conf/frr_riyadh.conf:/etc/frr/frr.conf
+      - ./conf/spine1.conf:/etc/frr/frr.conf
     networks:
-      - r2m
-      - r2d
+      l1tos1:
+        ipv4_address: 10.168.1.6
+      l2tos1:
+        ipv4_address: 10.168.2.6
+      btos1:
+        ipv4_address: 10.168.3.6
     command: |
       sh -x -c 'touch /etc/frr/vtysh.conf && \
-            sed -i "s/ospfd=no/ospfd=yes/g" /etc/frr/daemons && \
-            ip link add name loop0 type dummy && \
-            ip link add lan1 type bridge && \
-            ip link add lan2 type bridge && \
-            ifconfig loop0 10.0.0.1 netmask 255.255.255.255 up && \
-            ifconfig lan1 192.168.4.1 netmask 255.255.255.0 up && \
-            ifconfig lan2 192.168.5.1 netmask 255.255.255.0 up && \
+            sed -i "s/bgpdd=no/bgpd=yes/g" /etc/frr/daemons && \
+            ip link add name lo0 type dummy && \
+            ifconfig lo0 10.0.0.1 netmask 255.255.255.255 up && \
             /etc/init.d/frr stop && \
-            /usr/lib/frr/watchfrr -d -F traditional zebra ospfd staticd && \
+            /usr/lib/frr/watchfrr -d -F traditional zebra bgpd staticd && \
             sleep infinity'
 
-  frr-medina:
+  leaf1:
     image: quay.io/frrouting/frr:8.5.0
     cap_add:
       - NET_ADMIN
@@ -41,23 +41,52 @@ services:
     stdin_open: true
     tty: true
     volumes:
-      - ./conf/frr_medina.conf:/etc/frr/frr.conf
+      - ./conf/leaf1.conf:/etc/frr/frr.conf
     networks:
-      - r2m
+      l1tos1:
+        ipv4_address: 10.168.1.5
     command: |
       sh -x -c 'touch /etc/frr/vtysh.conf && \
-            sed -i "s/ospfd=no/ospfd=yes/g" /etc/frr/daemons && \
-            ip link add name loop0 type dummy && \
-            ip link add lan1 type bridge && \
-            ip link add lan2 type bridge && \
-            ifconfig loop0 10.0.0.2 netmask 255.255.255.255 up && \
-            ifconfig lan1 192.168.0.1 netmask 255.255.255.0 up && \
-            ifconfig lan2 192.168.1.1 netmask 255.255.255.0 up && \
+            sed -i "s/bgpdd=no/bgpd=yes/g" /etc/frr/daemons && \
+            ip link add name lo0 type dummy && \
+            ifconfig lo0 10.0.0.2 netmask 255.255.255.255 up && \
+            #ip link add blue type vrf table 1000 && \
+            #ip link set blue up && \
+            #ip link add br100 type bridge && \
+            #ip link set br100 master blue addrgenmode none && \
+            #ip link set br100 addr aa:bb:cc:00:00:01 && \
+            #ip link add vni100 type vxlan local 10.0.0.2 dstport 4789 id 100 nolearning && \
+            #ip link set vni100 master br100 addrgenmode none && \
+            #ip link set vni100 type bridge_slave neigh_suppress on learning off && \
+            #ip link set vni100 up && \
+            #ip link set br100 up && \
+
+
+            ip link add br10 type bridge && \
+            ip link set br10 addr aa:bb:cc:00:00:11 && \
+            ip addr add 10.10.10.2/24 dev br10 && \
+            ip link add vni10 type vxlan local 10.0.0.2 dstport 4789 id 10 nolearning && \
+            ip link set vni10 master br10 addrgenmode none && \
+            ip link set vni10 type bridge_slave neigh_suppress on learning off && \
+            ip link set vni10 up && \
+            ip link set br10 up && \
+
+            #ip link add br20 type bridge && \
+            #ip link set br20 master blue addrgenmode none && \
+            #ip link set br20 addr aa:bb:cc:00:00:21 && \
+            #ip addr add 20.20.20.2/24 dev br20 && \
+            #ip link add vni20 type vxlan local 10.0.0.2 dstport 4789 id 20 nolearning && \
+            #ip link set vni20 master br20 addrgenmode none && \
+            #ip link set vni20 type bridge_slave neigh_suppress on learning off && \
+            #ip link set vni20 up && \
+            #ip link set br20 up && \
+
+
             /etc/init.d/frr stop && \
-            /usr/lib/frr/watchfrr -d -F traditional zebra ospfd staticd && \
+            /usr/lib/frr/watchfrr -d -F traditional zebra bgpd staticd && \
             sleep infinity'
 
-  frr-dammam:
+  bleaf:
     image: quay.io/frrouting/frr:8.5.0
     cap_add:
       - NET_ADMIN
@@ -67,57 +96,121 @@ services:
     stdin_open: true
     tty: true
     volumes:
-      - ./conf/frr_dammam.conf:/etc/frr/frr.conf
+      - ./conf/bleaf.conf:/etc/frr/frr.conf
     networks:
-      - r2d
+      btos1:
+        ipv4_address: 10.168.3.5
+      internet:
+        ipv4_address: 5.5.5.5
     command: |
       sh -x -c 'touch /etc/frr/vtysh.conf && \
-            sed -i "s/ospfd=no/ospfd=yes/g" /etc/frr/daemons && \
-            ip link add name loop0 type dummy && \
-            ip link add lan1 type bridge && \
-            ip link add lan2 type bridge && \
-            ifconfig loop0 10.0.0.3 netmask 255.255.255.255 up && \
-            ifconfig lan1 192.168.2.1 netmask 255.255.255.0 up && \
-            ifconfig lan2 192.168.3.1 netmask 255.255.255.0 up && \
+            sed -i "s/bgpdd=no/bgpd=yes/g" /etc/frr/daemons && \
+            ip link add name lo0 type dummy && \
+            ifconfig lo0 10.0.0.3 netmask 255.255.255.255 up && \
+            #ip link add blue type vrf table 1000 && \
+            #ip link set blue up && \
+            #ip link set eth1 master blue && \
+            #ip link add br100 type bridge && \
+            #ip link set br100 master blue addrgenmode none && \
+            #ip link set br100 addr aa:bb:cc:00:00:33 && \
+            #ip link add vni100 type vxlan local 10.0.0.3 dstport 4789 id 100 nolearning && \
+            #ip link set vni100 master br100 addrgenmode none && \
+            #ip link set vni100 type bridge_slave neigh_suppress on learning off && \
+            #ip link set vni100 up && \
+            #ip link set br100 up && \
+
             /etc/init.d/frr stop && \
-            /usr/lib/frr/watchfrr -d -F traditional zebra ospfd staticd && \
+            /usr/lib/frr/watchfrr -d -F traditional zebra bgpd staticd && \
             sleep infinity'
 
-  # opi-evpn-bridge:
-  #   build:
-  #     context: .
-  #   depends_on:
-  #     - frr-riyadh
-  #   volumes_from:
-  #     - frr-riyadh
-  #   networks:
-  #     - r2d
-  #     - r2m
-  #   command: /opi-evpn-bridge -port=50151
-  #   healthcheck:
-  #     test: grpcurl -plaintext localhost:50151 list || exit 1
+  leaf2:
+    image: quay.io/frrouting/frr:8.5.0
+    cap_add:
+      - NET_ADMIN
+      - SYS_ADMIN
+      - SYS_MODULE
+      - CAP_NET_RAW
+    stdin_open: true
+    tty: true
+    volumes:
+      - ./conf/leaf2.conf:/etc/frr/frr.conf
+    networks:
+      l2tos1:
+        ipv4_address: 10.168.2.5
+    command: |
+      sh -x -c 'touch /etc/frr/vtysh.conf && \
+            sed -i "s/bgpdd=no/bgpd=yes/g" /etc/frr/daemons && \
+            ip link add name lo0 type dummy && \
+            ifconfig lo0 10.0.0.4 netmask 255.255.255.255 up && \
+            #ip link add blue type vrf table 1000 && \
+            #ip link set blue up && \
+            #ip link add br100 type bridge && \
+            #ip link set br100 master blue addrgenmode none && \
+            #ip link set br100 addr aa:bb:cc:00:00:02 && \
+            #ip link add vni100 type vxlan local 10.0.0.4 dstport 4789 id 100 nolearning && \
+            #ip link set vni100 master br100 addrgenmode none && \
+            #ip link set vni100 type bridge_slave neigh_suppress on learning off && \
+            #ip link set vni100 up && \
+            #ip link set br100 up && \
+
+            ip link add br10 type bridge && \
+            ip link set br10 addr aa:bb:cc:00:00:22 && \
+            ip addr add 10.10.10.3/24 dev br10 && \
+            ip link add vni10 type vxlan local 10.0.0.4 dstport 4789 id 10 nolearning && \
+            ip link set vni10 master br10 addrgenmode none && \
+            ip link set vni10 type bridge_slave neigh_suppress on learning off && \
+            ip link set vni10 up && \
+            ip link set br10 up && \
+
+            #ip link add br20 type bridge && \
+            #ip link set br20 master blue addrgenmode none && \
+            #ip link set br20 addr aa:bb:cc:00:00:23 && \
+            #ip addr add 20.20.20.3/24 dev br20 && \
+            #ip link add vni20 type vxlan local 10.0.0.4 dstport 4789 id 20 nolearning && \
+            #ip link set vni20 master br20 addrgenmode none && \
+            #ip link set vni20 type bridge_slave neigh_suppress on learning off && \
+            #ip link set vni20 up && \
+            #ip link set br20 up && \
+
+
+            /etc/init.d/frr stop && \
+            /usr/lib/frr/watchfrr -d -F traditional zebra bgpd staticd && \
+            sleep infinity'
 
   opi-test:
     image: alpine:3.17
-  #   image: ghcr.io/opiproject/godpu:main@sha256:8baff1ae55a29a03499474717c25812fbe54225daf137f13230d1c2dea16fe3d
-    network_mode: service:frr-riyadh
+    network_mode: service:leaf1
     depends_on:
-      - frr-riyadh
-      - frr-medina
-      - frr-dammam
-  #     opi-evpn-bridge:
-  #       condition: service_healthy
-  #   command: test --addr=opi-evpn-server:50151 --pingaddr=10.3.0.1
-    command: sh -x -c 'sleep 60 && ping -c 3 10.0.0.2 && ping -c 3 192.168.0.1 && ping -c 3 192.168.2.1'
+      - leaf1
+      - leaf2
+      - bleaf
+      - spine1
+    # L2 VXLAN - VLAN10 stretched with VNI10 to leaf2 from leaf1 (ping 10.10.10.3)
+    # L3VXLAN Asymmetric IRB - VLAN20 stretched with VNI20 to leaf2 from leaf1 (ping 20.20.20.3) on blue VRF
+    # L3VXLAN Symmetric IRB - L3VNI 100 is used for borderleaf connectivity to reach the internet
+    # command: sh -x -c 'sleep 60 && ping -c 3 5.5.5.5 -I br100 && ping -c 3 10.10.10.3 && ping -c 3 20.20.20.3 -I br20'
+    command: sh -x -c 'sleep 60 && ping -c 3 10.10.10.3'
 
 networks:
-  r2d:
+  l1tos1:
     ipam:
       driver: default
       config:
-        - subnet: 10.0.200.0/24
-  r2m:
+        - subnet: 10.168.1.0/24
+
+  l2tos1:
     ipam:
       driver: default
       config:
-        - subnet: 10.0.201.0/24
+        - subnet: 10.168.2.0/24
+  btos1:
+    ipam:
+      driver: default
+      config:
+        - subnet: 10.168.3.0/24
+
+  internet:
+    ipam:
+      driver: default
+      config:
+        - subnet: 5.5.5.0/24
