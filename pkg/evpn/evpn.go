@@ -8,17 +8,17 @@ import (
 	"context"
 	"log"
 
-	pb "github.com/opiproject/opi-api/security/v1/gen/go"
+	pb "github.com/opiproject/opi-api/network/cloud/v1alpha1/gen/go"
 )
 
 // Server represents the Server object
 type Server struct {
-	pb.UnimplementedIPsecServer
+	pb.UnimplementedCloudInfraServiceServer
 }
 
 // IPsecVersion executes the ipsecVersion
-func (s *Server) IPsecVersion(_ context.Context, in *pb.IPsecVersionReq) (*pb.IPsecVersionResp, error) {
-	log.Printf("IPsecVersion: got %v", in)
-	// TODO: replace ipsec -> evpn
-	return &pb.IPsecVersionResp{}, nil
+func (s *Server) CreateSubnet(_ context.Context, in *pb.CreateSubnetRequest) (*pb.Subnet, error) {
+	log.Printf("CreateSubnet: got %v", in)
+	// TODO: replace cloud -> evpn
+	return &pb.Subnet{}, nil
 }

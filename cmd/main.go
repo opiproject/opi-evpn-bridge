@@ -12,7 +12,7 @@ import (
 
 	server "github.com/opiproject/opi-evpn-bridge/pkg/evpn"
 
-	pb "github.com/opiproject/opi-api/security/v1/gen/go"
+	pb "github.com/opiproject/opi-api/network/cloud/v1alpha1/gen/go"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 )
@@ -29,8 +29,8 @@ func main() {
 	}
 	s := grpc.NewServer()
 
-	// TODO: replace ipsec -> evpn
-	pb.RegisterIPsecServer(s, &server.Server{})
+	// TODO: replace cloud -> evpn
+	pb.RegisterCloudInfraServiceServer(s, &server.Server{})
 
 	reflection.Register(s)
 
