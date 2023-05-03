@@ -12,10 +12,8 @@
 [![GitHub stars](https://img.shields.io/github/stars/opiproject/opi-evpn-bridge.svg?style=flat-square&label=github%20stars)](https://github.com/opiproject/opi-evpn-bridge)
 [![GitHub Contributors](https://img.shields.io/github/contributors/opiproject/opi-evpn-bridge.svg?style=flat-square)](https://github.com/opiproject/opi-evpn-bridge/graphs/contributors)
 
-This directory contains the security PoC for OPI. This includes reference code
-for the [IPsec](https://github.com/opiproject/opi-api/blob/main/security/v1/ipsec.proto)
-APIs. The specification for these APIs can be found
-[here](https://github.com/opiproject/opi-api/blob/main/security/v1/autogen.md).
+This repo includes OPI reference code for EVPN Gateway based on [FRR](https://www.frrouting.org/). The specification for these APIs can be found
+[here](https://github.com/opiproject/opi-api/pull/276).
 
 ## I Want To Contribute
 
