@@ -16,7 +16,7 @@ type Server struct {
 	pb.UnimplementedCloudInfraServiceServer
 }
 
-// IPsecVersion executes the ipsecVersion
+// CreateSubnet executes the creation of the subnet
 func (s *Server) CreateSubnet(_ context.Context, in *pb.CreateSubnetRequest) (*pb.Subnet, error) {
 	log.Printf("CreateSubnet: got %v", in)
 	// TODO: replace cloud -> evpn
