@@ -177,6 +177,24 @@ services:
             /usr/lib/frr/watchfrr -d -F traditional zebra bgpd staticd && \
             sleep infinity'
 
+  opi-evpn-bridge:
+    build:
+      context: .
+    depends_on:
+      - leaf1
+    network_mode: service:leaf1
+    command: /opi-evpn-bridge -port=50151
+    healthcheck:
+      test: grpcurl -plaintext localhost:50151 list || exit 1
+
+  testgrpc:
+    image: docker.io/namely/grpc-cli
+    network_mode: service:leaf1
+    depends_on:
+      opi-evpn-bridge:
+        condition: service_healthy
+    command: ls localhost:50151 opi_api.network.cloud.v1alpha1.CloudInfraService -l
+
   opi-test:
     image: alpine:3.17
     network_mode: service:leaf1
@@ -185,6 +203,8 @@ services:
       - leaf2
       - bleaf
       - spine1
+      - opi-evpn-bridge
+      - testgrpc
     # L2 VXLAN - VLAN10 stretched with VNI10 to leaf2 from leaf1 (ping 10.10.10.3)
     # L3VXLAN Asymmetric IRB - VLAN20 stretched with VNI20 to leaf2 from leaf1 (ping 20.20.20.3) on blue VRF
     # L3VXLAN Symmetric IRB - L3VNI 100 is used for borderleaf connectivity to reach the internet
