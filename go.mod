@@ -4,7 +4,7 @@ go 1.19
 
 require (
 	github.com/milosgajdos/tenus v0.0.3
-	github.com/opiproject/opi-api v0.0.0-20230427144911-9638639fdf99
+	github.com/opiproject/opi-api v0.0.0-20230504180422-da1d8ce22515
 	google.golang.org/grpc v1.55.0
 )
 
