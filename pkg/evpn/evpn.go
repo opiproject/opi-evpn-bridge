@@ -78,9 +78,9 @@ func (s *Server) DeleteSubnet(_ context.Context, in *pb.DeleteSubnetRequest) (*e
 	log.Printf("DeleteSubnet: Received from client: %v", in)
 	snet, ok := s.Subnets[in.Id]
 	if !ok {
-		// if in.AllowMissing {
-		// 	return &emptypb.Empty{}, nil
-		// }
+		if in.AllowMissing {
+			return &emptypb.Empty{}, nil
+		}
 		err := status.Errorf(codes.NotFound, "unable to find key %s", in.Id)
 		log.Printf("error: %v", err)
 		return nil, err
