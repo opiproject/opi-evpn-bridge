@@ -71,7 +71,6 @@ func (s *Server) CreateSubnet(_ context.Context, in *pb.CreateSubnetRequest) (*p
 	}
 	response.Status = &pb.SubnetStatus{HwIndex: 8}
 	return response, nil
-
 }
 
 // DeleteSubnet deletes a subnet
