@@ -10,8 +10,11 @@ import (
 	"log"
 
 	"github.com/milosgajdos/tenus"
-	"github.com/ulule/deepcopier"
 	pb "github.com/opiproject/opi-api/network/cloud/v1alpha1/gen/go"
+	"github.com/ulule/deepcopier"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 // Server represents the Server object
@@ -32,6 +35,7 @@ func (s *Server) CreateSubnet(_ context.Context, in *pb.CreateSubnetRequest) (*p
 	// not found, so create a new one
 
 	// Create a new network bridge
+	// It is equivalent of running: ip link add name ${ifcName} type bridge
 	br, err := tenus.NewBridgeWithName("mybridge")
 	if err != nil {
 		log.Fatal(err)
@@ -68,4 +72,35 @@ func (s *Server) CreateSubnet(_ context.Context, in *pb.CreateSubnetRequest) (*p
 	response.Status = &pb.SubnetStatus{HwIndex: 8}
 	return response, nil
 
+}
+
+// DeleteSubnet deletes a subnet
+func (s *Server) DeleteSubnet(_ context.Context, in *pb.DeleteSubnetRequest) (*emptypb.Empty, error) {
+	log.Printf("DeleteSubnet: Received from client: %v", in)
+	snet, ok := s.Subnets[in.Id]
+	if !ok {
+		// if in.AllowMissing {
+		// 	return &emptypb.Empty{}, nil
+		// }
+		err := status.Errorf(codes.NotFound, "unable to find key %s", in.Id)
+		log.Printf("error: %v", err)
+		return nil, err
+	}
+	// Get an existing network bridge
+	br, err := tenus.BridgeFromName("mybridge")
+	if err != nil {
+		log.Fatal(err)
+	}
+	// Bring the bridge down
+	if err = br.SetLinkDown(); err != nil {
+		fmt.Println(err)
+	}
+	// Delete link
+	// $ sudo ip link delete br0 type bridge
+	if err = tenus.DeleteLink("mybridge"); err != nil {
+		log.Fatal(err)
+	}
+
+	delete(s.Subnets, snet.Spec.Id.Value)
+	return &emptypb.Empty{}, nil
 }
