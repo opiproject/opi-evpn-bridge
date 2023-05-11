@@ -153,7 +153,7 @@ func (s *Server) CreateInterface(_ context.Context, in *pb.CreateInterfaceReques
 	return response, nil
 }
 
-// DeleteSubnet deletes an interface
+// DeleteInterface deletes an interface
 func (s *Server) DeleteInterface(_ context.Context, in *pb.DeleteInterfaceRequest) (*emptypb.Empty, error) {
 	log.Printf("DeleteInterface: Received from client: %v", in)
 	iface, ok := s.Interfaces[in.Id]
