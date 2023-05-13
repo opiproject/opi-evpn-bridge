@@ -196,7 +196,7 @@ services:
     command: ls localhost:50151 opi_api.network.cloud.v1alpha1.CloudInfraService -l
 
   opi-test:
-    image: alpine:3.17
+    image: alpine:3.18
     network_mode: service:leaf1
     depends_on:
       - leaf1
