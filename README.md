@@ -25,6 +25,12 @@ See [CONTRIBUTING](https://github.com/opiproject/opi/blob/main/CONTRIBUTING.md) 
 
 Run `docker-compose up -d`
 
+## Manual gRPC example
+
+```bash
+docker-compose exec opi-evpn-bridge grpcurl -plaintext -d '{"interface":{"spec":{"id": {"value": "ok"}}}}' localhost:50151 opi_api.network.cloud.v1alpha1.CloudInfraService.CreateInterface
+```
+
 ## Architecture Diagram
 
 ![OPI EVPN Bridge Architcture Diagram](./OPI-EVPN-GW-FRR-bridge.png)
