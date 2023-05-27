@@ -9,6 +9,8 @@ github.com/milosgajdos/tenus v0.0.3 h1:jmaJzwaY1DUyYVD0lM4U+uvP2kkEg1VahDqRFxIkV
 github.com/milosgajdos/tenus v0.0.3/go.mod h1:eIjx29vNeDOYWJuCnaHY2r4fq5egetV26ry3on7p8qY=
 github.com/opiproject/opi-api v0.0.0-20230511183445-d8ac77a12618 h1:XKa7LtF1zewDhWAN5Turp/Qj2TyRfcWosSVvq3ILJMU=
 github.com/opiproject/opi-api v0.0.0-20230511183445-d8ac77a12618/go.mod h1:92pv4ulvvPMuxCJ9ND3aYbmBfEMLx0VCjpkiR7ZTqPY=
+github.com/opiproject/opi-api v0.0.0-20230525195117-1db0f9cbae90 h1:YUkLBe4aBO2oHnHniHDybwlE6afytkVr6ma5JuScC3k=
+github.com/opiproject/opi-api v0.0.0-20230525195117-1db0f9cbae90/go.mod h1:92pv4ulvvPMuxCJ9ND3aYbmBfEMLx0VCjpkiR7ZTqPY=
 github.com/ulule/deepcopier v0.0.0-20200430083143-45decc6639b6 h1:TtyC78WMafNW8QFfv3TeP3yWNDG+uxNkk9vOrnDu6JA=
 github.com/ulule/deepcopier v0.0.0-20200430083143-45decc6639b6/go.mod h1:h8272+G2omSmi30fBXiZDMkmHuOgonplfKIKjQWzlfs=
 golang.org/x/net v0.10.0 h1:X2//UzNDwYmtCLn7To6G58Wr6f5ahEAQgKNzv9Y951M=
