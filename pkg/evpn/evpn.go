@@ -77,12 +77,12 @@ func (s *Server) CreateSubnet(_ context.Context, in *pb.CreateSubnetRequest) (*p
 // DeleteSubnet deletes a subnet
 func (s *Server) DeleteSubnet(_ context.Context, in *pb.DeleteSubnetRequest) (*emptypb.Empty, error) {
 	log.Printf("DeleteSubnet: Received from client: %v", in)
-	snet, ok := s.Subnets[in.Id]
+	snet, ok := s.Subnets[in.Name]
 	if !ok {
 		if in.AllowMissing {
 			return &emptypb.Empty{}, nil
 		}
-		err := status.Errorf(codes.NotFound, "unable to find key %s", in.Id)
+		err := status.Errorf(codes.NotFound, "unable to find key %s", in.Name)
 		log.Printf("error: %v", err)
 		return nil, err
 	}
@@ -156,12 +156,12 @@ func (s *Server) CreateInterface(_ context.Context, in *pb.CreateInterfaceReques
 // DeleteInterface deletes an interface
 func (s *Server) DeleteInterface(_ context.Context, in *pb.DeleteInterfaceRequest) (*emptypb.Empty, error) {
 	log.Printf("DeleteInterface: Received from client: %v", in)
-	iface, ok := s.Interfaces[in.Id]
+	iface, ok := s.Interfaces[in.Name]
 	if !ok {
 		if in.AllowMissing {
 			return &emptypb.Empty{}, nil
 		}
-		err := status.Errorf(codes.NotFound, "unable to find key %s", in.Id)
+		err := status.Errorf(codes.NotFound, "unable to find key %s", in.Name)
 		log.Printf("error: %v", err)
 		return nil, err
 	}
