@@ -28,9 +28,9 @@ type Server struct {
 func (s *Server) CreateSubnet(_ context.Context, in *pb.CreateSubnetRequest) (*pb.Subnet, error) {
 	log.Printf("CreateSubnet: Received from client: %v", in)
 	// idempotent API when called with same key, should return same object
-	snet, ok := s.Subnets[in.Subnet.Spec.Id.Value]
+	snet, ok := s.Subnets[in.Subnet.Name]
 	if ok {
-		log.Printf("Already existing Subnet with id %v", in.Subnet.Spec.Id.Value)
+		log.Printf("Already existing Subnet with id %v", in.Subnet.Name)
 		return snet, nil
 	}
 	// not found, so create a new one
@@ -63,7 +63,7 @@ func (s *Server) CreateSubnet(_ context.Context, in *pb.CreateSubnetRequest) (*p
 		fmt.Println(err)
 	}
 	// TODO: replace cloud -> evpn
-	s.Subnets[in.Subnet.Spec.Id.Value] = in.Subnet
+	s.Subnets[in.Subnet.Name] = in.Subnet
 	response := &pb.Subnet{}
 	err = deepcopier.Copy(in.Subnet).To(response)
 	if err != nil {
@@ -101,7 +101,7 @@ func (s *Server) DeleteSubnet(_ context.Context, in *pb.DeleteSubnetRequest) (*e
 		log.Fatal(err)
 	}
 
-	delete(s.Subnets, snet.Spec.Id.Value)
+	delete(s.Subnets, snet.Name)
 	return &emptypb.Empty{}, nil
 }
 
@@ -109,21 +109,21 @@ func (s *Server) DeleteSubnet(_ context.Context, in *pb.DeleteSubnetRequest) (*e
 func (s *Server) CreateInterface(_ context.Context, in *pb.CreateInterfaceRequest) (*pb.Interface, error) {
 	log.Printf("CreateInterface: Received from client: %v", in)
 	// idempotent API when called with same key, should return same object
-	iface, ok := s.Interfaces[in.Interface.Spec.Id.Value]
+	iface, ok := s.Interfaces[in.Interface.Name]
 	if ok {
-		log.Printf("Already existing Interface with id %v", in.Interface.Spec.Id.Value)
+		log.Printf("Already existing Interface with id %v", in.Interface.Name)
 		return iface, nil
 	}
 	// not found, so create a new one
-	snet, ok := s.Subnets[in.Interface.Spec.Id.Value]
+	snet, ok := s.Subnets[in.Interface.Name]
 	if !ok {
 		// TODO: change Spec.Id.Value to bridge reference instead
-		err := status.Errorf(codes.NotFound, "unable to find key %s", in.Interface.Spec.Id.Value)
+		err := status.Errorf(codes.NotFound, "unable to find key %s", in.Interface.Name)
 		log.Printf("error: %v", err)
 		return nil, err
 	}
 	// Get an existing network bridge
-	br, err := tenus.BridgeFromName(snet.Spec.Id.Value)
+	br, err := tenus.BridgeFromName(snet.Name)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -142,7 +142,7 @@ func (s *Server) CreateInterface(_ context.Context, in *pb.CreateInterfaceReques
 		fmt.Println(err)
 	}
 	// TODO: replace cloud -> evpn
-	s.Interfaces[in.Interface.Spec.Id.Value] = in.Interface
+	s.Interfaces[in.Interface.Name] = in.Interface
 	response := &pb.Interface{}
 	err = deepcopier.Copy(in.Interface).To(response)
 	if err != nil {
@@ -168,10 +168,10 @@ func (s *Server) DeleteInterface(_ context.Context, in *pb.DeleteInterfaceReques
 
 	// Delete link
 	// $ sudo ip link delete br0 type bridge
-	if err := tenus.DeleteLink(iface.Spec.Id.Value); err != nil {
+	if err := tenus.DeleteLink(iface.Name); err != nil {
 		log.Fatal(err)
 	}
 
-	delete(s.Interfaces, iface.Spec.Id.Value)
+	delete(s.Interfaces, iface.Name)
 	return &emptypb.Empty{}, nil
 }
