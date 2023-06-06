@@ -344,6 +344,8 @@ services:
   opi-evpn-bridge:
     build:
       context: .
+    cap_add:
+      - NET_ADMIN
     depends_on:
       - leaf1
     network_mode: service:leaf1
