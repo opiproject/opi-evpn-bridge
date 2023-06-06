@@ -12,6 +12,7 @@ import (
 	"github.com/milosgajdos/tenus"
 	pb "github.com/opiproject/opi-api/network/cloud/v1alpha1/gen/go"
 	"github.com/ulule/deepcopier"
+	"go.einride.tech/aip/resourceid"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -27,6 +28,18 @@ type Server struct {
 // CreateSubnet executes the creation of the subnet
 func (s *Server) CreateSubnet(_ context.Context, in *pb.CreateSubnetRequest) (*pb.Subnet, error) {
 	log.Printf("CreateSubnet: Received from client: %v", in)
+	// see https://google.aip.dev/133#user-specified-ids
+	resourceID := resourceid.NewSystemGenerated()
+	if in.SubnetId != "" {
+		err := resourceid.ValidateUserSettable(in.SubnetId)
+		if err != nil {
+			log.Printf("error: %v", err)
+			return nil, err
+		}
+		log.Printf("client provided the ID of a resource %v, ignoring the name field %v", in.SubnetId, in.Subnet.Name)
+		resourceID = in.SubnetId
+	}
+	in.Subnet.Name = resourceID
 	// idempotent API when called with same key, should return same object
 	snet, ok := s.Subnets[in.Subnet.Name]
 	if ok {
@@ -108,6 +121,18 @@ func (s *Server) DeleteSubnet(_ context.Context, in *pb.DeleteSubnetRequest) (*e
 // CreateInterface executes the creation of the interface
 func (s *Server) CreateInterface(_ context.Context, in *pb.CreateInterfaceRequest) (*pb.Interface, error) {
 	log.Printf("CreateInterface: Received from client: %v", in)
+	// see https://google.aip.dev/133#user-specified-ids
+	resourceID := resourceid.NewSystemGenerated()
+	if in.InterfaceId != "" {
+		err := resourceid.ValidateUserSettable(in.InterfaceId)
+		if err != nil {
+			log.Printf("error: %v", err)
+			return nil, err
+		}
+		log.Printf("client provided the ID of a resource %v, ignoring the name field %v", in.InterfaceId, in.Interface.Name)
+		resourceID = in.InterfaceId
+	}
+	in.Interface.Name = resourceID
 	// idempotent API when called with same key, should return same object
 	iface, ok := s.Interfaces[in.Interface.Name]
 	if ok {
