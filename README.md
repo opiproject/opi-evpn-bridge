@@ -30,6 +30,7 @@ Run `docker-compose up -d`
 ```bash
 docker-compose exec opi-evpn-bridge grpcurl -plaintext -d '{"interface" : {"spec" : {"ifid": 11} }, "interface_id" : "testinterface", "parent" : "todo" }' localhost:50151 opi_api.network.cloud.v1alpha1.CloudInfraService.CreateInterface
 docker-compose exec opi-evpn-bridge grpcurl -plaintext -d '{"subnet" : {"spec" : {"ipv4_virtual_router_ip": 44} }, "subnet_id" : "testbridge", "parent" : "todo" }' localhost:50151 opi_api.network.cloud.v1alpha1.CloudInfraService.CreateSubnet
+docker-compose exec opi-evpn-bridge grpcurl -plaintext -d '{"name": "//network.opiproject.org/vpc/testbridge"}' localhost:50151 opi_api.network.cloud.v1alpha1.CloudInfraService.GetSubnet
 docker-compose exec opi-evpn-bridge grpcurl -plaintext -d '{"name": "//network.opiproject.org/vpc/testbridge"}' localhost:50151 opi_api.network.cloud.v1alpha1.CloudInfraService.DeleteSubnet
 docker-compose exec opi-evpn-bridge grpcurl -plaintext -d '{"name": "//network.opiproject.org/vpc/testinterface"}' localhost:50151 opi_api.network.cloud.v1alpha1.CloudInfraService.DeleteInterface
 ```

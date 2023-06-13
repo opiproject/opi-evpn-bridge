@@ -132,6 +132,30 @@ func (s *Server) DeleteSubnet(_ context.Context, in *pb.DeleteSubnetRequest) (*e
 	return &emptypb.Empty{}, nil
 }
 
+// GetSubnet gets an subnet
+func (s *Server) GetSubnet(_ context.Context, in *pb.GetSubnetRequest) (*pb.Subnet, error) {
+	log.Printf("GetSubnet: Received from client: %v", in)
+	// check required fields
+	if err := fieldbehavior.ValidateRequiredFields(in); err != nil {
+		log.Printf("error: %v", err)
+		return nil, err
+	}
+	// Validate that a resource name conforms to the restrictions outlined in AIP-122.
+	if err := resourcename.Validate(in.Name); err != nil {
+		log.Printf("error: %v", err)
+		return nil, err
+	}
+	// fetch object from the database
+	snet, ok := s.Subnets[in.Name]
+	if !ok {
+		err := status.Errorf(codes.NotFound, "unable to find key %s", in.Name)
+		log.Printf("error: %v", err)
+		return nil, err
+	}
+	// TODO
+	return &pb.Subnet{Name: in.Name, Spec: &pb.SubnetSpec{Ipv4VirtualRouterIp: snet.Spec.Ipv4VirtualRouterIp}, Status: &pb.SubnetStatus{HwIndex: 77}}, nil
+}
+
 // CreateInterface executes the creation of the interface
 func (s *Server) CreateInterface(_ context.Context, in *pb.CreateInterfaceRequest) (*pb.Interface, error) {
 	log.Printf("CreateInterface: Received from client: %v", in)
