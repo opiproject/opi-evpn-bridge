@@ -250,3 +250,27 @@ func (s *Server) DeleteInterface(_ context.Context, in *pb.DeleteInterfaceReques
 	delete(s.Interfaces, iface.Name)
 	return &emptypb.Empty{}, nil
 }
+
+// GetInterface gets an Interface
+func (s *Server) GetInterface(_ context.Context, in *pb.GetInterfaceRequest) (*pb.Interface, error) {
+	log.Printf("GetInterface: Received from client: %v", in)
+	// check required fields
+	if err := fieldbehavior.ValidateRequiredFields(in); err != nil {
+		log.Printf("error: %v", err)
+		return nil, err
+	}
+	// Validate that a resource name conforms to the restrictions outlined in AIP-122.
+	if err := resourcename.Validate(in.Name); err != nil {
+		log.Printf("error: %v", err)
+		return nil, err
+	}
+	// fetch object from the database
+	snet, ok := s.Interfaces[in.Name]
+	if !ok {
+		err := status.Errorf(codes.NotFound, "unable to find key %s", in.Name)
+		log.Printf("error: %v", err)
+		return nil, err
+	}
+	// TODO
+	return &pb.Interface{Name: in.Name, Spec: &pb.InterfaceSpec{Ifid: snet.Spec.Ifid}, Status: &pb.InterfaceStatus{IfIndex: 55}}, nil
+}
