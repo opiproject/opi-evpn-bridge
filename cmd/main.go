@@ -30,7 +30,10 @@ func main() {
 	s := grpc.NewServer()
 
 	// TODO: replace cloud -> evpn
-	pb.RegisterCloudInfraServiceServer(s, &server.Server{})
+	pb.RegisterCloudInfraServiceServer(s, &server.Server{
+		Subnets:    make(map[string]*pb.Subnet),
+		Interfaces: make(map[string]*pb.Interface),
+	})
 
 	reflection.Register(s)
 
