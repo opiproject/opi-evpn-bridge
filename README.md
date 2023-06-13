@@ -29,7 +29,7 @@ Run `docker-compose up -d`
 
 ```bash
 docker-compose exec opi-evpn-bridge grpcurl -plaintext -d '{"interface":{"name": "testinterface"}}' localhost:50151 opi_api.network.cloud.v1alpha1.CloudInfraService.CreateInterface
-sudo docker-compose exec opi-evpn-bridge grpcurl -plaintext -d '{"subnet":{"name": "testbridge"}}' localhost:50151 opi_api.network.cloud.v1alpha1.CloudInfraService.CreateSubnet
+docker-compose exec opi-evpn-bridge grpcurl -plaintext -d '{"subnet":{"name": "testbridge"}}' localhost:50151 opi_api.network.cloud.v1alpha1.CloudInfraService.CreateSubnet
 ```
 
 ## Architecture Diagram
