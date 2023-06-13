@@ -46,7 +46,7 @@ func (s *Server) CreateSubnet(_ context.Context, in *pb.CreateSubnetRequest) (*p
 		log.Printf("client provided the ID of a resource %v, ignoring the name field %v", in.SubnetId, in.Subnet.Name)
 		resourceID = in.SubnetId
 	}
-	in.Subnet.Name = resourceID
+	in.Subnet.Name = fmt.Sprintf("//network.opiproject.org/vpc/%s", resourceID)
 	// idempotent API when called with same key, should return same object
 	snet, ok := s.Subnets[in.Subnet.Name]
 	if ok {
@@ -86,6 +86,7 @@ func (s *Server) CreateSubnet(_ context.Context, in *pb.CreateSubnetRequest) (*p
 	response := proto.Clone(in.Subnet).(*pb.Subnet)
 	response.Status = &pb.SubnetStatus{HwIndex: 8}
 	s.Subnets[in.Subnet.Name] = response
+	log.Printf("CreateSubnet: Sending to client: %v", response)
 	return response, nil
 }
 
@@ -150,7 +151,7 @@ func (s *Server) CreateInterface(_ context.Context, in *pb.CreateInterfaceReques
 		log.Printf("client provided the ID of a resource %v, ignoring the name field %v", in.InterfaceId, in.Interface.Name)
 		resourceID = in.InterfaceId
 	}
-	in.Interface.Name = resourceID
+	in.Interface.Name = fmt.Sprintf("//network.opiproject.org/vpc/%s", resourceID)
 	// idempotent API when called with same key, should return same object
 	iface, ok := s.Interfaces[in.Interface.Name]
 	if ok {
@@ -188,6 +189,7 @@ func (s *Server) CreateInterface(_ context.Context, in *pb.CreateInterfaceReques
 	response := proto.Clone(in.Interface).(*pb.Interface)
 	response.Status = &pb.InterfaceStatus{IfIndex: 8}
 	s.Interfaces[in.Interface.Name] = response
+	log.Printf("CreateInterface: Sending to client: %v", response)
 	return response, nil
 }
 
