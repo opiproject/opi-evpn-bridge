@@ -11,12 +11,12 @@ import (
 
 	"github.com/milosgajdos/tenus"
 	pb "github.com/opiproject/opi-api/network/cloud/v1alpha1/gen/go"
-	"github.com/ulule/deepcopier"
 	"go.einride.tech/aip/fieldbehavior"
 	"go.einride.tech/aip/resourceid"
 	"go.einride.tech/aip/resourcename"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -83,14 +83,9 @@ func (s *Server) CreateSubnet(_ context.Context, in *pb.CreateSubnetRequest) (*p
 		fmt.Println(err)
 	}
 	// TODO: replace cloud -> evpn
-	s.Subnets[in.Subnet.Name] = in.Subnet
-	response := &pb.Subnet{}
-	err = deepcopier.Copy(in.Subnet).To(response)
-	if err != nil {
-		log.Printf("error: %v", err)
-		return nil, err
-	}
+	response := proto.Clone(in.Subnet).(*pb.Subnet)
 	response.Status = &pb.SubnetStatus{HwIndex: 8}
+	s.Subnets[in.Subnet.Name] = response
 	return response, nil
 }
 
@@ -190,14 +185,9 @@ func (s *Server) CreateInterface(_ context.Context, in *pb.CreateInterfaceReques
 		fmt.Println(err)
 	}
 	// TODO: replace cloud -> evpn
-	s.Interfaces[in.Interface.Name] = in.Interface
-	response := &pb.Interface{}
-	err = deepcopier.Copy(in.Interface).To(response)
-	if err != nil {
-		log.Printf("error: %v", err)
-		return nil, err
-	}
+	response := proto.Clone(in.Interface).(*pb.Interface)
 	response.Status = &pb.InterfaceStatus{IfIndex: 8}
+	s.Interfaces[in.Interface.Name] = response
 	return response, nil
 }
 
