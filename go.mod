@@ -4,7 +4,7 @@ go 1.19
 
 require (
 	github.com/milosgajdos/tenus v0.0.3
-	github.com/opiproject/opi-api v0.0.0-20230615175453-6d342498d66a
+	github.com/opiproject/opi-api v0.0.0-20230617012429-e33accd8da8d
 	github.com/ulule/deepcopier v0.0.0-20200430083143-45decc6639b6
 	go.einride.tech/aip v0.60.0
 	google.golang.org/grpc v1.56.0
