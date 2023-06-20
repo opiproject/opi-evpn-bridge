@@ -8,10 +8,12 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"path"
 
 	"github.com/milosgajdos/tenus"
 	pb "github.com/opiproject/opi-api/network/cloud/v1alpha1/gen/go"
 	"go.einride.tech/aip/fieldbehavior"
+	"go.einride.tech/aip/fieldmask"
 	"go.einride.tech/aip/resourceid"
 	"go.einride.tech/aip/resourcename"
 	"google.golang.org/grpc/codes"
@@ -132,6 +134,37 @@ func (s *Server) DeleteSubnet(_ context.Context, in *pb.DeleteSubnetRequest) (*e
 	return &emptypb.Empty{}, nil
 }
 
+// UpdateSubnet updates an Nvme Subsystem
+func (s *Server) UpdateSubnet(_ context.Context, in *pb.UpdateSubnetRequest) (*pb.Subnet, error) {
+	log.Printf("UpdateSubnet: Received from client: %v", in)
+	// check required fields
+	if err := fieldbehavior.ValidateRequiredFields(in); err != nil {
+		log.Printf("error: %v", err)
+		return nil, err
+	}
+	// Validate that a resource name conforms to the restrictions outlined in AIP-122.
+	if err := resourcename.Validate(in.Subnet.Name); err != nil {
+		log.Printf("error: %v", err)
+		return nil, err
+	}
+	// fetch object from the database
+	volume, ok := s.Subnets[in.Subnet.Name]
+	if !ok {
+		// TODO: introduce "in.AllowMissing" field. In case "true", create a new resource, don't return error
+		err := status.Errorf(codes.NotFound, "unable to find key %s", in.Subnet.Name)
+		log.Printf("error: %v", err)
+		return nil, err
+	}
+	resourceID := path.Base(volume.Name)
+	// update_mask = 2
+	if err := fieldmask.Validate(in.UpdateMask, in.Subnet); err != nil {
+		log.Printf("error: %v", err)
+		return nil, err
+	}
+	log.Printf("TODO: use resourceID=%v", resourceID)
+	return nil, status.Errorf(codes.Unimplemented, "UpdateSubnet method is not implemented")
+}
+
 // GetSubnet gets an subnet
 func (s *Server) GetSubnet(_ context.Context, in *pb.GetSubnetRequest) (*pb.Subnet, error) {
 	log.Printf("GetSubnet: Received from client: %v", in)
@@ -249,6 +282,37 @@ func (s *Server) DeleteInterface(_ context.Context, in *pb.DeleteInterfaceReques
 
 	delete(s.Interfaces, iface.Name)
 	return &emptypb.Empty{}, nil
+}
+
+// UpdateInterface updates an Nvme Subsystem
+func (s *Server) UpdateInterface(_ context.Context, in *pb.UpdateInterfaceRequest) (*pb.Interface, error) {
+	log.Printf("UpdateInterface: Received from client: %v", in)
+	// check required fields
+	if err := fieldbehavior.ValidateRequiredFields(in); err != nil {
+		log.Printf("error: %v", err)
+		return nil, err
+	}
+	// Validate that a resource name conforms to the restrictions outlined in AIP-122.
+	if err := resourcename.Validate(in.Interface.Name); err != nil {
+		log.Printf("error: %v", err)
+		return nil, err
+	}
+	// fetch object from the database
+	volume, ok := s.Interfaces[in.Interface.Name]
+	if !ok {
+		// TODO: introduce "in.AllowMissing" field. In case "true", create a new resource, don't return error
+		err := status.Errorf(codes.NotFound, "unable to find key %s", in.Interface.Name)
+		log.Printf("error: %v", err)
+		return nil, err
+	}
+	resourceID := path.Base(volume.Name)
+	// update_mask = 2
+	if err := fieldmask.Validate(in.UpdateMask, in.Interface); err != nil {
+		log.Printf("error: %v", err)
+		return nil, err
+	}
+	log.Printf("TODO: use resourceID=%v", resourceID)
+	return nil, status.Errorf(codes.Unimplemented, "UpdateInterface method is not implemented")
 }
 
 // GetInterface gets an Interface
