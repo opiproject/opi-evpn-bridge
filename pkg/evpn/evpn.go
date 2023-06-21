@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"log"
 	"path"
+	"strconv"
 
 	"github.com/milosgajdos/tenus"
 	"github.com/vishvananda/netlink"
@@ -58,8 +59,15 @@ func (s *Server) CreateVpc(_ context.Context, in *pb.CreateVpcRequest) (*pb.Vpc,
 		log.Printf("Already existing Vpc with id %v", in.Vpc.Name)
 		return obj, nil
 	}
+	// TODO: search DB for tables by this reference instead of reinterpreting this as integer
+	table, err := strconv.Atoi(in.Vpc.Spec.V4RouteTableNameRef)
+	if err != nil {
+		err := status.Error(codes.InvalidArgument, "could not convert V4RouteTableNameRef to integer")
+		log.Printf("error: %v", err)
+		return nil, err
+	}
 	// not found, so create a new one
-	vrf := &netlink.Vrf{LinkAttrs: netlink.LinkAttrs{Name: resourceID}, Table: 2}
+	vrf := &netlink.Vrf{LinkAttrs: netlink.LinkAttrs{Name: resourceID}, Table: uint32(table)}
 	if err := netlink.LinkAdd(vrf); err != nil {
 		fmt.Printf("Failed to create link: %v", err)
 		return nil, err
