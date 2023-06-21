@@ -96,8 +96,14 @@ func (s *Server) DeleteVpc(_ context.Context, in *pb.DeleteVpcRequest) (*emptypb
 		return nil, err
 	}
 	resourceID := path.Base(obj.Name)
+	// use netlink to find VRF/VPC
+	vrf, err := netlink.LinkByName(resourceID)
+	if err != nil {
+		err := status.Errorf(codes.NotFound, "unable to find key %s", resourceID)
+		log.Printf("error: %v", err)
+		return nil, err
+	}
 	// use netlink to delete VRF/VPC
-	vrf := &netlink.Vrf{LinkAttrs: netlink.LinkAttrs{Name: resourceID}, Table: 2}
 	if err := netlink.LinkDel(vrf); err != nil {
 		fmt.Printf("Failed to delete link: %v", err)
 		return nil, err
