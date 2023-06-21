@@ -72,6 +72,10 @@ func (s *Server) CreateVpc(_ context.Context, in *pb.CreateVpcRequest) (*pb.Vpc,
 		fmt.Printf("Failed to create link: %v", err)
 		return nil, err
 	}
+	if err := netlink.LinkSetUp(vrf); err != nil {
+		fmt.Printf("Failed to up link: %v", err)
+		return nil, err
+	}
 	// TODO: replace cloud -> evpn
 	response := proto.Clone(in.Vpc).(*pb.Vpc)
 	response.Status = &pb.VpcStatus{SubnetCount: 4}
@@ -109,6 +113,11 @@ func (s *Server) DeleteVpc(_ context.Context, in *pb.DeleteVpcRequest) (*emptypb
 	if err != nil {
 		err := status.Errorf(codes.NotFound, "unable to find key %s", resourceID)
 		log.Printf("error: %v", err)
+		return nil, err
+	}
+	// bring link down
+	if err := netlink.LinkSetDown(vrf); err != nil {
+		fmt.Printf("Failed to up link: %v", err)
 		return nil, err
 	}
 	// use netlink to delete VRF/VPC
@@ -382,6 +391,10 @@ func (s *Server) CreateInterface(_ context.Context, in *pb.CreateInterfaceReques
 		fmt.Printf("Failed to create link: %v", err)
 		return nil, err
 	}
+	if err := netlink.LinkSetUp(dummy); err != nil {
+		fmt.Printf("Failed to up link: %v", err)
+		return nil, err
+	}
 	// TODO: do we also need to add this link to the bridge here ? search s.Subnets ?
 	response := proto.Clone(in.Interface).(*pb.Interface)
 	response.Status = &pb.InterfaceStatus{IfIndex: 8}
@@ -414,8 +427,19 @@ func (s *Server) DeleteInterface(_ context.Context, in *pb.DeleteInterfaceReques
 		return nil, err
 	}
 	resourceID := path.Base(iface.Name)
-	// delete dummy interface
-	dummy := &netlink.Dummy{LinkAttrs: netlink.LinkAttrs{Name: resourceID}}
+	// use netlink to find interface
+	dummy, err := netlink.LinkByName(resourceID)
+	if err != nil {
+		err := status.Errorf(codes.NotFound, "unable to find key %s", resourceID)
+		log.Printf("error: %v", err)
+		return nil, err
+	}
+	// bring link down
+	if err := netlink.LinkSetDown(dummy); err != nil {
+		fmt.Printf("Failed to up link: %v", err)
+		return nil, err
+	}
+	// use netlink to delete dummy interface
 	if err := netlink.LinkDel(dummy); err != nil {
 		fmt.Printf("Failed to delete link: %v", err)
 		return nil, err
