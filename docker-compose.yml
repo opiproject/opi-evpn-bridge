@@ -360,18 +360,19 @@ services:
       opi-evpn-bridge:
         condition: service_healthy
     entrypoint: /bin/bash
-    command: -c "
-        /entrypoint.sh ls localhost:50151 opi_api.network.cloud.v1alpha1.CloudInfraService -l && \
-        /entrypoint.sh ls localhost:50151 opi_api.network.cloud.v1alpha1.CloudInfraService.CreateInterface -l && \
-        /entrypoint.sh ls localhost:50151 opi_api.network.cloud.v1alpha1.CloudInfraService.CreateSubnet -l && \
-        /entrypoint.sh ls localhost:50151 opi_api.network.cloud.v1alpha1.CloudInfraService.CreateVpc -l && \
-        /entrypoint.sh ls localhost:50151 opi_api.network.cloud.v1alpha1.CloudInfraService.GetInterface -l && \
-        /entrypoint.sh ls localhost:50151 opi_api.network.cloud.v1alpha1.CloudInfraService.GetSubnet -l && \
-        /entrypoint.sh ls localhost:50151 opi_api.network.cloud.v1alpha1.CloudInfraService.GetVpc -l && \
-        /entrypoint.sh ls localhost:50151 opi_api.network.cloud.v1alpha1.CloudInfraService.DeleteInterface -l && \
-        /entrypoint.sh ls localhost:50151 opi_api.network.cloud.v1alpha1.CloudInfraService.DeleteSubnet -l && \
-        /entrypoint.sh ls localhost:50151 opi_api.network.cloud.v1alpha1.CloudInfraService.DeleteVpc -l && \
-        echo done"
+    command: |
+      -x -c 'echo start && \
+      /entrypoint.sh ls localhost:50151 opi_api.network.cloud.v1alpha1.CloudInfraService -l && \
+      /entrypoint.sh ls localhost:50151 opi_api.network.cloud.v1alpha1.CloudInfraService.CreateInterface -l && \
+      /entrypoint.sh ls localhost:50151 opi_api.network.cloud.v1alpha1.CloudInfraService.CreateSubnet -l && \
+      /entrypoint.sh ls localhost:50151 opi_api.network.cloud.v1alpha1.CloudInfraService.CreateVpc -l && \
+      /entrypoint.sh ls localhost:50151 opi_api.network.cloud.v1alpha1.CloudInfraService.GetInterface -l && \
+      /entrypoint.sh ls localhost:50151 opi_api.network.cloud.v1alpha1.CloudInfraService.GetSubnet -l && \
+      /entrypoint.sh ls localhost:50151 opi_api.network.cloud.v1alpha1.CloudInfraService.GetVpc -l && \
+      /entrypoint.sh ls localhost:50151 opi_api.network.cloud.v1alpha1.CloudInfraService.DeleteInterface -l && \
+      /entrypoint.sh ls localhost:50151 opi_api.network.cloud.v1alpha1.CloudInfraService.DeleteSubnet -l && \
+      /entrypoint.sh ls localhost:50151 opi_api.network.cloud.v1alpha1.CloudInfraService.DeleteVpc -l && \
+      echo done'
 
   host2-leaf2:
     image: docker.io/library/alpine:3.18
