@@ -11,6 +11,8 @@ import (
 	"path"
 
 	"github.com/milosgajdos/tenus"
+	"github.com/vishvananda/netlink"
+
 	pb "github.com/opiproject/opi-api/network/cloud/v1alpha1/gen/go"
 	"go.einride.tech/aip/fieldbehavior"
 	"go.einride.tech/aip/fieldmask"
@@ -339,34 +341,13 @@ func (s *Server) CreateInterface(_ context.Context, in *pb.CreateInterfaceReques
 		log.Printf("Already existing Interface with id %v", in.Interface.Name)
 		return iface, nil
 	}
-	// not found, so create a new one
-	snet, ok := s.Subnets[in.Interface.Name]
-	if !ok {
-		// TODO: change Spec.Id.Value to bridge reference instead
-		err := status.Errorf(codes.NotFound, "unable to find key %s", in.Interface.Name)
-		log.Printf("error: %v", err)
+	// create dummy interface
+	dummy := &netlink.Dummy{netlink.LinkAttrs{Name: resourceID}}
+	if err := netlink.LinkAdd(dummy); err != nil {
+		fmt.Printf("Failed to create link: %v", err)
 		return nil, err
 	}
-	// Get an existing network bridge
-	br, err := tenus.BridgeFromName(snet.Name)
-	if err != nil {
-		log.Fatal(err)
-	}
-	// Create a dummy link
-	dl, err := tenus.NewLink("mydummylink")
-	if err != nil {
-		log.Fatal(err)
-	}
-	// Add the dummy link into bridge
-	if err = br.AddSlaveIfc(dl.NetInterface()); err != nil {
-		log.Fatal(err)
-	}
-
-	// Bring the dummy link up
-	if err = dl.SetLinkUp(); err != nil {
-		fmt.Println(err)
-	}
-	// TODO: replace cloud -> evpn
+	// TODO: do we also need to add this link to the bridge here ? search s.Subnets ?
 	response := proto.Clone(in.Interface).(*pb.Interface)
 	response.Status = &pb.InterfaceStatus{IfIndex: 8}
 	s.Interfaces[in.Interface.Name] = response
@@ -397,13 +378,14 @@ func (s *Server) DeleteInterface(_ context.Context, in *pb.DeleteInterfaceReques
 		log.Printf("error: %v", err)
 		return nil, err
 	}
-
-	// Delete link
-	// $ sudo ip link delete br0 type bridge
-	if err := tenus.DeleteLink(iface.Name); err != nil {
-		log.Fatal(err)
+	resourceID := path.Base(iface.Name)
+	// delete dummy interface
+	dummy := &netlink.Dummy{netlink.LinkAttrs{Name: resourceID}}
+	if err := netlink.LinkDel(dummy); err != nil {
+		fmt.Printf("Failed to delete link: %v", err)
+		return nil, err
 	}
-
+	// remove from DB
 	delete(s.Interfaces, iface.Name)
 	return &emptypb.Empty{}, nil
 }
@@ -436,6 +418,12 @@ func (s *Server) UpdateInterface(_ context.Context, in *pb.UpdateInterfaceReques
 		return nil, err
 	}
 	log.Printf("TODO: use resourceID=%v", resourceID)
+	// TODO: modify dummy interface
+	// dummy := &netlink.Dummy{netlink.LinkAttrs{Name: resourceID}}
+	// if err := netlink.LinkModify(dummy); err != nil {
+	// 	fmt.Printf("Failed to delete link: %v", err)
+	// 	return nil, err
+	// }
 	return nil, status.Errorf(codes.Unimplemented, "UpdateInterface method is not implemented")
 }
 
@@ -456,6 +444,13 @@ func (s *Server) GetInterface(_ context.Context, in *pb.GetInterfaceRequest) (*p
 	snet, ok := s.Interfaces[in.Name]
 	if !ok {
 		err := status.Errorf(codes.NotFound, "unable to find key %s", in.Name)
+		log.Printf("error: %v", err)
+		return nil, err
+	}
+	resourceID := path.Base(snet.Name)
+	_, err := netlink.LinkByName(resourceID)
+	if err != nil {
+		err := status.Errorf(codes.NotFound, "unable to find key %s", resourceID)
 		log.Printf("error: %v", err)
 		return nil, err
 	}
