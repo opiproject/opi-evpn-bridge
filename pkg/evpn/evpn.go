@@ -52,7 +52,7 @@ func (s *Server) CreateVpc(_ context.Context, in *pb.CreateVpcRequest) (*pb.Vpc,
 		log.Printf("client provided the ID of a resource %v, ignoring the name field %v", in.VpcId, in.Vpc.Name)
 		resourceID = in.VpcId
 	}
-	in.Vpc.Name = fmt.Sprintf("//network.opiproject.org/vpc/%s", resourceID)
+	in.Vpc.Name = fmt.Sprintf("//network.opiproject.org/vpcs/%s", resourceID)
 	// idempotent API when called with same key, should return same object
 	obj, ok := s.Vpcs[in.Vpc.Name]
 	if ok {
@@ -202,7 +202,7 @@ func (s *Server) CreateSubnet(_ context.Context, in *pb.CreateSubnetRequest) (*p
 		log.Printf("client provided the ID of a resource %v, ignoring the name field %v", in.SubnetId, in.Subnet.Name)
 		resourceID = in.SubnetId
 	}
-	in.Subnet.Name = fmt.Sprintf("//network.opiproject.org/vpc/%s", resourceID)
+	in.Subnet.Name = fmt.Sprintf("//network.opiproject.org/subnets/%s", resourceID)
 	// idempotent API when called with same key, should return same object
 	snet, ok := s.Subnets[in.Subnet.Name]
 	if ok {
@@ -369,7 +369,7 @@ func (s *Server) CreateInterface(_ context.Context, in *pb.CreateInterfaceReques
 		log.Printf("client provided the ID of a resource %v, ignoring the name field %v", in.InterfaceId, in.Interface.Name)
 		resourceID = in.InterfaceId
 	}
-	in.Interface.Name = fmt.Sprintf("//network.opiproject.org/vpc/%s", resourceID)
+	in.Interface.Name = fmt.Sprintf("//network.opiproject.org/interfaces/%s", resourceID)
 	// idempotent API when called with same key, should return same object
 	iface, ok := s.Interfaces[in.Interface.Name]
 	if ok {
