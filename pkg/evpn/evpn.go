@@ -249,7 +249,7 @@ func (s *Server) CreateSubnet(_ context.Context, in *pb.CreateSubnetRequest) (*p
 	}
 	// TODO: replace cloud -> evpn
 	response := proto.Clone(in.Subnet).(*pb.Subnet)
-	response.Status = &pb.SubnetStatus{HwIndex: 8}
+	response.Status = &pb.SubnetStatus{HwIndex: 8, VnicCount: 88}
 	s.Subnets[in.Subnet.Name] = response
 	log.Printf("CreateSubnet: Sending to client: %v", response)
 	return response, nil
@@ -397,7 +397,7 @@ func (s *Server) CreateInterface(_ context.Context, in *pb.CreateInterfaceReques
 	}
 	// TODO: do we also need to add this link to the bridge here ? search s.Subnets ?
 	response := proto.Clone(in.Interface).(*pb.Interface)
-	response.Status = &pb.InterfaceStatus{IfIndex: 8}
+	response.Status = &pb.InterfaceStatus{IfIndex: 8, OperStatus: pb.IfStatus_IF_STATUS_UP}
 	s.Interfaces[in.Interface.Name] = response
 	log.Printf("CreateInterface: Sending to client: %v", response)
 	return response, nil
