@@ -29,7 +29,7 @@ type Server struct {
 	Interfaces map[string]*pb.Interface
 }
 
-// CreateSubnet executes the creation of the subnet
+// CreateSubnet executes the creation of the SVI/subnet
 func (s *Server) CreateSubnet(_ context.Context, in *pb.CreateSubnetRequest) (*pb.Subnet, error) {
 	log.Printf("CreateSubnet: Received from client: %v", in)
 	// check required fields
@@ -92,7 +92,7 @@ func (s *Server) CreateSubnet(_ context.Context, in *pb.CreateSubnetRequest) (*p
 	return response, nil
 }
 
-// DeleteSubnet deletes a subnet
+// DeleteSubnet deletes a SVI/subnet
 func (s *Server) DeleteSubnet(_ context.Context, in *pb.DeleteSubnetRequest) (*emptypb.Empty, error) {
 	log.Printf("DeleteSubnet: Received from client: %v", in)
 	// check required fields
@@ -134,7 +134,7 @@ func (s *Server) DeleteSubnet(_ context.Context, in *pb.DeleteSubnetRequest) (*e
 	return &emptypb.Empty{}, nil
 }
 
-// UpdateSubnet updates an Nvme Subsystem
+// UpdateSubnet updates an SVI/subnet
 func (s *Server) UpdateSubnet(_ context.Context, in *pb.UpdateSubnetRequest) (*pb.Subnet, error) {
 	log.Printf("UpdateSubnet: Received from client: %v", in)
 	// check required fields
@@ -165,7 +165,7 @@ func (s *Server) UpdateSubnet(_ context.Context, in *pb.UpdateSubnetRequest) (*p
 	return nil, status.Errorf(codes.Unimplemented, "UpdateSubnet method is not implemented")
 }
 
-// GetSubnet gets an subnet
+// GetSubnet gets an SVI/subnet
 func (s *Server) GetSubnet(_ context.Context, in *pb.GetSubnetRequest) (*pb.Subnet, error) {
 	log.Printf("GetSubnet: Received from client: %v", in)
 	// check required fields
