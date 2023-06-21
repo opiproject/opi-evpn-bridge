@@ -158,6 +158,13 @@ func (s *Server) GetVpc(_ context.Context, in *pb.GetVpcRequest) (*pb.Vpc, error
 		log.Printf("error: %v", err)
 		return nil, err
 	}
+	resourceID := path.Base(obj.Name)
+	_, err := netlink.LinkByName(resourceID)
+	if err != nil {
+		err := status.Errorf(codes.NotFound, "unable to find key %s", resourceID)
+		log.Printf("error: %v", err)
+		return nil, err
+	}
 	// TODO
 	return &pb.Vpc{Name: in.Name, Spec: &pb.VpcSpec{V4RouteTableNameRef: obj.Spec.V4RouteTableNameRef, Tos: 11}, Status: &pb.VpcStatus{SubnetCount: 77}}, nil
 }
@@ -315,6 +322,13 @@ func (s *Server) GetSubnet(_ context.Context, in *pb.GetSubnetRequest) (*pb.Subn
 	snet, ok := s.Subnets[in.Name]
 	if !ok {
 		err := status.Errorf(codes.NotFound, "unable to find key %s", in.Name)
+		log.Printf("error: %v", err)
+		return nil, err
+	}
+	resourceID := path.Base(snet.Name)
+	_, err := netlink.LinkByName(resourceID)
+	if err != nil {
+		err := status.Errorf(codes.NotFound, "unable to find key %s", resourceID)
 		log.Printf("error: %v", err)
 		return nil, err
 	}
