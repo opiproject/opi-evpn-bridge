@@ -381,9 +381,9 @@ services:
       /entrypoint.sh call --json_input --json_output localhost:50151 DeleteVpc    "{\"name\" : \"//network.opiproject.org/vpcs/blue1\" }" && \
       /entrypoint.sh call --json_input --json_output localhost:50151 DeleteVpc    "{\"name\" : \"//network.opiproject.org/vpcs/red1\" }" && \
       /entrypoint.sh call --json_input --json_output localhost:50151 DeleteVpc    "{\"name\" : \"//network.opiproject.org/vpcs/yellow1\" }" && \
-      /entrypoint.sh call --json_input --json_output localhost:50151 CreateSubnet "{\"subnet\" : {\"spec\" : {\"ipv4_virtual_router_ip\" : 11} }, \"subnet_id\" : \"br200\", \"parent\" : \"todo\" }" && \
-      /entrypoint.sh call --json_input --json_output localhost:50151 CreateSubnet "{\"subnet\" : {\"spec\" : {\"ipv4_virtual_router_ip\" : 22} }, \"subnet_id\" : \"br201\", \"parent\" : \"todo\" }" && \
-      /entrypoint.sh call --json_input --json_output localhost:50151 CreateSubnet "{\"subnet\" : {\"spec\" : {\"ipv4_virtual_router_ip\" : 33} }, \"subnet_id\" : \"br202\", \"parent\" : \"todo\" }" && \
+      /entrypoint.sh call --json_input --json_output localhost:50151 CreateSubnet "{\"subnet\" : {\"spec\" : {\"ipv4_virtual_router_ip\" : 11, \"virtual_router_mac\": \"qrvMAAAB\"} }, \"subnet_id\" : \"br200\", \"parent\" : \"todo\" }" && \
+      /entrypoint.sh call --json_input --json_output localhost:50151 CreateSubnet "{\"subnet\" : {\"spec\" : {\"ipv4_virtual_router_ip\" : 22, \"virtual_router_mac\": \"qrvMAAAC\"} }, \"subnet_id\" : \"br201\", \"parent\" : \"todo\" }" && \
+      /entrypoint.sh call --json_input --json_output localhost:50151 CreateSubnet "{\"subnet\" : {\"spec\" : {\"ipv4_virtual_router_ip\" : 33, \"virtual_router_mac\": \"qrvMAAAD\"} }, \"subnet_id\" : \"br202\", \"parent\" : \"todo\" }" && \
       /entrypoint.sh call --json_input --json_output localhost:50151 GetSubnet    "{\"name\" : \"//network.opiproject.org/subnets/br200\" }" && \
       /entrypoint.sh call --json_input --json_output localhost:50151 GetSubnet    "{\"name\" : \"//network.opiproject.org/subnets/br201\" }" && \
       /entrypoint.sh call --json_input --json_output localhost:50151 GetSubnet    "{\"name\" : \"//network.opiproject.org/subnets/br202\" }" && \
