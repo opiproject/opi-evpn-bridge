@@ -230,6 +230,15 @@ func (s *Server) CreateSubnet(_ context.Context, in *pb.CreateSubnetRequest) (*p
 			return nil, err
 		}
 	}
+	if in.Subnet.Spec.Ipv4VirtualRouterIp > 0 {
+		// TODO: remove hard-coded and check err
+		addr, _ := netlink.ParseAddr("169.254.169.254/32")
+		// addr := &netlink.Addr{IPNet: &net.IPNet{IP: in.Subnet.Spec.Ipv4VirtualRouterIp, Mask: in.Subnet.Spec.V4Prefix}}
+		if err := netlink.AddrAdd(bridge, addr); err != nil {
+			fmt.Printf("Failed to set IP on link: %v", err)
+			return nil, err
+		}
+	}
 	if err := netlink.LinkSetUp(bridge); err != nil {
 		fmt.Printf("Failed to up link: %v", err)
 		return nil, err
