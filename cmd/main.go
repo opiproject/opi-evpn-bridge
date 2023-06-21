@@ -33,6 +33,7 @@ func main() {
 	pb.RegisterCloudInfraServiceServer(s, &server.Server{
 		Subnets:    make(map[string]*pb.Subnet),
 		Interfaces: make(map[string]*pb.Interface),
+		Vpcs:       make(map[string]*pb.Vpc),
 	})
 
 	reflection.Register(s)

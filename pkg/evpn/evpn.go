@@ -27,6 +27,130 @@ type Server struct {
 	pb.UnimplementedCloudInfraServiceServer
 	Subnets    map[string]*pb.Subnet
 	Interfaces map[string]*pb.Interface
+	Vpcs       map[string]*pb.Vpc
+}
+
+// CreateVpc executes the creation of the VRF/VPC
+func (s *Server) CreateVpc(_ context.Context, in *pb.CreateVpcRequest) (*pb.Vpc, error) {
+	log.Printf("CreateVpc: Received from client: %v", in)
+	// check required fields
+	if err := fieldbehavior.ValidateRequiredFields(in); err != nil {
+		log.Printf("error: %v", err)
+		return nil, err
+	}
+	// see https://google.aip.dev/133#user-specified-ids
+	resourceID := resourceid.NewSystemGenerated()
+	if in.VpcId != "" {
+		err := resourceid.ValidateUserSettable(in.VpcId)
+		if err != nil {
+			log.Printf("error: %v", err)
+			return nil, err
+		}
+		log.Printf("client provided the ID of a resource %v, ignoring the name field %v", in.VpcId, in.Vpc.Name)
+		resourceID = in.VpcId
+	}
+	in.Vpc.Name = fmt.Sprintf("//network.opiproject.org/vpc/%s", resourceID)
+	// idempotent API when called with same key, should return same object
+	obj, ok := s.Vpcs[in.Vpc.Name]
+	if ok {
+		log.Printf("Already existing Vpc with id %v", in.Vpc.Name)
+		return obj, nil
+	}
+	// not found, so create a new one
+
+	// TODO: use netlink to create new VRF/VPC
+
+	// TODO: replace cloud -> evpn
+	response := proto.Clone(in.Vpc).(*pb.Vpc)
+	response.Status = &pb.VpcStatus{SubnetCount: 4}
+	s.Vpcs[in.Vpc.Name] = response
+	log.Printf("CreateVpc: Sending to client: %v", response)
+	return response, nil
+}
+
+// DeleteVpc deletes a VRF/VPC
+func (s *Server) DeleteVpc(_ context.Context, in *pb.DeleteVpcRequest) (*emptypb.Empty, error) {
+	log.Printf("DeleteVpc: Received from client: %v", in)
+	// check required fields
+	if err := fieldbehavior.ValidateRequiredFields(in); err != nil {
+		log.Printf("error: %v", err)
+		return nil, err
+	}
+	// Validate that a resource name conforms to the restrictions outlined in AIP-122.
+	if err := resourcename.Validate(in.Name); err != nil {
+		log.Printf("error: %v", err)
+		return nil, err
+	}
+	// fetch object from the database
+	obj, ok := s.Vpcs[in.Name]
+	if !ok {
+		if in.AllowMissing {
+			return &emptypb.Empty{}, nil
+		}
+		err := status.Errorf(codes.NotFound, "unable to find key %s", in.Name)
+		log.Printf("error: %v", err)
+		return nil, err
+	}
+
+	// TODO: use netlink to delete new VRF/VPC
+
+	delete(s.Vpcs, obj.Name)
+	return &emptypb.Empty{}, nil
+}
+
+// UpdateVpc updates an VRF/VPC
+func (s *Server) UpdateVpc(_ context.Context, in *pb.UpdateVpcRequest) (*pb.Vpc, error) {
+	log.Printf("UpdateVpc: Received from client: %v", in)
+	// check required fields
+	if err := fieldbehavior.ValidateRequiredFields(in); err != nil {
+		log.Printf("error: %v", err)
+		return nil, err
+	}
+	// Validate that a resource name conforms to the restrictions outlined in AIP-122.
+	if err := resourcename.Validate(in.Vpc.Name); err != nil {
+		log.Printf("error: %v", err)
+		return nil, err
+	}
+	// fetch object from the database
+	volume, ok := s.Vpcs[in.Vpc.Name]
+	if !ok {
+		// TODO: introduce "in.AllowMissing" field. In case "true", create a new resource, don't return error
+		err := status.Errorf(codes.NotFound, "unable to find key %s", in.Vpc.Name)
+		log.Printf("error: %v", err)
+		return nil, err
+	}
+	resourceID := path.Base(volume.Name)
+	// update_mask = 2
+	if err := fieldmask.Validate(in.UpdateMask, in.Vpc); err != nil {
+		log.Printf("error: %v", err)
+		return nil, err
+	}
+	log.Printf("TODO: use resourceID=%v", resourceID)
+	return nil, status.Errorf(codes.Unimplemented, "UpdateVpc method is not implemented")
+}
+
+// GetVpc gets an VRF/VPC
+func (s *Server) GetVpc(_ context.Context, in *pb.GetVpcRequest) (*pb.Vpc, error) {
+	log.Printf("GetVpc: Received from client: %v", in)
+	// check required fields
+	if err := fieldbehavior.ValidateRequiredFields(in); err != nil {
+		log.Printf("error: %v", err)
+		return nil, err
+	}
+	// Validate that a resource name conforms to the restrictions outlined in AIP-122.
+	if err := resourcename.Validate(in.Name); err != nil {
+		log.Printf("error: %v", err)
+		return nil, err
+	}
+	// fetch object from the database
+	obj, ok := s.Vpcs[in.Name]
+	if !ok {
+		err := status.Errorf(codes.NotFound, "unable to find key %s", in.Name)
+		log.Printf("error: %v", err)
+		return nil, err
+	}
+	// TODO
+	return &pb.Vpc{Name: in.Name, Spec: &pb.VpcSpec{V4RouteTableNameRef: obj.Spec.V4RouteTableNameRef, Tos: 11}, Status: &pb.VpcStatus{SubnetCount: 77}}, nil
 }
 
 // CreateSubnet executes the creation of the SVI/subnet

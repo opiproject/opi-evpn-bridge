@@ -34,6 +34,8 @@ docker-compose exec opi-evpn-bridge grpcurl -plaintext -d '{"name": "//network.o
 docker-compose exec opi-evpn-bridge grpcurl -plaintext -d '{"name": "//network.opiproject.org/vpc/testbridge"}' localhost:50151 opi_api.network.cloud.v1alpha1.CloudInfraService.GetSubnet
 docker-compose exec opi-evpn-bridge grpcurl -plaintext -d '{"name": "//network.opiproject.org/vpc/testbridge"}' localhost:50151 opi_api.network.cloud.v1alpha1.CloudInfraService.DeleteSubnet
 docker-compose exec opi-evpn-bridge grpcurl -plaintext -d '{"name": "//network.opiproject.org/vpc/testinterface"}' localhost:50151 opi_api.network.cloud.v1alpha1.CloudInfraService.DeleteInterface
+docker-compose exec opi-evpn-bridge grpcurl -plaintext -d '{"vpc" : {"spec" : {"v4_route_table_name_ref" : "1234"} }, "vpc_id" : "testvpc", "parent" : "todo" }' localhost:50151 opi_api.network.cloud.v1alpha1.CloudInfraService.CreateVpc
+docker-compose exec opi-evpn-bridge grpcurl -plaintext -d '{"name" : "//network.opiproject.org/vpc/testvpc"}' localhost:50151 opi_api.network.cloud.v1alpha1.CloudInfraService.DeleteVpc
 ```
 
 ## Architecture Diagram
