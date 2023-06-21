@@ -59,7 +59,7 @@ func (s *Server) CreateVpc(_ context.Context, in *pb.CreateVpcRequest) (*pb.Vpc,
 		return obj, nil
 	}
 	// not found, so create a new one
-	vrf := &netlink.Vrf{netlink.LinkAttrs{Name: resourceID}, 2}
+	vrf := &netlink.Vrf{LinkAttrs: netlink.LinkAttrs{Name: resourceID}, Table: 2}
 	if err := netlink.LinkAdd(vrf); err != nil {
 		fmt.Printf("Failed to create link: %v", err)
 		return nil, err
@@ -97,7 +97,7 @@ func (s *Server) DeleteVpc(_ context.Context, in *pb.DeleteVpcRequest) (*emptypb
 	}
 	resourceID := path.Base(obj.Name)
 	// use netlink to delete VRF/VPC
-	vrf := &netlink.Vrf{netlink.LinkAttrs{Name: resourceID}, 2}
+	vrf := &netlink.Vrf{LinkAttrs: netlink.LinkAttrs{Name: resourceID}, Table: 2}
 	if err := netlink.LinkDel(vrf); err != nil {
 		fmt.Printf("Failed to delete link: %v", err)
 		return nil, err
@@ -349,7 +349,7 @@ func (s *Server) CreateInterface(_ context.Context, in *pb.CreateInterfaceReques
 		return iface, nil
 	}
 	// create dummy interface
-	dummy := &netlink.Dummy{netlink.LinkAttrs{Name: resourceID}}
+	dummy := &netlink.Dummy{LinkAttrs: netlink.LinkAttrs{Name: resourceID}}
 	if err := netlink.LinkAdd(dummy); err != nil {
 		fmt.Printf("Failed to create link: %v", err)
 		return nil, err
@@ -387,7 +387,7 @@ func (s *Server) DeleteInterface(_ context.Context, in *pb.DeleteInterfaceReques
 	}
 	resourceID := path.Base(iface.Name)
 	// delete dummy interface
-	dummy := &netlink.Dummy{netlink.LinkAttrs{Name: resourceID}}
+	dummy := &netlink.Dummy{LinkAttrs: netlink.LinkAttrs{Name: resourceID}}
 	if err := netlink.LinkDel(dummy); err != nil {
 		fmt.Printf("Failed to delete link: %v", err)
 		return nil, err
@@ -426,7 +426,7 @@ func (s *Server) UpdateInterface(_ context.Context, in *pb.UpdateInterfaceReques
 	}
 	log.Printf("TODO: use resourceID=%v", resourceID)
 	// TODO: modify dummy interface
-	// dummy := &netlink.Dummy{netlink.LinkAttrs{Name: resourceID}}
+	// dummy := &netlink.Dummy{LinkAttrs: netlink.LinkAttrs{Name: resourceID}}
 	// if err := netlink.LinkModify(dummy); err != nil {
 	// 	fmt.Printf("Failed to delete link: %v", err)
 	// 	return nil, err
