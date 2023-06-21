@@ -59,9 +59,11 @@ func (s *Server) CreateVpc(_ context.Context, in *pb.CreateVpcRequest) (*pb.Vpc,
 		return obj, nil
 	}
 	// not found, so create a new one
-
-	// TODO: use netlink to create new VRF/VPC
-
+	vrf := &netlink.Vrf{netlink.LinkAttrs{Name: resourceID}, 2}
+	if err := netlink.LinkAdd(vrf); err != nil {
+		fmt.Printf("Failed to create link: %v", err)
+		return nil, err
+	}
 	// TODO: replace cloud -> evpn
 	response := proto.Clone(in.Vpc).(*pb.Vpc)
 	response.Status = &pb.VpcStatus{SubnetCount: 4}
@@ -93,9 +95,14 @@ func (s *Server) DeleteVpc(_ context.Context, in *pb.DeleteVpcRequest) (*emptypb
 		log.Printf("error: %v", err)
 		return nil, err
 	}
-
-	// TODO: use netlink to delete new VRF/VPC
-
+	resourceID := path.Base(obj.Name)
+	// use netlink to delete VRF/VPC
+	vrf := &netlink.Vrf{netlink.LinkAttrs{Name: resourceID}, 2}
+	if err := netlink.LinkDel(vrf); err != nil {
+		fmt.Printf("Failed to delete link: %v", err)
+		return nil, err
+	}
+	// remove from the Database
 	delete(s.Vpcs, obj.Name)
 	return &emptypb.Empty{}, nil
 }
