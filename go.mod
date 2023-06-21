@@ -3,7 +3,6 @@ module github.com/opiproject/opi-evpn-bridge
 go 1.19
 
 require (
-	github.com/milosgajdos/tenus v0.0.3
 	github.com/opiproject/opi-api v0.0.0-20230617012429-e33accd8da8d
 	github.com/vishvananda/netlink v1.1.0
 	go.einride.tech/aip v0.60.0
@@ -12,7 +11,6 @@ require (
 )
 
 require (
-	github.com/docker/libcontainer v2.2.1+incompatible // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/vishvananda/netns v0.0.0-20191106174202-0a2b9b5464df // indirect

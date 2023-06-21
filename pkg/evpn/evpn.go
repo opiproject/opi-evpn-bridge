@@ -11,7 +11,6 @@ import (
 	"path"
 	"strconv"
 
-	"github.com/milosgajdos/tenus"
 	"github.com/vishvananda/netlink"
 
 	pb "github.com/opiproject/opi-api/network/cloud/v1alpha1/gen/go"
@@ -219,34 +218,19 @@ func (s *Server) CreateSubnet(_ context.Context, in *pb.CreateSubnetRequest) (*p
 		return snet, nil
 	}
 	// not found, so create a new one
-
-	// Create a new network bridge
-	// It is equivalent of running: ip link add name ${ifcName} type bridge
-	br, err := tenus.NewBridgeWithName("mybridge")
-	if err != nil {
-		log.Fatal(err)
+	bridge := &netlink.Bridge{LinkAttrs: netlink.LinkAttrs{Name: resourceID}}
+	if err := netlink.LinkAdd(bridge); err != nil {
+		fmt.Printf("Failed to create link: %v", err)
+		return nil, err
 	}
-
-	// Bring the bridge up
-	if err = br.SetLinkUp(); err != nil {
-		fmt.Println(err)
+	if err := netlink.LinkSetUp(bridge); err != nil {
+		fmt.Printf("Failed to up link: %v", err)
+		return nil, err
 	}
+	// TODO: plug interfaces into this bridge ?
+	// eth1, _ := netlink.LinkByName("eth1")
+	// netlink.LinkSetMaster(eth1, bridge)
 
-	// Create a dummy link
-	dl, err := tenus.NewLink("mydummylink")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Add the dummy link into bridge
-	if err = br.AddSlaveIfc(dl.NetInterface()); err != nil {
-		log.Fatal(err)
-	}
-
-	// Bring the dummy link up
-	if err = dl.SetLinkUp(); err != nil {
-		fmt.Println(err)
-	}
 	// TODO: replace cloud -> evpn
 	response := proto.Clone(in.Subnet).(*pb.Subnet)
 	response.Status = &pb.SubnetStatus{HwIndex: 8, VnicCount: 88}
@@ -269,7 +253,7 @@ func (s *Server) DeleteSubnet(_ context.Context, in *pb.DeleteSubnetRequest) (*e
 		return nil, err
 	}
 	// fetch object from the database
-	snet, ok := s.Subnets[in.Name]
+	obj, ok := s.Subnets[in.Name]
 	if !ok {
 		if in.AllowMissing {
 			return &emptypb.Empty{}, nil
@@ -278,22 +262,26 @@ func (s *Server) DeleteSubnet(_ context.Context, in *pb.DeleteSubnetRequest) (*e
 		log.Printf("error: %v", err)
 		return nil, err
 	}
-	// Get an existing network bridge
-	br, err := tenus.BridgeFromName("mybridge")
+	resourceID := path.Base(obj.Name)
+	// use netlink to find VRF/VPC
+	vrf, err := netlink.LinkByName(resourceID)
 	if err != nil {
-		log.Fatal(err)
+		err := status.Errorf(codes.NotFound, "unable to find key %s", resourceID)
+		log.Printf("error: %v", err)
+		return nil, err
 	}
-	// Bring the bridge down
-	if err = br.SetLinkDown(); err != nil {
-		fmt.Println(err)
+	// bring link down
+	if err := netlink.LinkSetDown(vrf); err != nil {
+		fmt.Printf("Failed to up link: %v", err)
+		return nil, err
 	}
-	// Delete link
-	// $ sudo ip link delete br0 type bridge
-	if err = tenus.DeleteLink("mybridge"); err != nil {
-		log.Fatal(err)
+	// use netlink to delete VRF/VPC
+	if err := netlink.LinkDel(vrf); err != nil {
+		fmt.Printf("Failed to delete link: %v", err)
+		return nil, err
 	}
-
-	delete(s.Subnets, snet.Name)
+	// remove from the Database
+	delete(s.Subnets, obj.Name)
 	return &emptypb.Empty{}, nil
 }
 
@@ -444,7 +432,7 @@ func (s *Server) DeleteInterface(_ context.Context, in *pb.DeleteInterfaceReques
 		fmt.Printf("Failed to delete link: %v", err)
 		return nil, err
 	}
-	// remove from DB
+	// remove from the Database
 	delete(s.Interfaces, iface.Name)
 	return &emptypb.Empty{}, nil
 }
