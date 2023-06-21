@@ -223,9 +223,12 @@ func (s *Server) CreateSubnet(_ context.Context, in *pb.CreateSubnetRequest) (*p
 		fmt.Printf("Failed to create link: %v", err)
 		return nil, err
 	}
-	if err := netlink.LinkSetHardwareAddr(bridge, in.Subnet.Spec.VirtualRouterMac); err != nil {
-		fmt.Printf("Failed to create link: %v", err)
-		return nil, err
+	if len(in.Subnet.Spec.VirtualRouterMac) > 0 {
+		mac := in.Subnet.Spec.VirtualRouterMac
+		if err := netlink.LinkSetHardwareAddr(bridge, mac); err != nil {
+			fmt.Printf("Failed to set MAC on link: %v", err)
+			return nil, err
+		}
 	}
 	if err := netlink.LinkSetUp(bridge); err != nil {
 		fmt.Printf("Failed to up link: %v", err)
