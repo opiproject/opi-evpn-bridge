@@ -372,6 +372,15 @@ services:
       /entrypoint.sh ls localhost:50151 opi_api.network.cloud.v1alpha1.CloudInfraService.DeleteInterface -l && \
       /entrypoint.sh ls localhost:50151 opi_api.network.cloud.v1alpha1.CloudInfraService.DeleteSubnet -l && \
       /entrypoint.sh ls localhost:50151 opi_api.network.cloud.v1alpha1.CloudInfraService.DeleteVpc -l && \
+      /entrypoint.sh call --json_input --json_output localhost:50151 CreateVpc "{\"vpc\" : {\"spec\" : {\"v4_route_table_name_ref\" : \"1000\"} }, \"vpc_id\" : \"blue1\", \"parent\" : \"todo\" }" && \
+      /entrypoint.sh call --json_input --json_output localhost:50151 CreateVpc "{\"vpc\" : {\"spec\" : {\"v4_route_table_name_ref\" : \"1001\"} }, \"vpc_id\" : \"red1\", \"parent\" : \"todo\" }" && \
+      /entrypoint.sh call --json_input --json_output localhost:50151 CreateVpc "{\"vpc\" : {\"spec\" : {\"v4_route_table_name_ref\" : \"1002\"} }, \"vpc_id\" : \"yellow1\", \"parent\" : \"todo\" }" && \
+      /entrypoint.sh call --json_input --json_output localhost:50151 GetVpc    "{\"name\" : \"//network.opiproject.org/vpcs/blue1\" }" && \
+      /entrypoint.sh call --json_input --json_output localhost:50151 GetVpc    "{\"name\" : \"//network.opiproject.org/vpcs/red1\" }" && \
+      /entrypoint.sh call --json_input --json_output localhost:50151 GetVpc    "{\"name\" : \"//network.opiproject.org/vpcs/yellow1\" }" && \
+      /entrypoint.sh call --json_input --json_output localhost:50151 DeleteVpc "{\"name\" : \"//network.opiproject.org/vpcs/blue1\" }" && \
+      /entrypoint.sh call --json_input --json_output localhost:50151 DeleteVpc "{\"name\" : \"//network.opiproject.org/vpcs/red1\" }" && \
+      /entrypoint.sh call --json_input --json_output localhost:50151 DeleteVpc "{\"name\" : \"//network.opiproject.org/vpcs/yellow1\" }" && \
       echo done'
 
   host2-leaf2:
