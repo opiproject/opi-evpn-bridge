@@ -6,8 +6,10 @@ package evpn
 
 import (
 	"context"
+	"encoding/binary"
 	"fmt"
 	"log"
+	"net"
 	"path"
 	"strconv"
 
@@ -231,9 +233,10 @@ func (s *Server) CreateSubnet(_ context.Context, in *pb.CreateSubnetRequest) (*p
 		}
 	}
 	if in.Subnet.Spec.Ipv4VirtualRouterIp > 0 {
-		// TODO: remove hard-coded and check err
-		addr, _ := netlink.ParseAddr("169.254.169.254/32")
-		// addr := &netlink.Addr{IPNet: &net.IPNet{IP: in.Subnet.Spec.Ipv4VirtualRouterIp, Mask: in.Subnet.Spec.V4Prefix}}
+		myip := make(net.IP, 4)
+		binary.BigEndian.PutUint32(myip, in.Subnet.Spec.Ipv4VirtualRouterIp)
+		addr := &netlink.Addr{IPNet: &net.IPNet{IP: myip, Mask: net.CIDRMask(24, 32)}}
+		// TODO: in.Subnet.Spec.V4Prefix
 		if err := netlink.AddrAdd(bridge, addr); err != nil {
 			fmt.Printf("Failed to set IP on link: %v", err)
 			return nil, err
