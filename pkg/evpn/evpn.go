@@ -35,6 +35,15 @@ type Server struct {
 	Vpcs       map[string]*pb.Vpc
 }
 
+// NewServer creates initialized instance of EVPN server
+func NewServer() *Server {
+	return &Server{
+		Subnets:    make(map[string]*pb.Subnet),
+		Interfaces: make(map[string]*pb.Interface),
+		Vpcs:       make(map[string]*pb.Vpc),
+	}
+}
+
 // CreateInterface executes the creation of the interface
 func (s *Server) CreateInterface(_ context.Context, in *pb.CreateInterfaceRequest) (*pb.Interface, error) {
 	log.Printf("CreateInterface: Received from client: %v", in)

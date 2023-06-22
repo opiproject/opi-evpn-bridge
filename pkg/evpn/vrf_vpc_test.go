@@ -68,11 +68,7 @@ func Test_CreateVpc(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			// start GRPC mockup server
 			ctx := context.Background()
-			opi := &Server{
-				Subnets:    make(map[string]*pb.Subnet),
-				Interfaces: make(map[string]*pb.Interface),
-				Vpcs:       make(map[string]*pb.Vpc),
-			}
+			opi := NewServer()
 			conn, err := grpc.DialContext(ctx,
 				"",
 				grpc.WithTransportCredentials(insecure.NewCredentials()),
@@ -163,11 +159,7 @@ func Test_DeleteVpc(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			// start GRPC mockup server
 			ctx := context.Background()
-			opi := &Server{
-				Subnets:    make(map[string]*pb.Subnet),
-				Interfaces: make(map[string]*pb.Interface),
-				Vpcs:       make(map[string]*pb.Vpc),
-			}
+			opi := NewServer()
 			conn, err := grpc.DialContext(ctx,
 				"",
 				grpc.WithTransportCredentials(insecure.NewCredentials()),
@@ -240,11 +232,7 @@ func Test_GetVpc(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			// start GRPC mockup server
 			ctx := context.Background()
-			opi := &Server{
-				Subnets:    make(map[string]*pb.Subnet),
-				Interfaces: make(map[string]*pb.Interface),
-				Vpcs:       make(map[string]*pb.Vpc),
-			}
+			opi := NewServer()
 			conn, err := grpc.DialContext(ctx,
 				"",
 				grpc.WithTransportCredentials(insecure.NewCredentials()),

@@ -10,9 +10,9 @@ import (
 	"log"
 	"net"
 
-	server "github.com/opiproject/opi-evpn-bridge/pkg/evpn"
-
 	pb "github.com/opiproject/opi-api/network/cloud/v1alpha1/gen/go"
+	"github.com/opiproject/opi-evpn-bridge/pkg/evpn"
+
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 )
@@ -28,13 +28,10 @@ func main() {
 		log.Fatalf("failed to listen: %v", err)
 	}
 	s := grpc.NewServer()
+	opi := evpn.NewServer()
 
 	// TODO: replace cloud -> evpn
-	pb.RegisterCloudInfraServiceServer(s, &server.Server{
-		Subnets:    make(map[string]*pb.Subnet),
-		Interfaces: make(map[string]*pb.Interface),
-		Vpcs:       make(map[string]*pb.Vpc),
-	})
+	pb.RegisterCloudInfraServiceServer(s, opi)
 
 	reflection.Register(s)
 
