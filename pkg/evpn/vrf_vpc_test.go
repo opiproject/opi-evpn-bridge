@@ -12,12 +12,11 @@ import (
 	"reflect"
 	"testing"
 
-	"google.golang.org/protobuf/proto"
-
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/emptypb"
 
 	pb "github.com/opiproject/opi-api/network/cloud/v1alpha1/gen/go"
@@ -54,14 +53,14 @@ func Test_CreateVpc(t *testing.T) {
 			fmt.Sprintf("user-settable ID must only contain lowercase, numbers and hyphens (%v)", "got: 'C' in position 0"),
 			false,
 		},
-		// "already exists": {
-		// 	testVpcID,
-		// 	&testVpc,
-		// 	&testVpc,
-		// 	codes.OK,
-		// 	"",
-		// 	true,
-		// },
+		"already exists": {
+			testVpcID,
+			&testVpc,
+			&testVpc,
+			codes.OK,
+			"",
+			true,
+		},
 	}
 
 	// run tests
@@ -69,7 +68,15 @@ func Test_CreateVpc(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			// start GRPC mockup server
 			ctx := context.Background()
-			conn, err := grpc.DialContext(ctx, "", grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithContextDialer(dialer()))
+			opi := &Server{
+				Subnets:    make(map[string]*pb.Subnet),
+				Interfaces: make(map[string]*pb.Interface),
+				Vpcs:       make(map[string]*pb.Vpc),
+			}
+			conn, err := grpc.DialContext(ctx,
+				"",
+				grpc.WithTransportCredentials(insecure.NewCredentials()),
+				grpc.WithContextDialer(dialer(opi)))
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -82,7 +89,7 @@ func Test_CreateVpc(t *testing.T) {
 			client := pb.NewCloudInfraServiceClient(conn)
 
 			if tt.exist {
-				// s.Vpcs[testVpcName] = &testVpc
+				opi.Vpcs[testVpcName] = &testVpc
 			}
 			if tt.out != nil {
 				tt.out.Name = testVpcName
@@ -156,7 +163,15 @@ func Test_DeleteVpc(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			// start GRPC mockup server
 			ctx := context.Background()
-			conn, err := grpc.DialContext(ctx, "", grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithContextDialer(dialer()))
+			opi := &Server{
+				Subnets:    make(map[string]*pb.Subnet),
+				Interfaces: make(map[string]*pb.Interface),
+				Vpcs:       make(map[string]*pb.Vpc),
+			}
+			conn, err := grpc.DialContext(ctx,
+				"",
+				grpc.WithTransportCredentials(insecure.NewCredentials()),
+				grpc.WithContextDialer(dialer(opi)))
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -169,7 +184,7 @@ func Test_DeleteVpc(t *testing.T) {
 			client := pb.NewCloudInfraServiceClient(conn)
 
 			fname1 := resourceIDToVolumeName(tt.in)
-			// s.Vpcs[testVpcName] = &testVpc
+			opi.Vpcs[testVpcName] = &testVpc
 
 			request := &pb.DeleteVpcRequest{Name: fname1, AllowMissing: tt.missing}
 			response, err := client.DeleteVpc(ctx, request)
@@ -225,7 +240,15 @@ func Test_GetVpc(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			// start GRPC mockup server
 			ctx := context.Background()
-			conn, err := grpc.DialContext(ctx, "", grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithContextDialer(dialer()))
+			opi := &Server{
+				Subnets:    make(map[string]*pb.Subnet),
+				Interfaces: make(map[string]*pb.Interface),
+				Vpcs:       make(map[string]*pb.Vpc),
+			}
+			conn, err := grpc.DialContext(ctx,
+				"",
+				grpc.WithTransportCredentials(insecure.NewCredentials()),
+				grpc.WithContextDialer(dialer(opi)))
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -237,7 +260,7 @@ func Test_GetVpc(t *testing.T) {
 			}(conn)
 			client := pb.NewCloudInfraServiceClient(conn)
 
-			// s.Vpcs[testVpcID] = &testVpc
+			opi.Vpcs[testVpcID] = &testVpc
 
 			request := &pb.GetVpcRequest{Name: tt.in}
 			response, err := client.GetVpc(ctx, request)

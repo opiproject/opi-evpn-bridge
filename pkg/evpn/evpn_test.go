@@ -17,10 +17,10 @@ import (
 
 // TODO: move test infrastructure code to a separate (test/server) package to avoid duplication
 
-func dialer() func(context.Context, string) (net.Conn, error) {
+func dialer(opi *Server) func(context.Context, string) (net.Conn, error) {
 	listener := bufconn.Listen(1024 * 1024)
 	server := grpc.NewServer()
-	pb.RegisterCloudInfraServiceServer(server, &Server{})
+	pb.RegisterCloudInfraServiceServer(server, opi)
 
 	go func() {
 		if err := server.Serve(listener); err != nil {
