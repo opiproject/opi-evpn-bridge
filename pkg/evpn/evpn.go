@@ -414,6 +414,35 @@ func (s *Server) CreateInterface(_ context.Context, in *pb.CreateInterfaceReques
 		fmt.Printf("Failed to create link: %v", err)
 		return nil, err
 	}
+	switch u := in.Interface.Spec.Ifinfo.(type) {
+	case *pb.InterfaceSpec_ControlIfSpec:
+		// set MAC
+		mac := u.ControlIfSpec.MacAddress
+		if len(mac) > 0 {
+			if err := netlink.LinkSetHardwareAddr(dummy, mac); err != nil {
+				fmt.Printf("Failed to set MAC on link: %v", err)
+				return nil, err
+			}
+		}
+		// set IPv4
+		prefix := u.ControlIfSpec.Prefix
+		switch a := prefix.Addr.V4OrV6.(type) {
+		case *pc.IPAddress_V4Addr:
+			if prefix.Addr.Af == pc.IpAf_IP_AF_INET && prefix.Len > 0 && a.V4Addr > 0 {
+				myip := make(net.IP, 4)
+				binary.BigEndian.PutUint32(myip, a.V4Addr)
+				addr := &netlink.Addr{IPNet: &net.IPNet{IP: myip, Mask: net.CIDRMask(int(prefix.Len), 32)}}
+				if err := netlink.AddrAdd(dummy, addr); err != nil {
+					fmt.Printf("Failed to set IP on link: %v", err)
+					return nil, err
+				}
+			}
+		default:
+			fmt.Println("No matching operations")
+		}
+	default:
+		fmt.Println("No matching operations")
+	}
 	if err := netlink.LinkSetUp(dummy); err != nil {
 		fmt.Printf("Failed to up link: %v", err)
 		return nil, err
