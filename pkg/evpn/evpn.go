@@ -236,11 +236,10 @@ func (s *Server) CreateSubnet(_ context.Context, in *pb.CreateSubnetRequest) (*p
 		}
 	}
 	// set IPv4
-	if in.Subnet.Spec.Ipv4VirtualRouterIp > 0 {
+	if in.Subnet.Spec.V4Prefix.Addr > 0 && in.Subnet.Spec.V4Prefix.Len > 0 {
 		myip := make(net.IP, 4)
-		binary.BigEndian.PutUint32(myip, in.Subnet.Spec.Ipv4VirtualRouterIp)
-		addr := &netlink.Addr{IPNet: &net.IPNet{IP: myip, Mask: net.CIDRMask(24, 32)}}
-		// TODO: in.Subnet.Spec.V4Prefix
+		binary.BigEndian.PutUint32(myip, in.Subnet.Spec.V4Prefix.Addr)
+		addr := &netlink.Addr{IPNet: &net.IPNet{IP: myip, Mask: net.CIDRMask(int(in.Subnet.Spec.V4Prefix.Len), 32)}}
 		if err := netlink.AddrAdd(bridge, addr); err != nil {
 			fmt.Printf("Failed to set IP on link: %v", err)
 			return nil, err
