@@ -225,6 +225,7 @@ func (s *Server) CreateSubnet(_ context.Context, in *pb.CreateSubnetRequest) (*p
 		fmt.Printf("Failed to create link: %v", err)
 		return nil, err
 	}
+	// set MAC
 	if len(in.Subnet.Spec.VirtualRouterMac) > 0 {
 		mac := in.Subnet.Spec.VirtualRouterMac
 		if err := netlink.LinkSetHardwareAddr(bridge, mac); err != nil {
@@ -232,6 +233,7 @@ func (s *Server) CreateSubnet(_ context.Context, in *pb.CreateSubnetRequest) (*p
 			return nil, err
 		}
 	}
+	// set IPv4
 	if in.Subnet.Spec.Ipv4VirtualRouterIp > 0 {
 		myip := make(net.IP, 4)
 		binary.BigEndian.PutUint32(myip, in.Subnet.Spec.Ipv4VirtualRouterIp)
@@ -242,14 +244,28 @@ func (s *Server) CreateSubnet(_ context.Context, in *pb.CreateSubnetRequest) (*p
 			return nil, err
 		}
 	}
+	// set UP
 	if err := netlink.LinkSetUp(bridge); err != nil {
 		fmt.Printf("Failed to up link: %v", err)
 		return nil, err
 	}
 	// TODO: plug interfaces into this bridge ?
-	// eth1, _ := netlink.LinkByName("eth1")
-	// netlink.LinkSetMaster(eth1, bridge)
-
+	// vpc, ok := s.Vpcs[in.Subnet.Spec.VpcNameRef]
+	// if !ok {
+	// 	err := status.Errorf(codes.NotFound, "unable to find key %s", in.Subnet.Spec.VpcNameRef)
+	// 	log.Printf("error: %v", err)
+	// 	return nil, err
+	// }
+	// iface, err := netlink.LinkByName(path.Base(vpc.Name))
+	// if err != nil {
+	// 	err := status.Errorf(codes.NotFound, "unable to find key %s", vpc.Name)
+	// 	log.Printf("error: %v", err)
+	// 	return nil, err
+	// }
+	// if err := netlink.LinkSetMaster(iface, bridge); err != nil {
+	// 	fmt.Printf("Failed to add iface to bridge: %v", err)
+	// 	return nil, err
+	// }
 	// TODO: replace cloud -> evpn
 	response := proto.Clone(in.Subnet).(*pb.Subnet)
 	response.Status = &pb.SubnetStatus{HwIndex: 8, VnicCount: 88}
