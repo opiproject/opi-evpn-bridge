@@ -226,8 +226,8 @@ func (s *Server) CreateSubnet(_ context.Context, in *pb.CreateSubnetRequest) (*p
 		return nil, err
 	}
 	// set MAC
-	if len(in.Subnet.Spec.VirtualRouterMac) > 0 {
-		mac := in.Subnet.Spec.VirtualRouterMac
+	mac := in.Subnet.Spec.VirtualRouterMac
+	if len(mac) > 0 {
 		if err := netlink.LinkSetHardwareAddr(bridge, mac); err != nil {
 			fmt.Printf("Failed to set MAC on link: %v", err)
 			return nil, err
