@@ -22,13 +22,9 @@ import (
 	pb "github.com/opiproject/opi-api/network/cloud/v1alpha1/gen/go"
 )
 
-func resourceIDToVolumeName(resourceID string) string {
-	return fmt.Sprintf("//network.opiproject.org/vpcs/%s", resourceID)
-}
-
 var (
 	testVpcID   = "opi-vpc8"
-	testVpcName = resourceIDToVolumeName(testVpcID)
+	testVpcName = resourceIDToVolumeName("vpcs", testVpcID)
 	testVpc     = pb.Vpc{
 		Spec: &pb.VpcSpec{
 			V4RouteTableNameRef: "1000",
@@ -135,7 +131,7 @@ func Test_DeleteVpc(t *testing.T) {
 			"unknown-id",
 			nil,
 			codes.NotFound,
-			fmt.Sprintf("unable to find key %v", resourceIDToVolumeName("unknown-id")),
+			fmt.Sprintf("unable to find key %v", resourceIDToVolumeName("vpcs", "unknown-id")),
 			false,
 		},
 		"unknown key with missing allowed": {
@@ -175,7 +171,7 @@ func Test_DeleteVpc(t *testing.T) {
 			}(conn)
 			client := pb.NewCloudInfraServiceClient(conn)
 
-			fname1 := resourceIDToVolumeName(tt.in)
+			fname1 := resourceIDToVolumeName("vpcs", tt.in)
 			opi.Vpcs[testVpcName] = &testVpc
 
 			request := &pb.DeleteVpcRequest{Name: fname1, AllowMissing: tt.missing}

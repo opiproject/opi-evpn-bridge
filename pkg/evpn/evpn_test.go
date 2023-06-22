@@ -6,6 +6,7 @@ package evpn
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net"
 
@@ -31,4 +32,8 @@ func dialer(opi *Server) func(context.Context, string) (net.Conn, error) {
 	return func(context.Context, string) (net.Conn, error) {
 		return listener.Dial()
 	}
+}
+
+func resourceIDToVolumeName(container string, resourceID string) string {
+	return fmt.Sprintf("//network.opiproject.org/%s/%s", container, resourceID)
 }
