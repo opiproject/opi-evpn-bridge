@@ -54,104 +54,6 @@ services:
             sed -i "s/bgpdd=no/bgpd=yes/g" /etc/frr/daemons && \
             ip link add name lo0 type dummy && \
             ifconfig lo0 10.0.0.2 netmask 255.255.255.255 up && \
-            ip link add blue type vrf table 1000 && \
-            ip link set blue up && \
-            ip link add red type vrf table 1001 && \
-            ip link set red up && \
-            ip link add yellow type vrf table 1002 && \
-            ip link set yellow up && \
-
-            ip link add br100 type bridge && \
-            ip link set br100 master blue addrgenmode none && \
-            ip link set br100 addr aa:bb:cc:00:00:01 && \
-            ip link add vni100 type vxlan local 10.0.0.2 dstport 4789 id 100 nolearning && \
-            ip link set vni100 master br100 addrgenmode none && \
-            ip link set vni100 type bridge_slave neigh_suppress on learning off && \
-            ip link set vni100 up && \
-            ip link set br100 up && \
-
-            ip link add br101 type bridge && \
-            ip link set br101 master red addrgenmode none && \
-            ip link set br101 addr aa:bb:cc:00:00:02 && \
-            ip link add vni101 type vxlan local 10.0.0.2 dstport 4789 id 101 nolearning && \
-            ip link set vni101 master br101 addrgenmode none && \
-            ip link set vni101 type bridge_slave neigh_suppress on learning off && \
-            ip link set vni101 up && \
-            ip link set br101 up && \
-
-            ip link add br102 type bridge && \
-            ip link set br102 master yellow addrgenmode none && \
-            ip link set br102 addr aa:bb:cc:00:00:03 && \
-            ip link add vni102 type vxlan local 10.0.0.2 dstport 4789 id 102 nolearning && \
-            ip link set vni102 master br102 addrgenmode none && \
-            ip link set vni102 type bridge_slave neigh_suppress on learning off && \
-            ip link set vni102 up && \
-            ip link set br102 up && \
-
-            ip link add br10 type bridge && \
-            ip link set br10 addr aa:bb:cc:00:00:11 && \
-            ip link add link eth1 name eth1.10 type vlan id 10 && \
-            ip link set eth1 up && ip addr flush dev eth1 && \
-            ip link set eth1.10 up && \
-            ip link set eth1.10 master br10 addrgenmode none && \
-            ip link add vni10 type vxlan local 10.0.0.2 dstport 4789 id 10 nolearning && \
-            ip link set vni10 master br10 addrgenmode none && \
-            ip link set vni10 type bridge_slave neigh_suppress on learning off && \
-            ip link set vni10 up && \
-            ip link set br10 up && \
-
-            ip link add br20 type bridge && \
-            ip link set br20 master blue addrgenmode none && \
-            ip link set br20 addr aa:bb:cc:00:00:21 && \
-            ip link add link eth2 name eth2.20 type vlan id 20 && \
-            ip link set eth2 up && ip addr flush dev eth2 && \
-            ip link set eth2.20 up && \
-            ip link set eth2.20 master br20 addrgenmode none && \
-            ip addr add 20.20.20.1/24 dev br20 && \
-            ip link add vni20 type vxlan local 10.0.0.2 dstport 4789 id 20 nolearning && \
-            ip link set vni20 master br20 addrgenmode none && \
-            ip link set vni20 type bridge_slave neigh_suppress on learning off && \
-            ip link set vni20 up && \
-            ip link set br20 up && \
-
-            ip link add br30 type bridge && \
-            ip link set br30 master blue addrgenmode none && \
-            ip link set br30 addr aa:bb:cc:00:00:31 && \
-            ip addr add 30.30.30.1/24 dev br30 && \
-            ip link add vni30 type vxlan local 10.0.0.2 dstport 4789 id 30 nolearning && \
-            ip link set vni30 master br30 addrgenmode none && \
-            ip link set vni30 type bridge_slave neigh_suppress on learning off && \
-            ip link set vni30 up && \
-            ip link set br30 up && \
-
-            ip link add br40 type bridge && \
-            ip link set br40 master red addrgenmode none && \
-            ip link set br40 addr aa:bb:cc:00:00:41 && \
-            ip link add link eth3 name eth3.40 type vlan id 40 && \
-            ip link set eth3 up && ip addr flush dev eth3 && \
-            ip link set eth3.40 up && \
-            ip link set eth3.40 master br40 addrgenmode none && \
-            ip addr add 40.40.40.1/24 dev br40 && \
-            ip link add vni40 type vxlan local 10.0.0.2 dstport 4789 id 40 nolearning && \
-            ip link set vni40 master br40 addrgenmode none && \
-            ip link set vni40 type bridge_slave neigh_suppress on learning off && \
-            ip link set vni40 up && \
-            ip link set br40 up && \
-
-            ip link add br50 type bridge && \
-            ip link set br50 master yellow addrgenmode none && \
-            ip link set br50 addr aa:bb:cc:00:00:42 && ip addr flush dev eth4 && \
-            ip link add link eth4 name eth4.50 type vlan id 50 && \
-            ip link set eth4.50 up && \
-            ip link set eth4.50 master br50 addrgenmode none && \
-            ip addr add 50.50.50.1/24 dev br50 && \
-            ip link add vni50 type vxlan local 10.0.0.2 dstport 4789 id 50 nolearning && \
-            ip link set vni50 master br50 addrgenmode none && \
-            ip link set vni50 type bridge_slave neigh_suppress on learning off && \
-            ip link set vni50 up && \
-            ip link set br50 up && \
-
-
             /etc/init.d/frr stop && \
             /usr/lib/frr/watchfrr -d -F traditional zebra bgpd staticd && \
             sleep infinity'
@@ -355,6 +257,8 @@ services:
 
   testgrpc:
     image: docker.io/namely/grpc-cli
+    cap_add:
+      - NET_ADMIN
     network_mode: service:leaf1
     depends_on:
       opi-evpn-bridge:
@@ -390,6 +294,103 @@ services:
       /entrypoint.sh call --json_input --json_output localhost:50151 DeleteSubnet "{\"name\" : \"//network.opiproject.org/subnets/br200\" }" && \
       /entrypoint.sh call --json_input --json_output localhost:50151 DeleteSubnet "{\"name\" : \"//network.opiproject.org/subnets/br201\" }" && \
       /entrypoint.sh call --json_input --json_output localhost:50151 DeleteSubnet "{\"name\" : \"//network.opiproject.org/subnets/br202\" }" && \
+      apt update && apt install iproute2 -y && \
+      ip link add blue type vrf table 1000 && \
+      ip link set blue up && \
+      ip link add red type vrf table 1001 && \
+      ip link set red up && \
+      ip link add yellow type vrf table 1002 && \
+      ip link set yellow up && \
+
+      ip link add br100 type bridge && \
+      ip link set br100 master blue addrgenmode none && \
+      ip link set br100 addr aa:bb:cc:00:00:01 && \
+      ip link add vni100 type vxlan local 10.0.0.2 dstport 4789 id 100 nolearning && \
+      ip link set vni100 master br100 addrgenmode none && \
+      ip link set vni100 type bridge_slave neigh_suppress on learning off && \
+      ip link set vni100 up && \
+      ip link set br100 up && \
+
+      ip link add br101 type bridge && \
+      ip link set br101 master red addrgenmode none && \
+      ip link set br101 addr aa:bb:cc:00:00:02 && \
+      ip link add vni101 type vxlan local 10.0.0.2 dstport 4789 id 101 nolearning && \
+      ip link set vni101 master br101 addrgenmode none && \
+      ip link set vni101 type bridge_slave neigh_suppress on learning off && \
+      ip link set vni101 up && \
+      ip link set br101 up && \
+
+      ip link add br102 type bridge && \
+      ip link set br102 master yellow addrgenmode none && \
+      ip link set br102 addr aa:bb:cc:00:00:03 && \
+      ip link add vni102 type vxlan local 10.0.0.2 dstport 4789 id 102 nolearning && \
+      ip link set vni102 master br102 addrgenmode none && \
+      ip link set vni102 type bridge_slave neigh_suppress on learning off && \
+      ip link set vni102 up && \
+      ip link set br102 up && \
+
+      ip link add br10 type bridge && \
+      ip link set br10 addr aa:bb:cc:00:00:11 && \
+      ip link add link eth1 name eth1.10 type vlan id 10 && \
+      ip link set eth1 up && ip addr flush dev eth1 && \
+      ip link set eth1.10 up && \
+      ip link set eth1.10 master br10 addrgenmode none && \
+      ip link add vni10 type vxlan local 10.0.0.2 dstport 4789 id 10 nolearning && \
+      ip link set vni10 master br10 addrgenmode none && \
+      ip link set vni10 type bridge_slave neigh_suppress on learning off && \
+      ip link set vni10 up && \
+      ip link set br10 up && \
+
+      ip link add br20 type bridge && \
+      ip link set br20 master blue addrgenmode none && \
+      ip link set br20 addr aa:bb:cc:00:00:21 && \
+      ip link add link eth2 name eth2.20 type vlan id 20 && \
+      ip link set eth2 up && ip addr flush dev eth2 && \
+      ip link set eth2.20 up && \
+      ip link set eth2.20 master br20 addrgenmode none && \
+      ip addr add 20.20.20.1/24 dev br20 && \
+      ip link add vni20 type vxlan local 10.0.0.2 dstport 4789 id 20 nolearning && \
+      ip link set vni20 master br20 addrgenmode none && \
+      ip link set vni20 type bridge_slave neigh_suppress on learning off && \
+      ip link set vni20 up && \
+      ip link set br20 up && \
+
+      ip link add br30 type bridge && \
+      ip link set br30 master blue addrgenmode none && \
+      ip link set br30 addr aa:bb:cc:00:00:31 && \
+      ip addr add 30.30.30.1/24 dev br30 && \
+      ip link add vni30 type vxlan local 10.0.0.2 dstport 4789 id 30 nolearning && \
+      ip link set vni30 master br30 addrgenmode none && \
+      ip link set vni30 type bridge_slave neigh_suppress on learning off && \
+      ip link set vni30 up && \
+      ip link set br30 up && \
+
+      ip link add br40 type bridge && \
+      ip link set br40 master red addrgenmode none && \
+      ip link set br40 addr aa:bb:cc:00:00:41 && \
+      ip link add link eth3 name eth3.40 type vlan id 40 && \
+      ip link set eth3 up && ip addr flush dev eth3 && \
+      ip link set eth3.40 up && \
+      ip link set eth3.40 master br40 addrgenmode none && \
+      ip addr add 40.40.40.1/24 dev br40 && \
+      ip link add vni40 type vxlan local 10.0.0.2 dstport 4789 id 40 nolearning && \
+      ip link set vni40 master br40 addrgenmode none && \
+      ip link set vni40 type bridge_slave neigh_suppress on learning off && \
+      ip link set vni40 up && \
+      ip link set br40 up && \
+
+      ip link add br50 type bridge && \
+      ip link set br50 master yellow addrgenmode none && \
+      ip link set br50 addr aa:bb:cc:00:00:42 && ip addr flush dev eth4 && \
+      ip link add link eth4 name eth4.50 type vlan id 50 && \
+      ip link set eth4.50 up && \
+      ip link set eth4.50 master br50 addrgenmode none && \
+      ip addr add 50.50.50.1/24 dev br50 && \
+      ip link add vni50 type vxlan local 10.0.0.2 dstport 4789 id 50 nolearning && \
+      ip link set vni50 master br50 addrgenmode none && \
+      ip link set vni50 type bridge_slave neigh_suppress on learning off && \
+      ip link set vni50 up && \
+      ip link set br50 up && \
       echo done'
 
   host2-leaf2:
