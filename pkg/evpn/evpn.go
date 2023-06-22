@@ -16,6 +16,8 @@ import (
 	"github.com/vishvananda/netlink"
 
 	pb "github.com/opiproject/opi-api/network/cloud/v1alpha1/gen/go"
+	pc "github.com/opiproject/opi-api/network/opinetcommon/v1alpha1/gen/go"
+
 	"go.einride.tech/aip/fieldbehavior"
 	"go.einride.tech/aip/fieldmask"
 	"go.einride.tech/aip/resourceid"
