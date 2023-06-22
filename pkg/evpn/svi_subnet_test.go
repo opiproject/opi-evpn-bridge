@@ -21,7 +21,7 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 
 	pb "github.com/opiproject/opi-api/network/cloud/v1alpha1/gen/go"
-	// pc "github.com/opiproject/opi-api/network/opinetcommon/v1alpha1/gen/go"
+	pc "github.com/opiproject/opi-api/network/opinetcommon/v1alpha1/gen/go"
 )
 
 var (
@@ -29,11 +29,11 @@ var (
 	testSubnetName = resourceIDToVolumeName("subnets", testSubnetID)
 	testSubnet     = pb.Subnet{
 		Spec: &pb.SubnetSpec{
-			// VirtualRouterMac: []byte("qrvMAAAB"),
-			// V4Prefix: &pc.IPv4Prefix{
-			// 	Addr: 336860161,
-			// 	Len:  24,
-			// },
+			VirtualRouterMac: []byte("qrvMAAAB"),
+			V4Prefix: &pc.IPv4Prefix{
+				Addr: 336860161,
+				Len:  24,
+			},
 		},
 	}
 )
