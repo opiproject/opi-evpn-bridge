@@ -87,9 +87,9 @@ services:
             ip link set blue up && \
             ip link set eth1 master blue && \
 
-            ip link add red type vrf table 1001 && \
-            ip link set red up && \
-            ip link set eth2 master red && \
+            ip link add green type vrf table 1001 && \
+            ip link set green up && \
+            ip link set eth2 master green && \
 
             ip link add yellow type vrf table 1002 && \
             ip link set yellow up && \
@@ -105,7 +105,7 @@ services:
             ip link set br100 up && \
 
             ip link add br101 type bridge && \
-            ip link set br101 master red addrgenmode none && \
+            ip link set br101 master green addrgenmode none && \
             ip link set br101 addr aa:bb:cc:00:00:44 && \
             ip link add vni101 type vxlan local 10.0.0.3 dstport 4789 id 101 nolearning && \
             ip link set vni101 master br101 addrgenmode none && \
@@ -149,8 +149,8 @@ services:
             ifconfig lo0 10.0.0.4 netmask 255.255.255.255 up && \
             ip link add blue type vrf table 1000 && \
             ip link set blue up && \
-            ip link add red type vrf table 1001 && \
-            ip link set red up && \
+            ip link add green type vrf table 1001 && \
+            ip link set green up && \
             ip link add yellow type vrf table 1002 && \
             ip link set yellow up && \
 
@@ -164,7 +164,7 @@ services:
             ip link set br100 up && \
 
             ip link add br101 type bridge && \
-            ip link set br101 master red addrgenmode none && \
+            ip link set br101 master green addrgenmode none && \
             ip link set br101 addr aa:bb:cc:00:00:03 && \
             ip link add vni101 type vxlan local 10.0.0.4 dstport 4789 id 101 nolearning && \
             ip link set vni101 master br101 addrgenmode none && \
@@ -218,7 +218,7 @@ services:
             ip link set br30 up && \
 
             ip link add br40 type bridge && \
-            ip link set br40 master red addrgenmode none && \
+            ip link set br40 master green addrgenmode none && \
             ip link set br40 addr aa:bb:cc:00:00:25 && \
             ip addr add 40.40.40.1/24 dev br40 && \
             ip link add vni40 type vxlan local 10.0.0.4 dstport 4789 id 40 nolearning && \
@@ -229,7 +229,7 @@ services:
 
 
             ip link add br50 type bridge && \
-            ip link set br50 master red addrgenmode none && \
+            ip link set br50 master green addrgenmode none && \
             ip link set br50 addr aa:bb:cc:00:00:26 && \
             ip addr add 50.50.50.1/24 dev br50 && \
             ip link add vni50 type vxlan local 10.0.0.4 dstport 4789 id 50 nolearning && \
@@ -277,13 +277,13 @@ services:
       /entrypoint.sh ls localhost:50151 opi_api.network.cloud.v1alpha1.CloudInfraService.DeleteSubnet -l && \
       /entrypoint.sh ls localhost:50151 opi_api.network.cloud.v1alpha1.CloudInfraService.DeleteVpc -l && \
       /entrypoint.sh call --json_input --json_output localhost:50151 CreateVpc    "{\"vpc\" : {\"spec\" : {\"v4_route_table_name_ref\" : \"2000\"} }, \"vpc_id\" : \"blue1\", \"parent\" : \"todo\" }" && \
-      /entrypoint.sh call --json_input --json_output localhost:50151 CreateVpc    "{\"vpc\" : {\"spec\" : {\"v4_route_table_name_ref\" : \"2001\"} }, \"vpc_id\" : \"red1\", \"parent\" : \"todo\" }" && \
+      /entrypoint.sh call --json_input --json_output localhost:50151 CreateVpc    "{\"vpc\" : {\"spec\" : {\"v4_route_table_name_ref\" : \"2001\"} }, \"vpc_id\" : \"green1\", \"parent\" : \"todo\" }" && \
       /entrypoint.sh call --json_input --json_output localhost:50151 CreateVpc    "{\"vpc\" : {\"spec\" : {\"v4_route_table_name_ref\" : \"2002\"} }, \"vpc_id\" : \"yellow1\", \"parent\" : \"todo\" }" && \
       /entrypoint.sh call --json_input --json_output localhost:50151 GetVpc       "{\"name\" : \"//network.opiproject.org/vpcs/blue1\" }" && \
-      /entrypoint.sh call --json_input --json_output localhost:50151 GetVpc       "{\"name\" : \"//network.opiproject.org/vpcs/red1\" }" && \
+      /entrypoint.sh call --json_input --json_output localhost:50151 GetVpc       "{\"name\" : \"//network.opiproject.org/vpcs/green1\" }" && \
       /entrypoint.sh call --json_input --json_output localhost:50151 GetVpc       "{\"name\" : \"//network.opiproject.org/vpcs/yellow1\" }" && \
       /entrypoint.sh call --json_input --json_output localhost:50151 DeleteVpc    "{\"name\" : \"//network.opiproject.org/vpcs/blue1\" }" && \
-      /entrypoint.sh call --json_input --json_output localhost:50151 DeleteVpc    "{\"name\" : \"//network.opiproject.org/vpcs/red1\" }" && \
+      /entrypoint.sh call --json_input --json_output localhost:50151 DeleteVpc    "{\"name\" : \"//network.opiproject.org/vpcs/green1\" }" && \
       /entrypoint.sh call --json_input --json_output localhost:50151 DeleteVpc    "{\"name\" : \"//network.opiproject.org/vpcs/yellow1\" }" && \
       /entrypoint.sh call --json_input --json_output localhost:50151 CreateSubnet "{\"subnet\" : {\"spec\" : {\"ipv4_virtual_router_ip\" : 11, \"virtual_router_mac\": \"qrvMAAAB\", \"v4_prefix\": {\"addr\": 336860161, \"len\": 24} } }, \"subnet_id\" : \"br200\", \"parent\" : \"todo\" }" && \
       /entrypoint.sh call --json_input --json_output localhost:50151 CreateSubnet "{\"subnet\" : {\"spec\" : {\"ipv4_virtual_router_ip\" : 22, \"virtual_router_mac\": \"qrvMAAAC\", \"v4_prefix\": {\"addr\": 505290241, \"len\": 24} } }, \"subnet_id\" : \"br201\", \"parent\" : \"todo\" }" && \
@@ -297,8 +297,8 @@ services:
       apt update && apt install iproute2 -y && \
       ip link add blue type vrf table 1000 && \
       ip link set blue up && \
-      ip link add red type vrf table 1001 && \
-      ip link set red up && \
+      ip link add green type vrf table 1001 && \
+      ip link set green up && \
       ip link add yellow type vrf table 1002 && \
       ip link set yellow up && \
 
@@ -312,7 +312,7 @@ services:
       ip link set br100 up && \
 
       ip link add br101 type bridge && \
-      ip link set br101 master red addrgenmode none && \
+      ip link set br101 master green addrgenmode none && \
       ip link set br101 addr aa:bb:cc:00:00:02 && \
       ip link add vni101 type vxlan local 10.0.0.2 dstport 4789 id 101 nolearning && \
       ip link set vni101 master br101 addrgenmode none && \
@@ -366,7 +366,7 @@ services:
       ip link set br30 up && \
 
       ip link add br40 type bridge && \
-      ip link set br40 master red addrgenmode none && \
+      ip link set br40 master green addrgenmode none && \
       ip link set br40 addr aa:bb:cc:00:00:41 && \
       ip link add link eth3 name eth3.40 type vlan id 40 && \
       ip link set eth3 up && ip addr flush dev eth3 && \
@@ -444,7 +444,7 @@ services:
     # L3VXLAN Asymmetric IRB:
     #   VLAN20 & VLAN30 stretched with VNI20 & VNI30 repectively to leaf2 from leaf1 via blue VRF, ping Host3 IP from Host1
     # L3VXLAN Symmetric IRB:
-    #   Ping to Bleaf internet connectivity IPs from Host1 via red and yellow VRFs from Leaf1
+    #   Ping to Bleaf internet connectivity IPs from Host1 via green and yellow VRFs from Leaf1
     command: |
       sh -x -c 'sleep 30 && \
                 ip link add link eth0 name eth0.10 type vlan id 10 && \
