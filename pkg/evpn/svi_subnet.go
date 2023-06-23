@@ -77,28 +77,33 @@ func (s *Server) CreateSubnet(_ context.Context, in *pb.CreateSubnetRequest) (*p
 			return nil, err
 		}
 	}
+	// Validate that a VRF/VPC resource name conforms to the restrictions outlined in AIP-122.
+	if err := resourcename.Validate(in.Subnet.Spec.VpcNameRef); err != nil {
+		log.Printf("error: %v", err)
+		return nil, err
+	}
+	// now get VRF/VPC to plug this bridge into
+	vpc, ok := s.Vpcs[in.Subnet.Spec.VpcNameRef]
+	if !ok {
+		err := status.Errorf(codes.NotFound, "unable to find key %s", in.Subnet.Spec.VpcNameRef)
+		log.Printf("error: %v", err)
+		return nil, err
+	}
+	vrf, err := netlink.LinkByName(path.Base(vpc.Name))
+	if err != nil {
+		err := status.Errorf(codes.NotFound, "unable to find key %s", vpc.Name)
+		log.Printf("error: %v", err)
+		return nil, err
+	}
+	if err := netlink.LinkSetMaster(bridge, vrf); err != nil {
+		fmt.Printf("Failed to add bridge to vrf: %v", err)
+		return nil, err
+	}
 	// set UP
 	if err := netlink.LinkSetUp(bridge); err != nil {
 		fmt.Printf("Failed to up link: %v", err)
 		return nil, err
 	}
-	// TODO: plug interfaces into this bridge ?
-	// vpc, ok := s.Vpcs[in.Subnet.Spec.VpcNameRef]
-	// if !ok {
-	// 	err := status.Errorf(codes.NotFound, "unable to find key %s", in.Subnet.Spec.VpcNameRef)
-	// 	log.Printf("error: %v", err)
-	// 	return nil, err
-	// }
-	// iface, err := netlink.LinkByName(path.Base(vpc.Name))
-	// if err != nil {
-	// 	err := status.Errorf(codes.NotFound, "unable to find key %s", vpc.Name)
-	// 	log.Printf("error: %v", err)
-	// 	return nil, err
-	// }
-	// if err := netlink.LinkSetMaster(iface, bridge); err != nil {
-	// 	fmt.Printf("Failed to add iface to bridge: %v", err)
-	// 	return nil, err
-	// }
 	// TODO: replace cloud -> evpn
 	response := proto.Clone(in.Subnet).(*pb.Subnet)
 	response.Status = &pb.SubnetStatus{HwIndex: 8, VnicCount: 88}
