@@ -283,10 +283,10 @@ services:
       /entrypoint.sh call --json_input --json_output localhost:50151 CreateSubnet "{\"subnet\" : {\"spec\" : {\"vpc_name_ref\" : \"//network.opiproject.org/vpcs/green\",  \"virtual_router_mac\": \"qrvMAAAC\" } }, \"subnet_id\" : \"br101\", \"parent\" : \"todo\" }" && \
       /entrypoint.sh call --json_input --json_output localhost:50151 CreateSubnet "{\"subnet\" : {\"spec\" : {\"vpc_name_ref\" : \"//network.opiproject.org/vpcs/yellow\", \"virtual_router_mac\": \"qrvMAAAD\" } }, \"subnet_id\" : \"br102\", \"parent\" : \"todo\" }" && \
       /entrypoint.sh call --json_input --json_output localhost:50151 CreateSubnet "{\"subnet\" : {\"spec\" : {                                                             \"virtual_router_mac\": \"qrvMAAAR\" } }, \"subnet_id\" : \"br10\",  \"parent\" : \"todo\" }" && \
-      /entrypoint.sh call --json_input --json_output localhost:50151 CreateSubnet "{\"subnet\" : {\"spec\" : {\"vpc_name_ref\" : \"//network.opiproject.org/vpcs/blue\",   \"virtual_router_mac\": \"qrvMAAAh\" } }, \"subnet_id\" : \"br20\",  \"parent\" : \"todo\" }" && \
-      /entrypoint.sh call --json_input --json_output localhost:50151 CreateSubnet "{\"subnet\" : {\"spec\" : {\"vpc_name_ref\" : \"//network.opiproject.org/vpcs/blue\",   \"virtual_router_mac\": \"qrvMAAAx\" } }, \"subnet_id\" : \"br30\",  \"parent\" : \"todo\" }" && \
-      /entrypoint.sh call --json_input --json_output localhost:50151 CreateSubnet "{\"subnet\" : {\"spec\" : {\"vpc_name_ref\" : \"//network.opiproject.org/vpcs/green\",  \"virtual_router_mac\": \"qrvMAABB\" } }, \"subnet_id\" : \"br40\",  \"parent\" : \"todo\" }" && \
-      /entrypoint.sh call --json_input --json_output localhost:50151 CreateSubnet "{\"subnet\" : {\"spec\" : {\"vpc_name_ref\" : \"//network.opiproject.org/vpcs/yellow\", \"virtual_router_mac\": \"qrvMAABC\" } }, \"subnet_id\" : \"br50\",  \"parent\" : \"todo\" }" && \
+      /entrypoint.sh call --json_input --json_output localhost:50151 CreateSubnet "{\"subnet\" : {\"spec\" : {\"vpc_name_ref\" : \"//network.opiproject.org/vpcs/blue\",   \"virtual_router_mac\": \"qrvMAAAh\", \"v4_prefix\": {\"addr\": 336860161, \"len\": 24} } }, \"subnet_id\" : \"br20\",  \"parent\" : \"todo\" }" && \
+      /entrypoint.sh call --json_input --json_output localhost:50151 CreateSubnet "{\"subnet\" : {\"spec\" : {\"vpc_name_ref\" : \"//network.opiproject.org/vpcs/blue\",   \"virtual_router_mac\": \"qrvMAAAx\", \"v4_prefix\": {\"addr\": 505290241, \"len\": 24} } }, \"subnet_id\" : \"br30\",  \"parent\" : \"todo\" }" && \
+      /entrypoint.sh call --json_input --json_output localhost:50151 CreateSubnet "{\"subnet\" : {\"spec\" : {\"vpc_name_ref\" : \"//network.opiproject.org/vpcs/green\",  \"virtual_router_mac\": \"qrvMAABB\", \"v4_prefix\": {\"addr\": 673720321, \"len\": 24} } }, \"subnet_id\" : \"br40\",  \"parent\" : \"todo\" }" && \
+      /entrypoint.sh call --json_input --json_output localhost:50151 CreateSubnet "{\"subnet\" : {\"spec\" : {\"vpc_name_ref\" : \"//network.opiproject.org/vpcs/yellow\", \"virtual_router_mac\": \"qrvMAABC\", \"v4_prefix\": {\"addr\": 842150401, \"len\": 24} } }, \"subnet_id\" : \"br50\",  \"parent\" : \"todo\" }" && \
       apt update && apt install iproute2 -y && \
 
       ip link add vni100 type vxlan local 10.0.0.2 dstport 4789 id 100 nolearning && \
@@ -317,13 +317,11 @@ services:
       ip link set eth2 up && ip addr flush dev eth2 && \
       ip link set eth2.20 up && \
       ip link set eth2.20 master br20 addrgenmode none && \
-      ip addr add 20.20.20.1/24 dev br20 && \
       ip link add vni20 type vxlan local 10.0.0.2 dstport 4789 id 20 nolearning && \
       ip link set vni20 master br20 addrgenmode none && \
       ip link set vni20 type bridge_slave neigh_suppress on learning off && \
       ip link set vni20 up && \
 
-      ip addr add 30.30.30.1/24 dev br30 && \
       ip link add vni30 type vxlan local 10.0.0.2 dstport 4789 id 30 nolearning && \
       ip link set vni30 master br30 addrgenmode none && \
       ip link set vni30 type bridge_slave neigh_suppress on learning off && \
@@ -333,7 +331,6 @@ services:
       ip link set eth3 up && ip addr flush dev eth3 && \
       ip link set eth3.40 up && \
       ip link set eth3.40 master br40 addrgenmode none && \
-      ip addr add 40.40.40.1/24 dev br40 && \
       ip link add vni40 type vxlan local 10.0.0.2 dstport 4789 id 40 nolearning && \
       ip link set vni40 master br40 addrgenmode none && \
       ip link set vni40 type bridge_slave neigh_suppress on learning off && \
@@ -343,7 +340,6 @@ services:
       ip link add link eth4 name eth4.50 type vlan id 50 && \
       ip link set eth4.50 up && \
       ip link set eth4.50 master br50 addrgenmode none && \
-      ip addr add 50.50.50.1/24 dev br50 && \
       ip link add vni50 type vxlan local 10.0.0.2 dstport 4789 id 50 nolearning && \
       ip link set vni50 master br50 addrgenmode none && \
       ip link set vni50 type bridge_slave neigh_suppress on learning off && \
