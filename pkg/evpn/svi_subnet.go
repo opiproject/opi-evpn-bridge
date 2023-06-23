@@ -68,7 +68,7 @@ func (s *Server) CreateSubnet(_ context.Context, in *pb.CreateSubnetRequest) (*p
 		}
 	}
 	// set IPv4
-	if in.Subnet.Spec.V4Prefix.Addr > 0 && in.Subnet.Spec.V4Prefix.Len > 0 {
+	if in.Subnet.Spec.V4Prefix != nil && in.Subnet.Spec.V4Prefix.Addr > 0 && in.Subnet.Spec.V4Prefix.Len > 0 {
 		myip := make(net.IP, 4)
 		binary.BigEndian.PutUint32(myip, in.Subnet.Spec.V4Prefix.Addr)
 		addr := &netlink.Addr{IPNet: &net.IPNet{IP: myip, Mask: net.CIDRMask(int(in.Subnet.Spec.V4Prefix.Len), 32)}}
