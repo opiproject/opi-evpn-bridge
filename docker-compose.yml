@@ -282,43 +282,28 @@ services:
       /entrypoint.sh call --json_input --json_output localhost:50151 GetVpc       "{\"name\" : \"//network.opiproject.org/vpcs/blue\" }" && \
       /entrypoint.sh call --json_input --json_output localhost:50151 GetVpc       "{\"name\" : \"//network.opiproject.org/vpcs/green\" }" && \
       /entrypoint.sh call --json_input --json_output localhost:50151 GetVpc       "{\"name\" : \"//network.opiproject.org/vpcs/yellow\" }" && \
-      /entrypoint.sh call --json_input --json_output localhost:50151 CreateSubnet "{\"subnet\" : {\"spec\" : {\"vpc_name_ref\" : \"//network.opiproject.org/vpcs/blue\", \"virtual_router_mac\": \"qrvMAAAB\", \"v4_prefix\": {\"addr\": 336860161, \"len\": 24} } }, \"subnet_id\" : \"br200\", \"parent\" : \"todo\" }" && \
-      /entrypoint.sh call --json_input --json_output localhost:50151 CreateSubnet "{\"subnet\" : {\"spec\" : {\"vpc_name_ref\" : \"//network.opiproject.org/vpcs/green\", \"virtual_router_mac\": \"qrvMAAAC\", \"v4_prefix\": {\"addr\": 505290241, \"len\": 24} } }, \"subnet_id\" : \"br201\", \"parent\" : \"todo\" }" && \
-      /entrypoint.sh call --json_input --json_output localhost:50151 CreateSubnet "{\"subnet\" : {\"spec\" : {\"vpc_name_ref\" : \"//network.opiproject.org/vpcs/yellow\", \"virtual_router_mac\": \"qrvMAAAD\", \"v4_prefix\": {\"addr\": 673720321, \"len\": 24} } }, \"subnet_id\" : \"br202\", \"parent\" : \"todo\" }" && \
-      /entrypoint.sh call --json_input --json_output localhost:50151 GetSubnet    "{\"name\" : \"//network.opiproject.org/subnets/br200\" }" && \
-      /entrypoint.sh call --json_input --json_output localhost:50151 GetSubnet    "{\"name\" : \"//network.opiproject.org/subnets/br201\" }" && \
-      /entrypoint.sh call --json_input --json_output localhost:50151 GetSubnet    "{\"name\" : \"//network.opiproject.org/subnets/br202\" }" && \
-      /entrypoint.sh call --json_input --json_output localhost:50151 DeleteSubnet "{\"name\" : \"//network.opiproject.org/subnets/br200\" }" && \
-      /entrypoint.sh call --json_input --json_output localhost:50151 DeleteSubnet "{\"name\" : \"//network.opiproject.org/subnets/br201\" }" && \
-      /entrypoint.sh call --json_input --json_output localhost:50151 DeleteSubnet "{\"name\" : \"//network.opiproject.org/subnets/br202\" }" && \
+      /entrypoint.sh call --json_input --json_output localhost:50151 CreateSubnet "{\"subnet\" : {\"spec\" : {\"vpc_name_ref\" : \"//network.opiproject.org/vpcs/blue\",   \"virtual_router_mac\": \"qrvMAAAB\" } }, \"subnet_id\" : \"br100\", \"parent\" : \"todo\" }" && \
+      /entrypoint.sh call --json_input --json_output localhost:50151 CreateSubnet "{\"subnet\" : {\"spec\" : {\"vpc_name_ref\" : \"//network.opiproject.org/vpcs/green\",  \"virtual_router_mac\": \"qrvMAAAC\" } }, \"subnet_id\" : \"br101\", \"parent\" : \"todo\" }" && \
+      /entrypoint.sh call --json_input --json_output localhost:50151 CreateSubnet "{\"subnet\" : {\"spec\" : {\"vpc_name_ref\" : \"//network.opiproject.org/vpcs/yellow\", \"virtual_router_mac\": \"qrvMAAAD\" } }, \"subnet_id\" : \"br102\", \"parent\" : \"todo\" }" && \
+      /entrypoint.sh call --json_input --json_output localhost:50151 GetSubnet    "{\"name\" : \"//network.opiproject.org/subnets/br100\" }" && \
+      /entrypoint.sh call --json_input --json_output localhost:50151 GetSubnet    "{\"name\" : \"//network.opiproject.org/subnets/br101\" }" && \
+      /entrypoint.sh call --json_input --json_output localhost:50151 GetSubnet    "{\"name\" : \"//network.opiproject.org/subnets/br102\" }" && \
       apt update && apt install iproute2 -y && \
 
-      ip link add br100 type bridge && \
-      ip link set br100 master blue addrgenmode none && \
-      ip link set br100 addr aa:bb:cc:00:00:01 && \
       ip link add vni100 type vxlan local 10.0.0.2 dstport 4789 id 100 nolearning && \
       ip link set vni100 master br100 addrgenmode none && \
       ip link set vni100 type bridge_slave neigh_suppress on learning off && \
       ip link set vni100 up && \
-      ip link set br100 up && \
 
-      ip link add br101 type bridge && \
-      ip link set br101 master green addrgenmode none && \
-      ip link set br101 addr aa:bb:cc:00:00:02 && \
       ip link add vni101 type vxlan local 10.0.0.2 dstport 4789 id 101 nolearning && \
       ip link set vni101 master br101 addrgenmode none && \
       ip link set vni101 type bridge_slave neigh_suppress on learning off && \
       ip link set vni101 up && \
-      ip link set br101 up && \
 
-      ip link add br102 type bridge && \
-      ip link set br102 master yellow addrgenmode none && \
-      ip link set br102 addr aa:bb:cc:00:00:03 && \
       ip link add vni102 type vxlan local 10.0.0.2 dstport 4789 id 102 nolearning && \
       ip link set vni102 master br102 addrgenmode none && \
       ip link set vni102 type bridge_slave neigh_suppress on learning off && \
       ip link set vni102 up && \
-      ip link set br102 up && \
 
       ip link add br10 type bridge && \
       ip link set br10 addr aa:bb:cc:00:00:11 && \
