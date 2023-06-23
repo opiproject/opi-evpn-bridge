@@ -279,15 +279,9 @@ services:
       /entrypoint.sh call --json_input --json_output localhost:50151 CreateVpc    "{\"vpc\" : {\"spec\" : {\"v4_route_table_name_ref\" : \"1000\"} }, \"vpc_id\" : \"blue\", \"parent\" : \"todo\" }" && \
       /entrypoint.sh call --json_input --json_output localhost:50151 CreateVpc    "{\"vpc\" : {\"spec\" : {\"v4_route_table_name_ref\" : \"1001\"} }, \"vpc_id\" : \"green\", \"parent\" : \"todo\" }" && \
       /entrypoint.sh call --json_input --json_output localhost:50151 CreateVpc    "{\"vpc\" : {\"spec\" : {\"v4_route_table_name_ref\" : \"1002\"} }, \"vpc_id\" : \"yellow\", \"parent\" : \"todo\" }" && \
-      /entrypoint.sh call --json_input --json_output localhost:50151 GetVpc       "{\"name\" : \"//network.opiproject.org/vpcs/blue\" }" && \
-      /entrypoint.sh call --json_input --json_output localhost:50151 GetVpc       "{\"name\" : \"//network.opiproject.org/vpcs/green\" }" && \
-      /entrypoint.sh call --json_input --json_output localhost:50151 GetVpc       "{\"name\" : \"//network.opiproject.org/vpcs/yellow\" }" && \
       /entrypoint.sh call --json_input --json_output localhost:50151 CreateSubnet "{\"subnet\" : {\"spec\" : {\"vpc_name_ref\" : \"//network.opiproject.org/vpcs/blue\",   \"virtual_router_mac\": \"qrvMAAAB\" } }, \"subnet_id\" : \"br100\", \"parent\" : \"todo\" }" && \
       /entrypoint.sh call --json_input --json_output localhost:50151 CreateSubnet "{\"subnet\" : {\"spec\" : {\"vpc_name_ref\" : \"//network.opiproject.org/vpcs/green\",  \"virtual_router_mac\": \"qrvMAAAC\" } }, \"subnet_id\" : \"br101\", \"parent\" : \"todo\" }" && \
       /entrypoint.sh call --json_input --json_output localhost:50151 CreateSubnet "{\"subnet\" : {\"spec\" : {\"vpc_name_ref\" : \"//network.opiproject.org/vpcs/yellow\", \"virtual_router_mac\": \"qrvMAAAD\" } }, \"subnet_id\" : \"br102\", \"parent\" : \"todo\" }" && \
-      /entrypoint.sh call --json_input --json_output localhost:50151 GetSubnet    "{\"name\" : \"//network.opiproject.org/subnets/br100\" }" && \
-      /entrypoint.sh call --json_input --json_output localhost:50151 GetSubnet    "{\"name\" : \"//network.opiproject.org/subnets/br101\" }" && \
-      /entrypoint.sh call --json_input --json_output localhost:50151 GetSubnet    "{\"name\" : \"//network.opiproject.org/subnets/br102\" }" && \
       apt update && apt install iproute2 -y && \
 
       ip link add vni100 type vxlan local 10.0.0.2 dstport 4789 id 100 nolearning && \
@@ -367,6 +361,12 @@ services:
       ip link set vni50 type bridge_slave neigh_suppress on learning off && \
       ip link set vni50 up && \
       ip link set br50 up && \
+      /entrypoint.sh call --json_input --json_output localhost:50151 GetVpc       "{\"name\" : \"//network.opiproject.org/vpcs/blue\" }" && \
+      /entrypoint.sh call --json_input --json_output localhost:50151 GetVpc       "{\"name\" : \"//network.opiproject.org/vpcs/green\" }" && \
+      /entrypoint.sh call --json_input --json_output localhost:50151 GetVpc       "{\"name\" : \"//network.opiproject.org/vpcs/yellow\" }" && \
+      /entrypoint.sh call --json_input --json_output localhost:50151 GetSubnet    "{\"name\" : \"//network.opiproject.org/subnets/br100\" }" && \
+      /entrypoint.sh call --json_input --json_output localhost:50151 GetSubnet    "{\"name\" : \"//network.opiproject.org/subnets/br101\" }" && \
+      /entrypoint.sh call --json_input --json_output localhost:50151 GetSubnet    "{\"name\" : \"//network.opiproject.org/subnets/br102\" }" && \
       echo done'
 
   host2-leaf2:
