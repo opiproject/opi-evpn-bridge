@@ -43,7 +43,7 @@ docker-compose exec opi-evpn-bridge grpcurl -plaintext -d '{"name" : "//network.
 
 ![OPI EVPN Bridge Architcture Diagram](./OPI-EVPN-GW-FRR-bridge.png)
 
-## POC diagram
+## POC diagrams
 
 ![OPI EVPN Bridge POC Diagram for CI/CD](./OPI-EVPN-PoC.png)
 ![OPI EVPN Bridge Diagram for L2VXLAN](./OPI-EVPN-L2-VXLAN.png)
