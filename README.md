@@ -2,6 +2,7 @@
 
 [![Linters](https://github.com/opiproject/opi-evpn-bridge/actions/workflows/linters.yml/badge.svg)](https://github.com/opiproject/opi-evpn-bridge/actions/workflows/linters.yml)
 [![CodeQL](https://github.com/opiproject/opi-evpn-bridge/actions/workflows/codeql.yml/badge.svg)](https://github.com/opiproject/opi-evpn-bridge/actions/workflows/codeql.yml)
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/opiproject/opi-evpn-bridge/badge)](https://securityscorecards.dev/viewer/?platform=github.com&org=opiproject&repo=opi-evpn-bridge)
 [![tests](https://github.com/opiproject/opi-evpn-bridge/actions/workflows/go.yml/badge.svg)](https://github.com/opiproject/opi-evpn-bridge/actions/workflows/go.yml)
 [![Docker](https://github.com/opiproject/opi-evpn-bridge/actions/workflows/docker-publish.yml/badge.svg)](https://github.com/opiproject/opi-evpn-bridge/actions/workflows/docker-publish.yml)
 [![License](https://img.shields.io/github/license/opiproject/opi-evpn-bridge?style=flat-square&color=blue&label=License)](https://github.com/opiproject/opi-evpn-bridge/blob/master/LICENSE)
