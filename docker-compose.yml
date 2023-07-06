@@ -291,23 +291,11 @@ services:
       /entrypoint.sh call --json_input --json_output localhost:50151 CreateSubnet "{\"subnet\" : {\"spec\" : {\"vpc_name_ref\" : \"//network.opiproject.org/vpcs/blue\",   \"virtual_router_mac\": \"qrvMAAAx\", \"v4_prefix\": {\"addr\": 505290241, \"len\": 24} } }, \"subnet_id\" : \"br30\",  \"parent\" : \"todo\" }" && \
       /entrypoint.sh call --json_input --json_output localhost:50151 CreateSubnet "{\"subnet\" : {\"spec\" : {\"vpc_name_ref\" : \"//network.opiproject.org/vpcs/green\",  \"virtual_router_mac\": \"qrvMAABB\", \"v4_prefix\": {\"addr\": 673720321, \"len\": 24} } }, \"subnet_id\" : \"br40\",  \"parent\" : \"todo\" }" && \
       /entrypoint.sh call --json_input --json_output localhost:50151 CreateSubnet "{\"subnet\" : {\"spec\" : {\"vpc_name_ref\" : \"//network.opiproject.org/vpcs/yellow\", \"virtual_router_mac\": \"qrvMAABC\", \"v4_prefix\": {\"addr\": 842150401, \"len\": 24} } }, \"subnet_id\" : \"br50\",  \"parent\" : \"todo\" }" && \
+      /entrypoint.sh call --json_input --json_output localhost:50151 CreateTunnel "{\"tunnel\" : {\"spec\" : {\"vpc_name_ref\" : \"//network.opiproject.org/subnets/br100\", \"local_ip\": {\"af\": \"IP_AF_INET\", \"v4_addr\": 167772162}, \"encap\": {\"type\": \"ENCAP_TYPE_VXLAN\", \"value\": {\"vnid\": 100}} } }, \"tunnel_id\" : \"vni100\",  \"parent\" : \"todo\" }" && \
+      /entrypoint.sh call --json_input --json_output localhost:50151 CreateTunnel "{\"tunnel\" : {\"spec\" : {\"vpc_name_ref\" : \"//network.opiproject.org/subnets/br101\", \"local_ip\": {\"af\": \"IP_AF_INET\", \"v4_addr\": 167772162}, \"encap\": {\"type\": \"ENCAP_TYPE_VXLAN\", \"value\": {\"vnid\": 101}} } }, \"tunnel_id\" : \"vni101\",  \"parent\" : \"todo\" }" && \
+      /entrypoint.sh call --json_input --json_output localhost:50151 CreateTunnel "{\"tunnel\" : {\"spec\" : {\"vpc_name_ref\" : \"//network.opiproject.org/subnets/br102\", \"local_ip\": {\"af\": \"IP_AF_INET\", \"v4_addr\": 167772162}, \"encap\": {\"type\": \"ENCAP_TYPE_VXLAN\", \"value\": {\"vnid\": 102}} } }, \"tunnel_id\" : \"vni102\",  \"parent\" : \"todo\" }" && \
 
       apt update && apt install iproute2 -y && \
-
-      ip link add vni100 type vxlan local 10.0.0.2 dstport 4789 id 100 nolearning && \
-      ip link set vni100 master br100 addrgenmode none && \
-      ip link set vni100 type bridge_slave neigh_suppress on learning off && \
-      ip link set vni100 up && \
-
-      ip link add vni101 type vxlan local 10.0.0.2 dstport 4789 id 101 nolearning && \
-      ip link set vni101 master br101 addrgenmode none && \
-      ip link set vni101 type bridge_slave neigh_suppress on learning off && \
-      ip link set vni101 up && \
-
-      ip link add vni102 type vxlan local 10.0.0.2 dstport 4789 id 102 nolearning && \
-      ip link set vni102 master br102 addrgenmode none && \
-      ip link set vni102 type bridge_slave neigh_suppress on learning off && \
-      ip link set vni102 up && \
 
       ip link add link eth1 name eth1.10 type vlan id 10 && \
       ip link set eth1 up && ip addr flush dev eth1 && \
@@ -361,6 +349,9 @@ services:
       /entrypoint.sh call --json_input --json_output localhost:50151 GetSubnet    "{\"name\" : \"//network.opiproject.org/subnets/br30\" }" && \
       /entrypoint.sh call --json_input --json_output localhost:50151 GetSubnet    "{\"name\" : \"//network.opiproject.org/subnets/br40\" }" && \
       /entrypoint.sh call --json_input --json_output localhost:50151 GetSubnet    "{\"name\" : \"//network.opiproject.org/subnets/br50\" }" && \
+      /entrypoint.sh call --json_input --json_output localhost:50151 GetTunnel    "{\"name\" : \"//network.opiproject.org/tunnels/vni100\" }" && \
+      /entrypoint.sh call --json_input --json_output localhost:50151 GetTunnel    "{\"name\" : \"//network.opiproject.org/tunnels/vni101\" }" && \
+      /entrypoint.sh call --json_input --json_output localhost:50151 GetTunnel    "{\"name\" : \"//network.opiproject.org/tunnels/vni102\" }" && \
       echo done'
 
   host2-leaf2:
