@@ -29,6 +29,7 @@ var (
 	testSubnetName = resourceIDToVolumeName("subnets", testSubnetID)
 	testSubnet     = pb.Subnet{
 		Spec: &pb.SubnetSpec{
+			VpcNameRef:       testVpcName,
 			VirtualRouterMac: []byte("qrvMAAAB"),
 			V4Prefix: &pc.IPv4Prefix{
 				Addr: 336860161,
