@@ -35,6 +35,12 @@ func (s *Server) CreateTunnel(_ context.Context, in *pb.CreateTunnelRequest) (*p
 		log.Printf("error: %v", err)
 		return nil, err
 	}
+	// validate input paramaters since they are not manadatory in protobuf yet
+	if in.Tunnel.Spec.LocalIp == nil || in.Tunnel.Spec.Encap == nil {
+		msg := fmt.Sprintf("Missing LocalIp or Encap manadatory fields")
+		log.Print(msg)
+		return nil, status.Errorf(codes.InvalidArgument, msg)
+	}
 	// see https://google.aip.dev/133#user-specified-ids
 	resourceID := resourceid.NewSystemGenerated()
 	if in.TunnelId != "" {
@@ -54,7 +60,6 @@ func (s *Server) CreateTunnel(_ context.Context, in *pb.CreateTunnelRequest) (*p
 		return obj, nil
 	}
 	// not found, so create a new one
-	// TODO: return error if in.Tunnel.Spec.LocalIp != nil in.Tunnel.Spec.Encap != nil
 	myip := make(net.IP, 4)
 	binary.BigEndian.PutUint32(myip, in.Tunnel.Spec.LocalIp.GetV4Addr())
 	vxlanid := in.Tunnel.Spec.Encap.Value.GetVnid()
