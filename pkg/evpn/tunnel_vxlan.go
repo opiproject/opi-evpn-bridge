@@ -35,9 +35,9 @@ func (s *Server) CreateTunnel(_ context.Context, in *pb.CreateTunnelRequest) (*p
 		log.Printf("error: %v", err)
 		return nil, err
 	}
-	// validate input paramaters since they are not manadatory in protobuf yet
+	// validate input parameters since they are not manadatory in protobuf yet
 	if in.Tunnel.Spec.LocalIp == nil || in.Tunnel.Spec.Encap == nil {
-		msg := fmt.Sprintf("Missing LocalIp or Encap manadatory fields")
+		msg := fmt.Sprintf("Missing LocalIp or Encap manadatory fields for %s", in.TunnelId)
 		log.Print(msg)
 		return nil, status.Errorf(codes.InvalidArgument, msg)
 	}
