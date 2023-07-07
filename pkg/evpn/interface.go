@@ -104,18 +104,17 @@ func (s *Server) CreateInterface(_ context.Context, in *pb.CreateInterfaceReques
 		fmt.Printf("Failed to up link: %v", err)
 		return nil, err
 	}
-	// set MAC and IP
+	// set MAC
+	if len(ifaceobj.MacAddress) > 0 {
+		// TODO: dummy or vlandev ?
+		if err := netlink.LinkSetHardwareAddr(dummy, ifaceobj.MacAddress); err != nil {
+			fmt.Printf("Failed to set MAC on link: %v", err)
+			return nil, err
+		}
+	}
+	// set IPv4
 	switch u := in.Interface.Spec.Ifinfo.(type) {
 	case *pb.InterfaceSpec_ControlIfSpec:
-		// set MAC
-		mac := u.ControlIfSpec.MacAddress
-		if len(mac) > 0 {
-			if err := netlink.LinkSetHardwareAddr(dummy, mac); err != nil {
-				fmt.Printf("Failed to set MAC on link: %v", err)
-				return nil, err
-			}
-		}
-		// set IPv4
 		prefix := u.ControlIfSpec.Prefix
 		switch a := prefix.Addr.V4OrV6.(type) {
 		case *pc.IPAddress_V4Addr:
