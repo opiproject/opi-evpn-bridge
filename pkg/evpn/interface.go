@@ -16,7 +16,6 @@ import (
 	"github.com/vishvananda/netlink"
 
 	pb "github.com/opiproject/opi-api/network/cloud/v1alpha1/gen/go"
-	pc "github.com/opiproject/opi-api/network/opinetcommon/v1alpha1/gen/go"
 
 	"go.einride.tech/aip/fieldbehavior"
 	"go.einride.tech/aip/fieldmask"
@@ -70,6 +69,7 @@ func (s *Server) CreateInterface(_ context.Context, in *pb.CreateInterfaceReques
 		},
 		VlanId: vlanid,
 	}
+	// up
 	if err := netlink.LinkAdd(vlandev); err != nil {
 		fmt.Printf("Failed to create link: %v", err)
 		return nil, err
@@ -113,26 +113,17 @@ func (s *Server) CreateInterface(_ context.Context, in *pb.CreateInterfaceReques
 		}
 	}
 	// set IPv4
-	switch u := in.Interface.Spec.Ifinfo.(type) {
-	case *pb.InterfaceSpec_ControlIfSpec:
-		prefix := u.ControlIfSpec.Prefix
-		switch a := prefix.Addr.V4OrV6.(type) {
-		case *pc.IPAddress_V4Addr:
-			if prefix.Addr.Af == pc.IpAf_IP_AF_INET && prefix.Len > 0 && a.V4Addr > 0 {
-				myip := make(net.IP, 4)
-				binary.BigEndian.PutUint32(myip, a.V4Addr)
-				addr := &netlink.Addr{IPNet: &net.IPNet{IP: myip, Mask: net.CIDRMask(int(prefix.Len), 32)}}
-				if err := netlink.AddrAdd(dummy, addr); err != nil {
-					fmt.Printf("Failed to set IP on link: %v", err)
-					return nil, err
-				}
-			}
-		default:
-			fmt.Println("No matching operations")
+	for _, item := range ifaceobj.Prefix {
+		myip := make(net.IP, 4)
+		binary.BigEndian.PutUint32(myip, item.Addr.GetV4Addr())
+		addr := &netlink.Addr{IPNet: &net.IPNet{IP: myip, Mask: net.CIDRMask(int(item.Len), 32)}}
+		// TODO: dummy or vlandev ?
+		if err := netlink.AddrAdd(dummy, addr); err != nil {
+			fmt.Printf("Failed to set IP on link: %v", err)
+			return nil, err
 		}
-	default:
-		fmt.Println("No matching operations")
 	}
+	// up
 	if err := netlink.LinkSetUp(dummy); err != nil {
 		fmt.Printf("Failed to up link: %v", err)
 		return nil, err
