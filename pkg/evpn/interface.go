@@ -89,11 +89,11 @@ func (s *Server) CreateInterface(_ context.Context, in *pb.CreateInterfaceReques
 	default:
 		fmt.Println("No matching operations")
 	}
+	// TODO: add this interface (aka bridge port) to the bridge - search s.Subnets first using subnet_name_ref?
 	if err := netlink.LinkSetUp(dummy); err != nil {
 		fmt.Printf("Failed to up link: %v", err)
 		return nil, err
 	}
-	// TODO: do we also need to add this link to the bridge here ? search s.Subnets ?
 	response := proto.Clone(in.Interface).(*pb.Interface)
 	response.Status = &pb.InterfaceStatus{IfIndex: 8, OperStatus: pb.IfStatus_IF_STATUS_UP}
 	s.Interfaces[in.Interface.Name] = response
