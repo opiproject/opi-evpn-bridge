@@ -60,6 +60,25 @@ func (s *Server) CreateInterface(_ context.Context, in *pb.CreateInterfaceReques
 		fmt.Printf("Failed to create link: %v", err)
 		return nil, err
 	}
+	// create the vlan device
+	vlanid := 20
+	// TODO: take vlanid from proto input instead of hard-coded
+	vlandev := &netlink.Vlan{
+		LinkAttrs: netlink.LinkAttrs{
+			Name:        fmt.Sprintf("%s.%d", dummy.Attrs().Name, vlanid),
+			ParentIndex: dummy.Attrs().Index,
+		},
+		VlanId: vlanid,
+	}
+	if err := netlink.LinkAdd(vlandev); err != nil {
+		fmt.Printf("Failed to create link: %v", err)
+		return nil, err
+	}
+	if err := netlink.LinkSetUp(vlandev); err != nil {
+		fmt.Printf("Failed to up link: %v", err)
+		return nil, err
+	}
+	// set MAC and IP
 	switch u := in.Interface.Spec.Ifinfo.(type) {
 	case *pb.InterfaceSpec_ControlIfSpec:
 		// set MAC
