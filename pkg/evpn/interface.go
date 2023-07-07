@@ -74,6 +74,32 @@ func (s *Server) CreateInterface(_ context.Context, in *pb.CreateInterfaceReques
 		fmt.Printf("Failed to create link: %v", err)
 		return nil, err
 	}
+	// TODO: gap... instead of VPC we are looking for Subnet/Bridge here...
+	ifaceobj := in.Interface.Spec.GetL3IfSpec()
+	if ifaceobj.VpcNameRef != "" {
+		// Validate that a Subnet/Bridge resource name conforms to the restrictions outlined in AIP-122.
+		if err := resourcename.Validate(ifaceobj.VpcNameRef); err != nil {
+			log.Printf("error: %v", err)
+			return nil, err
+		}
+		// now get Subnet/Bridge to plug this port/interface into
+		bridge, ok := s.Subnets[ifaceobj.VpcNameRef]
+		if !ok {
+			err := status.Errorf(codes.NotFound, "unable to find key %s", ifaceobj.VpcNameRef)
+			log.Printf("error: %v", err)
+			return nil, err
+		}
+		brdev, err := netlink.LinkByName(path.Base(bridge.Name))
+		if err != nil {
+			err := status.Errorf(codes.NotFound, "unable to find key %s", bridge.Name)
+			log.Printf("error: %v", err)
+			return nil, err
+		}
+		if err := netlink.LinkSetMaster(vlandev, brdev); err != nil {
+			fmt.Printf("Failed to add port/interface to bridge: %v", err)
+			return nil, err
+		}
+	}
 	if err := netlink.LinkSetUp(vlandev); err != nil {
 		fmt.Printf("Failed to up link: %v", err)
 		return nil, err
@@ -108,7 +134,6 @@ func (s *Server) CreateInterface(_ context.Context, in *pb.CreateInterfaceReques
 	default:
 		fmt.Println("No matching operations")
 	}
-	// TODO: add this interface (aka bridge port) to the bridge - search s.Subnets first using subnet_name_ref?
 	if err := netlink.LinkSetUp(dummy); err != nil {
 		fmt.Printf("Failed to up link: %v", err)
 		return nil, err
