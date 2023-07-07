@@ -60,14 +60,13 @@ func (s *Server) CreateInterface(_ context.Context, in *pb.CreateInterfaceReques
 		return nil, err
 	}
 	// create the vlan device
-	vlanid := 20
-	// TODO: take vlanid from proto input instead of hard-coded
 	vlandev := &netlink.Vlan{
 		LinkAttrs: netlink.LinkAttrs{
-			Name:        fmt.Sprintf("%s.%d", dummy.Attrs().Name, vlanid),
+			Name:        fmt.Sprintf("%s.%d", dummy.Attrs().Name, in.Interface.Spec.Ifid),
 			ParentIndex: dummy.Attrs().Index,
 		},
-		VlanId: vlanid,
+		// TODO: use vlanid instead of Ifid
+		VlanId: int(in.Interface.Spec.Ifid),
 	}
 	// up
 	if err := netlink.LinkAdd(vlandev); err != nil {
