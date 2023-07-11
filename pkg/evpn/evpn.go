@@ -6,6 +6,7 @@
 package evpn
 
 import (
+	"fmt"
 	pb "github.com/opiproject/opi-api/network/cloud/v1alpha1/gen/go"
 )
 
@@ -26,4 +27,8 @@ func NewServer() *Server {
 		Tunnels:    make(map[string]*pb.Tunnel),
 		Vpcs:       make(map[string]*pb.Vpc),
 	}
+}
+
+func resourceIDToVolumeName(container string, resourceID string) string {
+	return fmt.Sprintf("//network.opiproject.org/%s/%s", container, resourceID)
 }

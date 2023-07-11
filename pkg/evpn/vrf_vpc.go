@@ -45,7 +45,7 @@ func (s *Server) CreateVpc(_ context.Context, in *pb.CreateVpcRequest) (*pb.Vpc,
 		log.Printf("client provided the ID of a resource %v, ignoring the name field %v", in.VpcId, in.Vpc.Name)
 		resourceID = in.VpcId
 	}
-	in.Vpc.Name = fmt.Sprintf("//network.opiproject.org/vpcs/%s", resourceID)
+	in.Vpc.Name = resourceIDToVolumeName("vpcs", resourceID)
 	// idempotent API when called with same key, should return same object
 	obj, ok := s.Vpcs[in.Vpc.Name]
 	if ok {

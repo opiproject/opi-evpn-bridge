@@ -52,7 +52,7 @@ func (s *Server) CreateTunnel(_ context.Context, in *pb.CreateTunnelRequest) (*p
 		log.Printf("client provided the ID of a resource %v, ignoring the name field %v", in.TunnelId, in.Tunnel.Name)
 		resourceID = in.TunnelId
 	}
-	in.Tunnel.Name = fmt.Sprintf("//network.opiproject.org/tunnels/%s", resourceID)
+	in.Tunnel.Name = resourceIDToVolumeName("tunnels", resourceID)
 	// idempotent API when called with same key, should return same object
 	obj, ok := s.Tunnels[in.Tunnel.Name]
 	if ok {
