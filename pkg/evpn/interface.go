@@ -53,10 +53,11 @@ func (s *Server) CreateInterface(_ context.Context, in *pb.CreateInterfaceReques
 		log.Printf("Already existing Interface with id %v", in.Interface.Name)
 		return iface, nil
 	}
-	// create dummy interface
-	dummy := &netlink.Dummy{LinkAttrs: netlink.LinkAttrs{Name: resourceID}}
-	if err := netlink.LinkAdd(dummy); err != nil {
-		fmt.Printf("Failed to create link: %v", err)
+	// get base interface
+	dummy, err := netlink.LinkByName(resourceID)
+	if err != nil {
+		err := status.Errorf(codes.NotFound, "unable to find key %s", resourceID)
+		log.Printf("error: %v", err)
 		return nil, err
 	}
 	// create the vlan device
