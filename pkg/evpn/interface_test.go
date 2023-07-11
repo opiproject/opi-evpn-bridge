@@ -19,6 +19,7 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/emptypb"
+	"google.golang.org/protobuf/types/known/fieldmaskpb"
 
 	pb "github.com/opiproject/opi-api/network/cloud/v1alpha1/gen/go"
 )
@@ -189,6 +190,105 @@ func Test_DeleteInterface(t *testing.T) {
 			}
 			if reflect.TypeOf(response) != reflect.TypeOf(tt.out) {
 				t.Error("response: expected", reflect.TypeOf(tt.out), "received", reflect.TypeOf(response))
+			}
+		})
+	}
+}
+
+func Test_UpdateInterface(t *testing.T) {
+	spec := &pb.InterfaceSpec{
+		Ifid: 11,
+	}
+	tests := map[string]struct {
+		mask    *fieldmaskpb.FieldMask
+		in      *pb.Interface
+		out     *pb.Interface
+		spdk    []string
+		errCode codes.Code
+		errMsg  string
+		start   bool
+		exist   bool
+	}{
+		"invalid fieldmask": {
+			&fieldmaskpb.FieldMask{Paths: []string{"*", "author"}},
+			&pb.Interface{
+				Name: testInterfaceName,
+				Spec: spec,
+			},
+			nil,
+			[]string{""},
+			codes.Unknown,
+			fmt.Sprintf("invalid field path: %s", "'*' must not be used with other paths"),
+			false,
+			true,
+		},
+		"valid request with unknown key": {
+			nil,
+			&pb.Interface{
+				Name: resourceIDToVolumeName("interfaces", "unknown-id"),
+			},
+			nil,
+			[]string{""},
+			codes.NotFound,
+			fmt.Sprintf("unable to find key %v", resourceIDToVolumeName("interfaces", "unknown-id")),
+			false,
+			true,
+		},
+	}
+
+	// run tests
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			// start GRPC mockup server
+			ctx := context.Background()
+			opi := NewServer()
+			conn, err := grpc.DialContext(ctx,
+				"",
+				grpc.WithTransportCredentials(insecure.NewCredentials()),
+				grpc.WithContextDialer(dialer(opi)))
+			if err != nil {
+				log.Fatal(err)
+			}
+			defer func(conn *grpc.ClientConn) {
+				err := conn.Close()
+				if err != nil {
+					log.Fatal(err)
+				}
+			}(conn)
+			client := pb.NewCloudInfraServiceClient(conn)
+
+			if tt.exist {
+				opi.Interfaces[testInterfaceName] = &testInterface
+			}
+			if tt.out != nil {
+				tt.out.Name = testInterfaceName
+			}
+
+			request := &pb.UpdateInterfaceRequest{Interface: tt.in, UpdateMask: tt.mask}
+			response, err := client.UpdateInterface(ctx, request)
+			if response != nil {
+				// Marshall the request and response, so we can just compare the contained data
+				mtt, _ := proto.Marshal(tt.out.Spec)
+				mResponse, _ := proto.Marshal(response.Spec)
+
+				// Compare the marshalled messages
+				if !bytes.Equal(mtt, mResponse) {
+					t.Error("response: expected", tt.out.GetSpec(), "received", response.GetSpec())
+				}
+				if !reflect.DeepEqual(response.Status, tt.out.Status) {
+					t.Error("response: expected", tt.out.GetStatus(), "received", response.GetStatus())
+				}
+			}
+
+			if err != nil {
+				if er, ok := status.FromError(err); ok {
+					if er.Code() != tt.errCode {
+						t.Error("error code: expected", tt.errCode, "received", er.Code())
+					}
+					if er.Message() != tt.errMsg {
+						t.Error("error message: expected", tt.errMsg, "received", er.Message())
+					}
+				}
 			}
 		})
 	}

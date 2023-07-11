@@ -191,8 +191,12 @@ func (s *Server) UpdateTunnel(_ context.Context, in *pb.UpdateTunnelRequest) (*p
 		fmt.Printf("Failed to update link: %v", err)
 		return nil, err
 	}
-	log.Printf("TODO: use resourceID=%v", resourceID)
-	return nil, status.Errorf(codes.Unimplemented, "UpdateTunnel method is not implemented")
+	// TODO: replace cloud -> evpn
+	response := proto.Clone(in.Tunnel).(*pb.Tunnel)
+	response.Status = &pb.TunnelStatus{VnicCount: 4}
+	s.Tunnels[in.Tunnel.Name] = response
+	log.Printf("UpdateTunnel: Sending to client: %v", response)
+	return response, nil
 }
 
 // GetTunnel gets an Subnet/Bridge

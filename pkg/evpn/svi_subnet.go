@@ -199,8 +199,12 @@ func (s *Server) UpdateSubnet(_ context.Context, in *pb.UpdateSubnetRequest) (*p
 		fmt.Printf("Failed to update link: %v", err)
 		return nil, err
 	}
-	log.Printf("TODO: use resourceID=%v", resourceID)
-	return nil, status.Errorf(codes.Unimplemented, "UpdateSubnet method is not implemented")
+	// TODO: replace cloud -> evpn
+	response := proto.Clone(in.Subnet).(*pb.Subnet)
+	response.Status = &pb.SubnetStatus{HwIndex: 8, VnicCount: 88}
+	s.Subnets[in.Subnet.Name] = response
+	log.Printf("UpdateSubnet: Sending to client: %v", response)
+	return response, nil
 }
 
 // GetSubnet gets an SVI/subnet
