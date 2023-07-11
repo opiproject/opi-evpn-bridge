@@ -279,7 +279,7 @@ services:
       /entrypoint.sh ls localhost:50151 opi_api.network.cloud.v1alpha1.CloudInfraService.DeleteSubnet -l && \
       /entrypoint.sh ls localhost:50151 opi_api.network.cloud.v1alpha1.CloudInfraService.DeleteTunnel -l && \
       /entrypoint.sh ls localhost:50151 opi_api.network.cloud.v1alpha1.CloudInfraService.DeleteVpc -l && \
-
+      echo create && \
       /entrypoint.sh call --json_input --json_output localhost:50151 CreateVpc    "{\"vpc\" : {\"spec\" : {\"v4_route_table_name_ref\" : \"1000\"} }, \"vpc_id\" : \"blue\",   \"parent\" : \"todo\" }" && \
       /entrypoint.sh call --json_input --json_output localhost:50151 CreateVpc    "{\"vpc\" : {\"spec\" : {\"v4_route_table_name_ref\" : \"1001\"} }, \"vpc_id\" : \"green\",  \"parent\" : \"todo\" }" && \
       /entrypoint.sh call --json_input --json_output localhost:50151 CreateVpc    "{\"vpc\" : {\"spec\" : {\"v4_route_table_name_ref\" : \"1002\"} }, \"vpc_id\" : \"yellow\", \"parent\" : \"todo\" }" && \
@@ -299,29 +299,11 @@ services:
       /entrypoint.sh call --json_input --json_output localhost:50151 CreateTunnel "{\"tunnel\" : {\"spec\" : {\"vpc_name_ref\" : \"//network.opiproject.org/subnets/br30\",  \"local_ip\": {\"af\": \"IP_AF_INET\", \"v4_addr\": 167772162}, \"encap\": {\"type\": \"ENCAP_TYPE_VXLAN\", \"value\": {\"vnid\": 30}} } },  \"tunnel_id\" : \"vni30\",   \"parent\" : \"todo\" }" && \
       /entrypoint.sh call --json_input --json_output localhost:50151 CreateTunnel "{\"tunnel\" : {\"spec\" : {\"vpc_name_ref\" : \"//network.opiproject.org/subnets/br40\",  \"local_ip\": {\"af\": \"IP_AF_INET\", \"v4_addr\": 167772162}, \"encap\": {\"type\": \"ENCAP_TYPE_VXLAN\", \"value\": {\"vnid\": 40}} } },  \"tunnel_id\" : \"vni40\",   \"parent\" : \"todo\" }" && \
       /entrypoint.sh call --json_input --json_output localhost:50151 CreateTunnel "{\"tunnel\" : {\"spec\" : {\"vpc_name_ref\" : \"//network.opiproject.org/subnets/br50\",  \"local_ip\": {\"af\": \"IP_AF_INET\", \"v4_addr\": 167772162}, \"encap\": {\"type\": \"ENCAP_TYPE_VXLAN\", \"value\": {\"vnid\": 50}} } },  \"tunnel_id\" : \"vni50\",   \"parent\" : \"todo\" }" && \
-
-      apt update && apt install iproute2 -y && \
-
-      ip link add link eth1 name eth1.10 type vlan id 10 && \
-      ip link set eth1 up && ip addr flush dev eth1 && \
-      ip link set eth1.10 up && \
-      ip link set eth1.10 master br10 addrgenmode none && \
-
-      ip link add link eth2 name eth2.20 type vlan id 20 && \
-      ip link set eth2 up && ip addr flush dev eth2 && \
-      ip link set eth2.20 up && \
-      ip link set eth2.20 master br20 addrgenmode none && \
-
-      ip link add link eth3 name eth3.40 type vlan id 40 && \
-      ip link set eth3 up && ip addr flush dev eth3 && \
-      ip link set eth3.40 up && \
-      ip link set eth3.40 master br40 addrgenmode none && \
-
-      ip link add link eth4 name eth4.50 type vlan id 50 && \
-      ip link set eth4 up && ip addr flush dev eth4 && \
-      ip link set eth4.50 up && \
-      ip link set eth4.50 master br50 addrgenmode none && \
-
+      /entrypoint.sh call --json_input --json_output localhost:50151 CreateInterface "{\"interface\" : {\"spec\" : {\"ifid\": 10, \"l3_if_spec\": {\"vpc_name_ref\" : \"//network.opiproject.org/subnets/br10\"}} }, \"interface_id\" : \"eth1\", \"parent\" : \"todo\" }" && \
+      /entrypoint.sh call --json_input --json_output localhost:50151 CreateInterface "{\"interface\" : {\"spec\" : {\"ifid\": 20, \"l3_if_spec\": {\"vpc_name_ref\" : \"//network.opiproject.org/subnets/br20\"}} }, \"interface_id\" : \"eth2\", \"parent\" : \"todo\" }" && \
+      /entrypoint.sh call --json_input --json_output localhost:50151 CreateInterface "{\"interface\" : {\"spec\" : {\"ifid\": 40, \"l3_if_spec\": {\"vpc_name_ref\" : \"//network.opiproject.org/subnets/br40\"}} }, \"interface_id\" : \"eth3\", \"parent\" : \"todo\" }" && \
+      /entrypoint.sh call --json_input --json_output localhost:50151 CreateInterface "{\"interface\" : {\"spec\" : {\"ifid\": 50, \"l3_if_spec\": {\"vpc_name_ref\" : \"//network.opiproject.org/subnets/br50\"}} }, \"interface_id\" : \"eth4\", \"parent\" : \"todo\" }" && \
+      echo get && \
       /entrypoint.sh call --json_input --json_output localhost:50151 GetVpc       "{\"name\" : \"//network.opiproject.org/vpcs/blue\" }" && \
       /entrypoint.sh call --json_input --json_output localhost:50151 GetVpc       "{\"name\" : \"//network.opiproject.org/vpcs/green\" }" && \
       /entrypoint.sh call --json_input --json_output localhost:50151 GetVpc       "{\"name\" : \"//network.opiproject.org/vpcs/yellow\" }" && \
@@ -341,6 +323,10 @@ services:
       /entrypoint.sh call --json_input --json_output localhost:50151 GetTunnel    "{\"name\" : \"//network.opiproject.org/tunnels/vni30\" }" && \
       /entrypoint.sh call --json_input --json_output localhost:50151 GetTunnel    "{\"name\" : \"//network.opiproject.org/tunnels/vni40\" }" && \
       /entrypoint.sh call --json_input --json_output localhost:50151 GetTunnel    "{\"name\" : \"//network.opiproject.org/tunnels/vni50\" }" && \
+      /entrypoint.sh call --json_input --json_output localhost:50151 GetInterface "{\"name\" : \"//network.opiproject.org/interfaces/eth1\" }" && \
+      /entrypoint.sh call --json_input --json_output localhost:50151 GetInterface "{\"name\" : \"//network.opiproject.org/interfaces/eth2\" }" && \
+      /entrypoint.sh call --json_input --json_output localhost:50151 GetInterface "{\"name\" : \"//network.opiproject.org/interfaces/eth3\" }" && \
+      /entrypoint.sh call --json_input --json_output localhost:50151 GetInterface "{\"name\" : \"//network.opiproject.org/interfaces/eth4\" }" && \
       echo done'
 
   host2-leaf2:
