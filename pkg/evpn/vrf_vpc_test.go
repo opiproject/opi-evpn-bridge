@@ -26,7 +26,7 @@ import (
 
 var (
 	testVpcID   = "opi-vpc8"
-	testVpcName = resourceIDToVolumeName("vpcs", testVpcID)
+	testVpcName = resourceIDToFullName("vpcs", testVpcID)
 	testVpc     = pb.Vpc{
 		Spec: &pb.VpcSpec{
 			V4RouteTableNameRef: "1000",
@@ -133,7 +133,7 @@ func Test_DeleteVpc(t *testing.T) {
 			"unknown-id",
 			nil,
 			codes.NotFound,
-			fmt.Sprintf("unable to find key %v", resourceIDToVolumeName("vpcs", "unknown-id")),
+			fmt.Sprintf("unable to find key %v", resourceIDToFullName("vpcs", "unknown-id")),
 			false,
 		},
 		"unknown key with missing allowed": {
@@ -173,7 +173,7 @@ func Test_DeleteVpc(t *testing.T) {
 			}(conn)
 			client := pb.NewCloudInfraServiceClient(conn)
 
-			fname1 := resourceIDToVolumeName("vpcs", tt.in)
+			fname1 := resourceIDToFullName("vpcs", tt.in)
 			opi.Vpcs[testVpcName] = &testVpc
 
 			request := &pb.DeleteVpcRequest{Name: fname1, AllowMissing: tt.missing}
@@ -227,12 +227,12 @@ func Test_UpdateVpc(t *testing.T) {
 		"valid request with unknown key": {
 			nil,
 			&pb.Vpc{
-				Name: resourceIDToVolumeName("vpcs", "unknown-id"),
+				Name: resourceIDToFullName("vpcs", "unknown-id"),
 			},
 			nil,
 			[]string{""},
 			codes.NotFound,
-			fmt.Sprintf("unable to find key %v", resourceIDToVolumeName("vpcs", "unknown-id")),
+			fmt.Sprintf("unable to find key %v", resourceIDToFullName("vpcs", "unknown-id")),
 			false,
 			true,
 		},

@@ -27,7 +27,7 @@ import (
 
 var (
 	testTunnelID   = "opi-tunnel8"
-	testTunnelName = resourceIDToVolumeName("tunnels", testTunnelID)
+	testTunnelName = resourceIDToFullName("tunnels", testTunnelID)
 	testTunnel     = pb.Tunnel{
 		Spec: &pb.TunnelSpec{
 			VpcNameRef: testSubnetName,
@@ -144,7 +144,7 @@ func Test_DeleteTunnel(t *testing.T) {
 			"unknown-id",
 			nil,
 			codes.NotFound,
-			fmt.Sprintf("unable to find key %v", resourceIDToVolumeName("tunnels", "unknown-id")),
+			fmt.Sprintf("unable to find key %v", resourceIDToFullName("tunnels", "unknown-id")),
 			false,
 		},
 		"unknown key with missing allowed": {
@@ -184,7 +184,7 @@ func Test_DeleteTunnel(t *testing.T) {
 			}(conn)
 			client := pb.NewCloudInfraServiceClient(conn)
 
-			fname1 := resourceIDToVolumeName("tunnels", tt.in)
+			fname1 := resourceIDToFullName("tunnels", tt.in)
 			opi.Tunnels[testTunnelName] = &testTunnel
 
 			request := &pb.DeleteTunnelRequest{Name: fname1, AllowMissing: tt.missing}
@@ -248,12 +248,12 @@ func Test_UpdateTunnel(t *testing.T) {
 		"valid request with unknown key": {
 			nil,
 			&pb.Tunnel{
-				Name: resourceIDToVolumeName("tunnels", "unknown-id"),
+				Name: resourceIDToFullName("tunnels", "unknown-id"),
 			},
 			nil,
 			[]string{""},
 			codes.NotFound,
-			fmt.Sprintf("unable to find key %v", resourceIDToVolumeName("tunnels", "unknown-id")),
+			fmt.Sprintf("unable to find key %v", resourceIDToFullName("tunnels", "unknown-id")),
 			false,
 			true,
 		},
