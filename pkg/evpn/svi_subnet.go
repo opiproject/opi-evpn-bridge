@@ -187,7 +187,7 @@ func (s *Server) UpdateSubnet(_ context.Context, in *pb.UpdateSubnetRequest) (*p
 		return nil, err
 	}
 	resourceID := path.Base(volume.Name)
-	_, err := netlink.LinkByName(resourceID)
+	iface, err := netlink.LinkByName(resourceID)
 	if err != nil {
 		err := status.Errorf(codes.NotFound, "unable to find key %s", resourceID)
 		log.Printf("error: %v", err)
@@ -195,10 +195,10 @@ func (s *Server) UpdateSubnet(_ context.Context, in *pb.UpdateSubnetRequest) (*p
 	}
 	// base := iface.Attrs()
 	// iface.MTU = 1500 // TODO: remove this, just an example
-	// if err := netlink.LinkModify(iface); err != nil {
-	// 	fmt.Printf("Failed to update link: %v", err)
-	// 	return nil, err
-	// }
+	if err := netlink.LinkModify(iface); err != nil {
+		fmt.Printf("Failed to update link: %v", err)
+		return nil, err
+	}
 	log.Printf("TODO: use resourceID=%v", resourceID)
 	return nil, status.Errorf(codes.Unimplemented, "UpdateSubnet method is not implemented")
 }
