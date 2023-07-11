@@ -162,8 +162,12 @@ func (s *Server) UpdateVpc(_ context.Context, in *pb.UpdateVpcRequest) (*pb.Vpc,
 		fmt.Printf("Failed to update link: %v", err)
 		return nil, err
 	}
-	log.Printf("TODO: use resourceID=%v", resourceID)
-	return nil, status.Errorf(codes.Unimplemented, "UpdateVpc method is not implemented")
+	// TODO: replace cloud -> evpn
+	response := proto.Clone(in.Vpc).(*pb.Vpc)
+	response.Status = &pb.VpcStatus{SubnetCount: 4}
+	s.Vpcs[in.Vpc.Name] = response
+	log.Printf("UpdateVpc: Sending to client: %v", response)
+	return response, nil
 }
 
 // GetVpc gets an VRF/VPC

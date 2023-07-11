@@ -220,8 +220,12 @@ func (s *Server) UpdateInterface(_ context.Context, in *pb.UpdateInterfaceReques
 		fmt.Printf("Failed to update link: %v", err)
 		return nil, err
 	}
-	log.Printf("TODO: use resourceID=%v", resourceID)
-	return nil, status.Errorf(codes.Unimplemented, "UpdateInterface method is not implemented")
+	// TODO: replace cloud -> evpn
+	response := proto.Clone(in.Interface).(*pb.Interface)
+	response.Status = &pb.InterfaceStatus{IfIndex: 8, OperStatus: pb.IfStatus_IF_STATUS_UP}
+	s.Interfaces[in.Interface.Name] = response
+	log.Printf("UpdateInterface: Sending to client: %v", response)
+	return response, nil
 }
 
 // GetInterface gets an Interface
