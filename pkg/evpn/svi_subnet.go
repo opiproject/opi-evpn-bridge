@@ -46,7 +46,7 @@ func (s *Server) CreateSubnet(_ context.Context, in *pb.CreateSubnetRequest) (*p
 		log.Printf("client provided the ID of a resource %v, ignoring the name field %v", in.SubnetId, in.Subnet.Name)
 		resourceID = in.SubnetId
 	}
-	in.Subnet.Name = resourceIDToVolumeName("subnets", resourceID)
+	in.Subnet.Name = resourceIDToFullName("subnets", resourceID)
 	// idempotent API when called with same key, should return same object
 	snet, ok := s.Subnets[in.Subnet.Name]
 	if ok {

@@ -27,7 +27,7 @@ import (
 
 var (
 	testSubnetID   = "opi-subnet9"
-	testSubnetName = resourceIDToVolumeName("subnets", testSubnetID)
+	testSubnetName = resourceIDToFullName("subnets", testSubnetID)
 	testSubnet     = pb.Subnet{
 		Spec: &pb.SubnetSpec{
 			VpcNameRef:       testVpcName,
@@ -139,7 +139,7 @@ func Test_DeleteSubnet(t *testing.T) {
 			"unknown-id",
 			nil,
 			codes.NotFound,
-			fmt.Sprintf("unable to find key %v", resourceIDToVolumeName("subnets", "unknown-id")),
+			fmt.Sprintf("unable to find key %v", resourceIDToFullName("subnets", "unknown-id")),
 			false,
 		},
 		"unknown key with missing allowed": {
@@ -179,7 +179,7 @@ func Test_DeleteSubnet(t *testing.T) {
 			}(conn)
 			client := pb.NewCloudInfraServiceClient(conn)
 
-			fname1 := resourceIDToVolumeName("subnets", tt.in)
+			fname1 := resourceIDToFullName("subnets", tt.in)
 			opi.Subnets[testSubnetName] = &testSubnet
 
 			request := &pb.DeleteSubnetRequest{Name: fname1, AllowMissing: tt.missing}
@@ -238,12 +238,12 @@ func Test_UpdateSubnet(t *testing.T) {
 		"valid request with unknown key": {
 			nil,
 			&pb.Subnet{
-				Name: resourceIDToVolumeName("subnets", "unknown-id"),
+				Name: resourceIDToFullName("subnets", "unknown-id"),
 			},
 			nil,
 			[]string{""},
 			codes.NotFound,
-			fmt.Sprintf("unable to find key %v", resourceIDToVolumeName("subnets", "unknown-id")),
+			fmt.Sprintf("unable to find key %v", resourceIDToFullName("subnets", "unknown-id")),
 			false,
 			true,
 		},

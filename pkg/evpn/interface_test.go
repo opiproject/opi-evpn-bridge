@@ -26,7 +26,7 @@ import (
 
 var (
 	testInterfaceID   = "opi-interface8"
-	testInterfaceName = resourceIDToVolumeName("interfaces", testInterfaceID)
+	testInterfaceName = resourceIDToFullName("interfaces", testInterfaceID)
 	testInterface     = pb.Interface{
 		Spec: &pb.InterfaceSpec{
 			Ifid: 11,
@@ -133,7 +133,7 @@ func Test_DeleteInterface(t *testing.T) {
 			"unknown-id",
 			nil,
 			codes.NotFound,
-			fmt.Sprintf("unable to find key %v", resourceIDToVolumeName("interfaces", "unknown-id")),
+			fmt.Sprintf("unable to find key %v", resourceIDToFullName("interfaces", "unknown-id")),
 			false,
 		},
 		"unknown key with missing allowed": {
@@ -173,7 +173,7 @@ func Test_DeleteInterface(t *testing.T) {
 			}(conn)
 			client := pb.NewCloudInfraServiceClient(conn)
 
-			fname1 := resourceIDToVolumeName("interfaces", tt.in)
+			fname1 := resourceIDToFullName("interfaces", tt.in)
 			opi.Interfaces[testInterfaceName] = &testInterface
 
 			request := &pb.DeleteInterfaceRequest{Name: fname1, AllowMissing: tt.missing}
@@ -227,12 +227,12 @@ func Test_UpdateInterface(t *testing.T) {
 		"valid request with unknown key": {
 			nil,
 			&pb.Interface{
-				Name: resourceIDToVolumeName("interfaces", "unknown-id"),
+				Name: resourceIDToFullName("interfaces", "unknown-id"),
 			},
 			nil,
 			[]string{""},
 			codes.NotFound,
-			fmt.Sprintf("unable to find key %v", resourceIDToVolumeName("interfaces", "unknown-id")),
+			fmt.Sprintf("unable to find key %v", resourceIDToFullName("interfaces", "unknown-id")),
 			false,
 			true,
 		},

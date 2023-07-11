@@ -46,7 +46,7 @@ func (s *Server) CreateInterface(_ context.Context, in *pb.CreateInterfaceReques
 		log.Printf("client provided the ID of a resource %v, ignoring the name field %v", in.InterfaceId, in.Interface.Name)
 		resourceID = in.InterfaceId
 	}
-	in.Interface.Name = resourceIDToVolumeName("interfaces", resourceID)
+	in.Interface.Name = resourceIDToFullName("interfaces", resourceID)
 	// idempotent API when called with same key, should return same object
 	iface, ok := s.Interfaces[in.Interface.Name]
 	if ok {
