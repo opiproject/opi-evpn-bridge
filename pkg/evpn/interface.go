@@ -202,19 +202,25 @@ func (s *Server) UpdateInterface(_ context.Context, in *pb.UpdateInterfaceReques
 		log.Printf("error: %v", err)
 		return nil, err
 	}
-	resourceID := path.Base(volume.Name)
 	// update_mask = 2
 	if err := fieldmask.Validate(in.UpdateMask, in.Interface); err != nil {
 		log.Printf("error: %v", err)
 		return nil, err
 	}
-	log.Printf("TODO: use resourceID=%v", resourceID)
-	// TODO: modify dummy interface
-	// dummy := &netlink.Dummy{LinkAttrs: netlink.LinkAttrs{Name: resourceID}}
-	// if err := netlink.LinkModify(dummy); err != nil {
-	// 	fmt.Printf("Failed to delete link: %v", err)
+	resourceID := path.Base(volume.Name)
+	_, err := netlink.LinkByName(resourceID)
+	if err != nil {
+		err := status.Errorf(codes.NotFound, "unable to find key %s", resourceID)
+		log.Printf("error: %v", err)
+		return nil, err
+	}
+	// base := iface.Attrs()
+	// iface.MTU = 1500 // TODO: remove this, just an example
+	// if err := netlink.LinkModify(iface); err != nil {
+	// 	fmt.Printf("Failed to update link: %v", err)
 	// 	return nil, err
 	// }
+	log.Printf("TODO: use resourceID=%v", resourceID)
 	return nil, status.Errorf(codes.Unimplemented, "UpdateInterface method is not implemented")
 }
 
