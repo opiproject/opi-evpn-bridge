@@ -83,8 +83,8 @@ func (s *Server) CreateSubnet(_ context.Context, in *pb.CreateSubnetRequest) (*p
 			log.Printf("error: %v", err)
 			return nil, err
 		}
-		// now get VRF/VPC to plug this bridge into
-		vpc, ok := s.Vpcs[in.Subnet.Spec.VpcNameRef]
+		// now get VRF to plug this bridge into
+		vpc, ok := s.Vrfs[in.Subnet.Spec.VpcNameRef]
 		if !ok {
 			err := status.Errorf(codes.NotFound, "unable to find key %s", in.Subnet.Spec.VpcNameRef)
 			log.Printf("error: %v", err)

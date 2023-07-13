@@ -29,7 +29,7 @@ var (
 	testSubnetName = resourceIDToFullName("subnets", testSubnetID)
 	testSubnet     = pb.Subnet{
 		Spec: &pb.SubnetSpec{
-			VpcNameRef:       testVpcName,
+			VpcNameRef:       testVrfName,
 			VirtualRouterMac: []byte("qrvMAAAB"),
 			V4Prefix: &pc.IPv4Prefix{
 				Addr: 336860161,
@@ -199,7 +199,7 @@ func Test_DeleteSubnet(t *testing.T) {
 
 func Test_UpdateSubnet(t *testing.T) {
 	spec := &pb.SubnetSpec{
-		VpcNameRef:       testVpcName,
+		VpcNameRef:       testVrfName,
 		VirtualRouterMac: []byte("qrvMAAAB"),
 		V4Prefix: &pc.IPv4Prefix{
 			Addr: 336860161,
