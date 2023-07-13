@@ -21,40 +21,44 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/fieldmaskpb"
 
-	pb "github.com/opiproject/opi-api/network/cloud/v1alpha1/gen/go"
+	pb "github.com/opiproject/opi-api/network/evpn-gw/v1alpha1/gen/go"
+	pc "github.com/opiproject/opi-api/network/opinetcommon/v1alpha1/gen/go"
 )
 
 var (
-	testVpcID   = "opi-vpc8"
-	testVpcName = resourceIDToFullName("vpcs", testVpcID)
-	testVpc     = pb.Vpc{
-		Spec: &pb.VpcSpec{
-			V4RouteTableNameRef: "1000",
+	testVrfID   = "opi-vrf8"
+	testVrfName = resourceIDToFullName("vrfs", testVrfID)
+	testVrf     = pb.Vrf{
+		Spec: &pb.VrfSpec{
+			Vni: 1000,
+			LoopbackIpPrefix: &pc.IPPrefix{
+				Len: 24,
+			},
 		},
 	}
 )
 
-func Test_CreateVpc(t *testing.T) {
+func Test_CreateVrf(t *testing.T) {
 	tests := map[string]struct {
 		id      string
-		in      *pb.Vpc
-		out     *pb.Vpc
+		in      *pb.Vrf
+		out     *pb.Vrf
 		errCode codes.Code
 		errMsg  string
 		exist   bool
 	}{
 		"illegal resource_id": {
 			"CapitalLettersNotAllowed",
-			&testVpc,
+			&testVrf,
 			nil,
 			codes.Unknown,
 			fmt.Sprintf("user-settable ID must only contain lowercase, numbers and hyphens (%v)", "got: 'C' in position 0"),
 			false,
 		},
 		"already exists": {
-			testVpcID,
-			&testVpc,
-			&testVpc,
+			testVrfID,
+			&testVrf,
+			&testVrf,
 			codes.OK,
 			"",
 			true,
@@ -80,17 +84,17 @@ func Test_CreateVpc(t *testing.T) {
 					log.Fatal(err)
 				}
 			}(conn)
-			client := pb.NewCloudInfraServiceClient(conn)
+			client := pb.NewVrfServiceClient(conn)
 
 			if tt.exist {
-				opi.Vpcs[testVpcName] = &testVpc
+				opi.Vrfs[testVrfName] = &testVrf
 			}
 			if tt.out != nil {
-				tt.out.Name = testVpcName
+				tt.out.Name = testVrfName
 			}
 
-			request := &pb.CreateVpcRequest{Vpc: tt.in, VpcId: tt.id, Parent: "todo"}
-			response, err := client.CreateVpc(ctx, request)
+			request := &pb.CreateVrfRequest{Vrf: tt.in, VrfId: tt.id}
+			response, err := client.CreateVrf(ctx, request)
 			if response != nil {
 				// if !reflect.DeepEqual(response, tt.out) {
 				mtt, _ := proto.Marshal(tt.out)
@@ -114,7 +118,7 @@ func Test_CreateVpc(t *testing.T) {
 	}
 }
 
-func Test_DeleteVpc(t *testing.T) {
+func Test_DeleteVrf(t *testing.T) {
 	tests := map[string]struct {
 		in      string
 		out     *emptypb.Empty
@@ -123,7 +127,7 @@ func Test_DeleteVpc(t *testing.T) {
 		missing bool
 	}{
 		// "valid request": {
-		// 	testVpcID,
+		// 	testVrfID,
 		// 	&emptypb.Empty{},
 		// 	codes.OK,
 		// 	"",
@@ -133,7 +137,7 @@ func Test_DeleteVpc(t *testing.T) {
 			"unknown-id",
 			nil,
 			codes.NotFound,
-			fmt.Sprintf("unable to find key %v", resourceIDToFullName("vpcs", "unknown-id")),
+			fmt.Sprintf("unable to find key %v", resourceIDToFullName("vrfs", "unknown-id")),
 			false,
 		},
 		"unknown key with missing allowed": {
@@ -171,13 +175,13 @@ func Test_DeleteVpc(t *testing.T) {
 					log.Fatal(err)
 				}
 			}(conn)
-			client := pb.NewCloudInfraServiceClient(conn)
+			client := pb.NewVrfServiceClient(conn)
 
-			fname1 := resourceIDToFullName("vpcs", tt.in)
-			opi.Vpcs[testVpcName] = &testVpc
+			fname1 := resourceIDToFullName("vrfs", tt.in)
+			opi.Vrfs[testVrfName] = &testVrf
 
-			request := &pb.DeleteVpcRequest{Name: fname1, AllowMissing: tt.missing}
-			response, err := client.DeleteVpc(ctx, request)
+			request := &pb.DeleteVrfRequest{Name: fname1, AllowMissing: tt.missing}
+			response, err := client.DeleteVrf(ctx, request)
 
 			if er, ok := status.FromError(err); ok {
 				if er.Code() != tt.errCode {
@@ -197,14 +201,17 @@ func Test_DeleteVpc(t *testing.T) {
 	}
 }
 
-func Test_UpdateVpc(t *testing.T) {
-	spec := &pb.VpcSpec{
-		V4RouteTableNameRef: "1000",
+func Test_UpdateVrf(t *testing.T) {
+	spec := &pb.VrfSpec{
+		Vni: 1000,
+		LoopbackIpPrefix: &pc.IPPrefix{
+			Len: 24,
+		},
 	}
 	tests := map[string]struct {
 		mask    *fieldmaskpb.FieldMask
-		in      *pb.Vpc
-		out     *pb.Vpc
+		in      *pb.Vrf
+		out     *pb.Vrf
 		spdk    []string
 		errCode codes.Code
 		errMsg  string
@@ -213,8 +220,8 @@ func Test_UpdateVpc(t *testing.T) {
 	}{
 		"invalid fieldmask": {
 			&fieldmaskpb.FieldMask{Paths: []string{"*", "author"}},
-			&pb.Vpc{
-				Name: testVpcName,
+			&pb.Vrf{
+				Name: testVrfName,
 				Spec: spec,
 			},
 			nil,
@@ -226,13 +233,14 @@ func Test_UpdateVpc(t *testing.T) {
 		},
 		"valid request with unknown key": {
 			nil,
-			&pb.Vpc{
-				Name: resourceIDToFullName("vpcs", "unknown-id"),
+			&pb.Vrf{
+				Name: resourceIDToFullName("vrfs", "unknown-id"),
+				Spec: spec,
 			},
 			nil,
 			[]string{""},
 			codes.NotFound,
-			fmt.Sprintf("unable to find key %v", resourceIDToFullName("vpcs", "unknown-id")),
+			fmt.Sprintf("unable to find key %v", resourceIDToFullName("vrfs", "unknown-id")),
 			false,
 			true,
 		},
@@ -257,17 +265,17 @@ func Test_UpdateVpc(t *testing.T) {
 					log.Fatal(err)
 				}
 			}(conn)
-			client := pb.NewCloudInfraServiceClient(conn)
+			client := pb.NewVrfServiceClient(conn)
 
 			if tt.exist {
-				opi.Vpcs[testVpcName] = &testVpc
+				opi.Vrfs[testVrfName] = &testVrf
 			}
 			if tt.out != nil {
-				tt.out.Name = testVpcName
+				tt.out.Name = testVrfName
 			}
 
-			request := &pb.UpdateVpcRequest{Vpc: tt.in, UpdateMask: tt.mask}
-			response, err := client.UpdateVpc(ctx, request)
+			request := &pb.UpdateVrfRequest{Vrf: tt.in, UpdateMask: tt.mask}
+			response, err := client.UpdateVrf(ctx, request)
 			if response != nil {
 				// Marshall the request and response, so we can just compare the contained data
 				mtt, _ := proto.Marshal(tt.out.Spec)
@@ -296,18 +304,18 @@ func Test_UpdateVpc(t *testing.T) {
 	}
 }
 
-func Test_GetVpc(t *testing.T) {
+func Test_GetVrf(t *testing.T) {
 	tests := map[string]struct {
 		in      string
-		out     *pb.Vpc
+		out     *pb.Vrf
 		errCode codes.Code
 		errMsg  string
 	}{
 		// "valid request": {
-		// 	testVpcID,
-		// 	&pb.Vpc{
-		// 		Name:      testVpcName,
-		// 		Multipath: testVpc.Multipath,
+		// 	testVrfID,
+		// 	&pb.Vrf{
+		// 		Name:      testVrfName,
+		// 		Multipath: testVrf.Multipath,
 		// 	},
 		// 	codes.OK,
 		// 	"",
@@ -345,12 +353,12 @@ func Test_GetVpc(t *testing.T) {
 					log.Fatal(err)
 				}
 			}(conn)
-			client := pb.NewCloudInfraServiceClient(conn)
+			client := pb.NewVrfServiceClient(conn)
 
-			opi.Vpcs[testVpcID] = &testVpc
+			opi.Vrfs[testVrfID] = &testVrf
 
-			request := &pb.GetVpcRequest{Name: tt.in}
-			response, err := client.GetVpc(ctx, request)
+			request := &pb.GetVrfRequest{Name: tt.in}
+			response, err := client.GetVrf(ctx, request)
 			if response != nil {
 				// if !reflect.DeepEqual(response, tt.out) {
 				mtt, _ := proto.Marshal(tt.out)

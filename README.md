@@ -30,18 +30,18 @@ Run `docker-compose up -d`
 ## Manual gRPC example
 
 ```bash
-docker-compose exec opi-evpn-bridge grpcurl -plaintext -d '{"vpc" : {"spec" : {"v4_route_table_name_ref" : "1234"} }, "vpc_id" : "testvpc", "parent" : "todo" }' localhost:50151 opi_api.network.cloud.v1alpha1.CloudInfraService.CreateVpc
-docker-compose exec opi-evpn-bridge grpcurl -plaintext -d '{"subnet" : {"spec" : {"vpc_name_ref": "//network.opiproject.org/vpcs/blue", "virtual_router_mac": "qrvMAAAB", "v4_prefix": {"addr": 336860161, "len": 24} } }, "subnet_id" : "testbridge", "parent" : "todo" }' localhost:50151 opi_api.network.cloud.v1alpha1.CloudInfraService.CreateSubnet
+docker-compose exec opi-evpn-bridge grpcurl -plaintext -d '{"vrf" : {"spec" : {"vni" : 1234, "loopback_ip_prefix" : {} }}, "vrf_id" : "testvrf" }' localhost:50151 opi_api.network.cloud.v1alpha1.CloudInfraService.CreateVrf"
+docker-compose exec opi-evpn-bridge grpcurl -plaintext -d '{"subnet" : {"spec" : {"vpc_name_ref": "//network.opiproject.org/vrfs/blue", "virtual_router_mac": "qrvMAAAB", "v4_prefix": {"addr": 336860161, "len": 24} } }, "subnet_id" : "testbridge", "parent" : "todo" }' localhost:50151 opi_api.network.cloud.v1alpha1.CloudInfraService.CreateSubnet
 docker-compose exec opi-evpn-bridge grpcurl -plaintext -d '{"interface" : {"spec" : {"ifid": 11, "l3_if_spec": {"vpc_name_ref": "//network.opiproject.org/subnets/testbridge", mac_address: "qrvMAAAB"}} }, "interface_id" : "testinterface", "parent" : "todo" }' localhost:50151 opi_api.network.cloud.v1alpha1.CloudInfraService.CreateInterface
 docker-compose exec opi-evpn-bridge grpcurl -plaintext -d '{"tunnel" : {"spec" : {"vpc_name_ref": "//network.opiproject.org/subnets/testbridge", "local_ip": {"af": "IP_AF_INET", "v4_addr": 336860161}, "encap": {"type": "ENCAP_TYPE_VXLAN", "value": {"vnid": 100}} } }, "tunnel_id" : "testvxlan", "parent" : "todo" }' localhost:50151 opi_api.network.cloud.v1alpha1.CloudInfraService.CreateTunnel
 docker-compose exec opi-evpn-bridge grpcurl -plaintext -d '{"name": "//network.opiproject.org/interfaces/testinterface"}' localhost:50151 opi_api.network.cloud.v1alpha1.CloudInfraService.GetInterface
 docker-compose exec opi-evpn-bridge grpcurl -plaintext -d '{"name": "//network.opiproject.org/subnets/testbridge"}' localhost:50151 opi_api.network.cloud.v1alpha1.CloudInfraService.GetSubnet
 docker-compose exec opi-evpn-bridge grpcurl -plaintext -d '{"name": "//network.opiproject.org/tunnels/testvxlan"}' localhost:50151 opi_api.network.cloud.v1alpha1.CloudInfraService.GetTunnel
-docker-compose exec opi-evpn-bridge grpcurl -plaintext -d '{"name": "//network.opiproject.org/vpcs/testvpc"}' localhost:50151 opi_api.network.cloud.v1alpha1.CloudInfraService.GetVpc
+docker-compose exec opi-evpn-bridge grpcurl -plaintext -d '{"name": "//network.opiproject.org/vrfs/testvrf"}' localhost:50151 opi_api.network.cloud.v1alpha1.CloudInfraService.GetVrf
 docker-compose exec opi-evpn-bridge grpcurl -plaintext -d '{"name": "//network.opiproject.org/interfaces/testinterface"}' localhost:50151 opi_api.network.cloud.v1alpha1.CloudInfraService.DeleteInterface
 docker-compose exec opi-evpn-bridge grpcurl -plaintext -d '{"name": "//network.opiproject.org/subnets/testbridge"}' localhost:50151 opi_api.network.cloud.v1alpha1.CloudInfraService.DeleteSubnet
 docker-compose exec opi-evpn-bridge grpcurl -plaintext -d '{"name" : "//network.opiproject.org/tunnels/testvxlan"}' localhost:50151 opi_api.network.cloud.v1alpha1.CloudInfraService.DeleteTunnel
-docker-compose exec opi-evpn-bridge grpcurl -plaintext -d '{"name" : "//network.opiproject.org/vpcs/testvpc"}' localhost:50151 opi_api.network.cloud.v1alpha1.CloudInfraService.DeleteVpc
+docker-compose exec opi-evpn-bridge grpcurl -plaintext -d '{"name" : "//network.opiproject.org/vrfs/testvrf"}' localhost:50151 opi_api.network.cloud.v1alpha1.CloudInfraService.DeleteVrf
 ```
 
 ## Architecture Diagram
