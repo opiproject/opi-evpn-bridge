@@ -9,15 +9,17 @@ import (
 	"fmt"
 
 	pb "github.com/opiproject/opi-api/network/cloud/v1alpha1/gen/go"
+	pe "github.com/opiproject/opi-api/network/evpn-gw/v1alpha1/gen/go"
 )
 
 // Server represents the Server object
 type Server struct {
 	pb.UnimplementedCloudInfraServiceServer
+	pe.UnimplementedVrfServiceServer
 	Subnets    map[string]*pb.Subnet
 	Interfaces map[string]*pb.Interface
 	Tunnels    map[string]*pb.Tunnel
-	Vpcs       map[string]*pb.Vpc
+	Vrfs       map[string]*pe.Vrf
 }
 
 // NewServer creates initialized instance of EVPN server
@@ -26,7 +28,7 @@ func NewServer() *Server {
 		Subnets:    make(map[string]*pb.Subnet),
 		Interfaces: make(map[string]*pb.Interface),
 		Tunnels:    make(map[string]*pb.Tunnel),
-		Vpcs:       make(map[string]*pb.Vpc),
+		Vrfs:       make(map[string]*pe.Vrf),
 	}
 }
 
