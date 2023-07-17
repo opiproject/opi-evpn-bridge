@@ -6,7 +6,6 @@
 package evpn
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"log"
@@ -91,13 +90,8 @@ func Test_CreateVpc(t *testing.T) {
 
 			request := &pb.CreateVpcRequest{Vpc: tt.in, VpcId: tt.id, Parent: "todo"}
 			response, err := client.CreateVpc(ctx, request)
-			if response != nil {
-				// if !reflect.DeepEqual(response, tt.out) {
-				mtt, _ := proto.Marshal(tt.out)
-				mResponse, _ := proto.Marshal(response)
-				if !bytes.Equal(mtt, mResponse) {
-					t.Error("response: expected", tt.out, "received", response)
-				}
+			if !proto.Equal(tt.out, response) {
+				t.Error("response: expected", tt.out, "received", response)
 			}
 
 			if er, ok := status.FromError(err); ok {
@@ -268,18 +262,8 @@ func Test_UpdateVpc(t *testing.T) {
 
 			request := &pb.UpdateVpcRequest{Vpc: tt.in, UpdateMask: tt.mask}
 			response, err := client.UpdateVpc(ctx, request)
-			if response != nil {
-				// Marshall the request and response, so we can just compare the contained data
-				mtt, _ := proto.Marshal(tt.out.Spec)
-				mResponse, _ := proto.Marshal(response.Spec)
-
-				// Compare the marshalled messages
-				if !bytes.Equal(mtt, mResponse) {
-					t.Error("response: expected", tt.out.GetSpec(), "received", response.GetSpec())
-				}
-				if !reflect.DeepEqual(response.Status, tt.out.Status) {
-					t.Error("response: expected", tt.out.GetStatus(), "received", response.GetStatus())
-				}
+			if !proto.Equal(tt.out, response) {
+				t.Error("response: expected", tt.out, "received", response)
 			}
 
 			if er, ok := status.FromError(err); ok {
@@ -351,13 +335,8 @@ func Test_GetVpc(t *testing.T) {
 
 			request := &pb.GetVpcRequest{Name: tt.in}
 			response, err := client.GetVpc(ctx, request)
-			if response != nil {
-				// if !reflect.DeepEqual(response, tt.out) {
-				mtt, _ := proto.Marshal(tt.out)
-				mResponse, _ := proto.Marshal(response)
-				if !bytes.Equal(mtt, mResponse) {
-					t.Error("response: expected", tt.out, "received", response)
-				}
+			if !proto.Equal(tt.out, response) {
+				t.Error("response: expected", tt.out, "received", response)
 			}
 
 			if er, ok := status.FromError(err); ok {
