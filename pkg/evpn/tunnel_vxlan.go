@@ -52,7 +52,7 @@ func (s *Server) CreateTunnel(_ context.Context, in *pb.CreateTunnelRequest) (*p
 		log.Printf("client provided the ID of a resource %v, ignoring the name field %v", in.TunnelId, in.Tunnel.Name)
 		resourceID = in.TunnelId
 	}
-	in.Tunnel.Name = fmt.Sprintf("//network.opiproject.org/tunnels/%s", resourceID)
+	in.Tunnel.Name = resourceIDToFullName("tunnels", resourceID)
 	// idempotent API when called with same key, should return same object
 	obj, ok := s.Tunnels[in.Tunnel.Name]
 	if ok {
@@ -173,14 +173,30 @@ func (s *Server) UpdateTunnel(_ context.Context, in *pb.UpdateTunnelRequest) (*p
 		log.Printf("error: %v", err)
 		return nil, err
 	}
-	resourceID := path.Base(volume.Name)
 	// update_mask = 2
 	if err := fieldmask.Validate(in.UpdateMask, in.Tunnel); err != nil {
 		log.Printf("error: %v", err)
 		return nil, err
 	}
-	log.Printf("TODO: use resourceID=%v", resourceID)
-	return nil, status.Errorf(codes.Unimplemented, "UpdateTunnel method is not implemented")
+	resourceID := path.Base(volume.Name)
+	iface, err := netlink.LinkByName(resourceID)
+	if err != nil {
+		err := status.Errorf(codes.NotFound, "unable to find key %s", resourceID)
+		log.Printf("error: %v", err)
+		return nil, err
+	}
+	// base := iface.Attrs()
+	// iface.MTU = 1500 // TODO: remove this, just an example
+	if err := netlink.LinkModify(iface); err != nil {
+		fmt.Printf("Failed to update link: %v", err)
+		return nil, err
+	}
+	// TODO: replace cloud -> evpn
+	response := proto.Clone(in.Tunnel).(*pb.Tunnel)
+	response.Status = &pb.TunnelStatus{VnicCount: 4}
+	s.Tunnels[in.Tunnel.Name] = response
+	log.Printf("UpdateTunnel: Sending to client: %v", response)
+	return response, nil
 }
 
 // GetTunnel gets an Subnet/Bridge

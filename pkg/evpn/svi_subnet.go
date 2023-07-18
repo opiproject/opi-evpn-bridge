@@ -46,7 +46,7 @@ func (s *Server) CreateSubnet(_ context.Context, in *pb.CreateSubnetRequest) (*p
 		log.Printf("client provided the ID of a resource %v, ignoring the name field %v", in.SubnetId, in.Subnet.Name)
 		resourceID = in.SubnetId
 	}
-	in.Subnet.Name = fmt.Sprintf("//network.opiproject.org/subnets/%s", resourceID)
+	in.Subnet.Name = resourceIDToFullName("subnets", resourceID)
 	// idempotent API when called with same key, should return same object
 	snet, ok := s.Subnets[in.Subnet.Name]
 	if ok {
@@ -181,14 +181,30 @@ func (s *Server) UpdateSubnet(_ context.Context, in *pb.UpdateSubnetRequest) (*p
 		log.Printf("error: %v", err)
 		return nil, err
 	}
-	resourceID := path.Base(volume.Name)
 	// update_mask = 2
 	if err := fieldmask.Validate(in.UpdateMask, in.Subnet); err != nil {
 		log.Printf("error: %v", err)
 		return nil, err
 	}
-	log.Printf("TODO: use resourceID=%v", resourceID)
-	return nil, status.Errorf(codes.Unimplemented, "UpdateSubnet method is not implemented")
+	resourceID := path.Base(volume.Name)
+	iface, err := netlink.LinkByName(resourceID)
+	if err != nil {
+		err := status.Errorf(codes.NotFound, "unable to find key %s", resourceID)
+		log.Printf("error: %v", err)
+		return nil, err
+	}
+	// base := iface.Attrs()
+	// iface.MTU = 1500 // TODO: remove this, just an example
+	if err := netlink.LinkModify(iface); err != nil {
+		fmt.Printf("Failed to update link: %v", err)
+		return nil, err
+	}
+	// TODO: replace cloud -> evpn
+	response := proto.Clone(in.Subnet).(*pb.Subnet)
+	response.Status = &pb.SubnetStatus{HwIndex: 8, VnicCount: 88}
+	s.Subnets[in.Subnet.Name] = response
+	log.Printf("UpdateSubnet: Sending to client: %v", response)
+	return response, nil
 }
 
 // GetSubnet gets an SVI/subnet

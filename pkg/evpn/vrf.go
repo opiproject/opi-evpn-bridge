@@ -45,7 +45,7 @@ func (s *Server) CreateVpc(_ context.Context, in *pb.CreateVpcRequest) (*pb.Vpc,
 		log.Printf("client provided the ID of a resource %v, ignoring the name field %v", in.VpcId, in.Vpc.Name)
 		resourceID = in.VpcId
 	}
-	in.Vpc.Name = fmt.Sprintf("//network.opiproject.org/vpcs/%s", resourceID)
+	in.Vpc.Name = resourceIDToFullName("vpcs", resourceID)
 	// idempotent API when called with same key, should return same object
 	obj, ok := s.Vpcs[in.Vpc.Name]
 	if ok {
@@ -144,14 +144,30 @@ func (s *Server) UpdateVpc(_ context.Context, in *pb.UpdateVpcRequest) (*pb.Vpc,
 		log.Printf("error: %v", err)
 		return nil, err
 	}
-	resourceID := path.Base(volume.Name)
 	// update_mask = 2
 	if err := fieldmask.Validate(in.UpdateMask, in.Vpc); err != nil {
 		log.Printf("error: %v", err)
 		return nil, err
 	}
-	log.Printf("TODO: use resourceID=%v", resourceID)
-	return nil, status.Errorf(codes.Unimplemented, "UpdateVpc method is not implemented")
+	resourceID := path.Base(volume.Name)
+	iface, err := netlink.LinkByName(resourceID)
+	if err != nil {
+		err := status.Errorf(codes.NotFound, "unable to find key %s", resourceID)
+		log.Printf("error: %v", err)
+		return nil, err
+	}
+	// base := iface.Attrs()
+	// iface.MTU = 1500 // TODO: remove this, just an example
+	if err := netlink.LinkModify(iface); err != nil {
+		fmt.Printf("Failed to update link: %v", err)
+		return nil, err
+	}
+	// TODO: replace cloud -> evpn
+	response := proto.Clone(in.Vpc).(*pb.Vpc)
+	response.Status = &pb.VpcStatus{SubnetCount: 4}
+	s.Vpcs[in.Vpc.Name] = response
+	log.Printf("UpdateVpc: Sending to client: %v", response)
+	return response, nil
 }
 
 // GetVpc gets an VRF/VPC

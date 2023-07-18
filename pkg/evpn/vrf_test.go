@@ -6,7 +6,6 @@
 package evpn
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"log"
@@ -19,13 +18,14 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/emptypb"
+	"google.golang.org/protobuf/types/known/fieldmaskpb"
 
 	pb "github.com/opiproject/opi-api/network/cloud/v1alpha1/gen/go"
 )
 
 var (
 	testVpcID   = "opi-vpc8"
-	testVpcName = resourceIDToVolumeName("vpcs", testVpcID)
+	testVpcName = resourceIDToFullName("vpcs", testVpcID)
 	testVpc     = pb.Vpc{
 		Spec: &pb.VpcSpec{
 			V4RouteTableNameRef: "1000",
@@ -90,24 +90,19 @@ func Test_CreateVpc(t *testing.T) {
 
 			request := &pb.CreateVpcRequest{Vpc: tt.in, VpcId: tt.id, Parent: "todo"}
 			response, err := client.CreateVpc(ctx, request)
-			if response != nil {
-				// if !reflect.DeepEqual(response, tt.out) {
-				mtt, _ := proto.Marshal(tt.out)
-				mResponse, _ := proto.Marshal(response)
-				if !bytes.Equal(mtt, mResponse) {
-					t.Error("response: expected", tt.out, "received", response)
-				}
+			if !proto.Equal(tt.out, response) {
+				t.Error("response: expected", tt.out, "received", response)
 			}
 
-			if err != nil {
-				if er, ok := status.FromError(err); ok {
-					if er.Code() != tt.errCode {
-						t.Error("error code: expected", tt.errCode, "received", er.Code())
-					}
-					if er.Message() != tt.errMsg {
-						t.Error("error message: expected", tt.errMsg, "received", er.Message())
-					}
+			if er, ok := status.FromError(err); ok {
+				if er.Code() != tt.errCode {
+					t.Error("error code: expected", tt.errCode, "received", er.Code())
 				}
+				if er.Message() != tt.errMsg {
+					t.Error("error message: expected", tt.errMsg, "received", er.Message())
+				}
+			} else {
+				t.Error("expected grpc error status")
 			}
 		})
 	}
@@ -132,7 +127,7 @@ func Test_DeleteVpc(t *testing.T) {
 			"unknown-id",
 			nil,
 			codes.NotFound,
-			fmt.Sprintf("unable to find key %v", resourceIDToVolumeName("vpcs", "unknown-id")),
+			fmt.Sprintf("unable to find key %v", resourceIDToFullName("vpcs", "unknown-id")),
 			false,
 		},
 		"unknown key with missing allowed": {
@@ -172,23 +167,114 @@ func Test_DeleteVpc(t *testing.T) {
 			}(conn)
 			client := pb.NewCloudInfraServiceClient(conn)
 
-			fname1 := resourceIDToVolumeName("vpcs", tt.in)
+			fname1 := resourceIDToFullName("vpcs", tt.in)
 			opi.Vpcs[testVpcName] = &testVpc
 
 			request := &pb.DeleteVpcRequest{Name: fname1, AllowMissing: tt.missing}
 			response, err := client.DeleteVpc(ctx, request)
-			if err != nil {
-				if er, ok := status.FromError(err); ok {
-					if er.Code() != tt.errCode {
-						t.Error("error code: expected", tt.errCode, "received", er.Code())
-					}
-					if er.Message() != tt.errMsg {
-						t.Error("error message: expected", tt.errMsg, "received", er.Message())
-					}
+
+			if er, ok := status.FromError(err); ok {
+				if er.Code() != tt.errCode {
+					t.Error("error code: expected", tt.errCode, "received", er.Code())
 				}
+				if er.Message() != tt.errMsg {
+					t.Error("error message: expected", tt.errMsg, "received", er.Message())
+				}
+			} else {
+				t.Error("expected grpc error status")
 			}
+
 			if reflect.TypeOf(response) != reflect.TypeOf(tt.out) {
 				t.Error("response: expected", reflect.TypeOf(tt.out), "received", reflect.TypeOf(response))
+			}
+		})
+	}
+}
+
+func Test_UpdateVpc(t *testing.T) {
+	spec := &pb.VpcSpec{
+		V4RouteTableNameRef: "1000",
+	}
+	tests := map[string]struct {
+		mask    *fieldmaskpb.FieldMask
+		in      *pb.Vpc
+		out     *pb.Vpc
+		spdk    []string
+		errCode codes.Code
+		errMsg  string
+		start   bool
+		exist   bool
+	}{
+		"invalid fieldmask": {
+			&fieldmaskpb.FieldMask{Paths: []string{"*", "author"}},
+			&pb.Vpc{
+				Name: testVpcName,
+				Spec: spec,
+			},
+			nil,
+			[]string{""},
+			codes.Unknown,
+			fmt.Sprintf("invalid field path: %s", "'*' must not be used with other paths"),
+			false,
+			true,
+		},
+		"valid request with unknown key": {
+			nil,
+			&pb.Vpc{
+				Name: resourceIDToFullName("vpcs", "unknown-id"),
+			},
+			nil,
+			[]string{""},
+			codes.NotFound,
+			fmt.Sprintf("unable to find key %v", resourceIDToFullName("vpcs", "unknown-id")),
+			false,
+			true,
+		},
+	}
+
+	// run tests
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			// start GRPC mockup server
+			ctx := context.Background()
+			opi := NewServer()
+			conn, err := grpc.DialContext(ctx,
+				"",
+				grpc.WithTransportCredentials(insecure.NewCredentials()),
+				grpc.WithContextDialer(dialer(opi)))
+			if err != nil {
+				log.Fatal(err)
+			}
+			defer func(conn *grpc.ClientConn) {
+				err := conn.Close()
+				if err != nil {
+					log.Fatal(err)
+				}
+			}(conn)
+			client := pb.NewCloudInfraServiceClient(conn)
+
+			if tt.exist {
+				opi.Vpcs[testVpcName] = &testVpc
+			}
+			if tt.out != nil {
+				tt.out.Name = testVpcName
+			}
+
+			request := &pb.UpdateVpcRequest{Vpc: tt.in, UpdateMask: tt.mask}
+			response, err := client.UpdateVpc(ctx, request)
+			if !proto.Equal(tt.out, response) {
+				t.Error("response: expected", tt.out, "received", response)
+			}
+
+			if er, ok := status.FromError(err); ok {
+				if er.Code() != tt.errCode {
+					t.Error("error code: expected", tt.errCode, "received", er.Code())
+				}
+				if er.Message() != tt.errMsg {
+					t.Error("error message: expected", tt.errMsg, "received", er.Message())
+				}
+			} else {
+				t.Error("expected grpc error status")
 			}
 		})
 	}
@@ -249,24 +335,19 @@ func Test_GetVpc(t *testing.T) {
 
 			request := &pb.GetVpcRequest{Name: tt.in}
 			response, err := client.GetVpc(ctx, request)
-			if response != nil {
-				// if !reflect.DeepEqual(response, tt.out) {
-				mtt, _ := proto.Marshal(tt.out)
-				mResponse, _ := proto.Marshal(response)
-				if !bytes.Equal(mtt, mResponse) {
-					t.Error("response: expected", tt.out, "received", response)
-				}
+			if !proto.Equal(tt.out, response) {
+				t.Error("response: expected", tt.out, "received", response)
 			}
 
-			if err != nil {
-				if er, ok := status.FromError(err); ok {
-					if er.Code() != tt.errCode {
-						t.Error("error code: expected", tt.errCode, "received", er.Code())
-					}
-					if er.Message() != tt.errMsg {
-						t.Error("error message: expected", tt.errMsg, "received", er.Message())
-					}
+			if er, ok := status.FromError(err); ok {
+				if er.Code() != tt.errCode {
+					t.Error("error code: expected", tt.errCode, "received", er.Code())
 				}
+				if er.Message() != tt.errMsg {
+					t.Error("error message: expected", tt.errMsg, "received", er.Message())
+				}
+			} else {
+				t.Error("expected grpc error status")
 			}
 		})
 	}

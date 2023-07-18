@@ -46,17 +46,18 @@ func (s *Server) CreateInterface(_ context.Context, in *pb.CreateInterfaceReques
 		log.Printf("client provided the ID of a resource %v, ignoring the name field %v", in.InterfaceId, in.Interface.Name)
 		resourceID = in.InterfaceId
 	}
-	in.Interface.Name = fmt.Sprintf("//network.opiproject.org/interfaces/%s", resourceID)
+	in.Interface.Name = resourceIDToFullName("interfaces", resourceID)
 	// idempotent API when called with same key, should return same object
 	iface, ok := s.Interfaces[in.Interface.Name]
 	if ok {
 		log.Printf("Already existing Interface with id %v", in.Interface.Name)
 		return iface, nil
 	}
-	// create dummy interface
-	dummy := &netlink.Dummy{LinkAttrs: netlink.LinkAttrs{Name: resourceID}}
-	if err := netlink.LinkAdd(dummy); err != nil {
-		fmt.Printf("Failed to create link: %v", err)
+	// get base interface
+	dummy, err := netlink.LinkByName(resourceID)
+	if err != nil {
+		err := status.Errorf(codes.NotFound, "unable to find key %s", resourceID)
+		log.Printf("error: %v", err)
 		return nil, err
 	}
 	// create the vlan device
@@ -201,20 +202,30 @@ func (s *Server) UpdateInterface(_ context.Context, in *pb.UpdateInterfaceReques
 		log.Printf("error: %v", err)
 		return nil, err
 	}
-	resourceID := path.Base(volume.Name)
 	// update_mask = 2
 	if err := fieldmask.Validate(in.UpdateMask, in.Interface); err != nil {
 		log.Printf("error: %v", err)
 		return nil, err
 	}
-	log.Printf("TODO: use resourceID=%v", resourceID)
-	// TODO: modify dummy interface
-	// dummy := &netlink.Dummy{LinkAttrs: netlink.LinkAttrs{Name: resourceID}}
-	// if err := netlink.LinkModify(dummy); err != nil {
-	// 	fmt.Printf("Failed to delete link: %v", err)
-	// 	return nil, err
-	// }
-	return nil, status.Errorf(codes.Unimplemented, "UpdateInterface method is not implemented")
+	resourceID := path.Base(volume.Name)
+	iface, err := netlink.LinkByName(resourceID)
+	if err != nil {
+		err := status.Errorf(codes.NotFound, "unable to find key %s", resourceID)
+		log.Printf("error: %v", err)
+		return nil, err
+	}
+	// base := iface.Attrs()
+	// iface.MTU = 1500 // TODO: remove this, just an example
+	if err := netlink.LinkModify(iface); err != nil {
+		fmt.Printf("Failed to update link: %v", err)
+		return nil, err
+	}
+	// TODO: replace cloud -> evpn
+	response := proto.Clone(in.Interface).(*pb.Interface)
+	response.Status = &pb.InterfaceStatus{IfIndex: 8, OperStatus: pb.IfStatus_IF_STATUS_UP}
+	s.Interfaces[in.Interface.Name] = response
+	log.Printf("UpdateInterface: Sending to client: %v", response)
+	return response, nil
 }
 
 // GetInterface gets an Interface
