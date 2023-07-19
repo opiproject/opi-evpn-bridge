@@ -25,6 +25,7 @@ services:
     command: |
       sh -x -c 'touch /etc/frr/vtysh.conf && \
             sed -i "s/bgpd=no/bgpd=yes/g" /etc/frr/daemons && \
+            sed -i "s/127.0.0.1/0.0.0.0/g" /etc/frr/daemons && \
             ip link add name lo0 type dummy && \
             ifconfig lo0 10.0.0.1 netmask 255.255.255.255 up && \
             /etc/init.d/frr stop && \
@@ -52,6 +53,7 @@ services:
     command: |
       sh -x -c 'touch /etc/frr/vtysh.conf && \
             sed -i "s/bgpd=no/bgpd=yes/g" /etc/frr/daemons && \
+            sed -i "s/127.0.0.1/0.0.0.0/g" /etc/frr/daemons && \
             ip link add name lo0 type dummy && \
             ifconfig lo0 10.0.0.2 netmask 255.255.255.255 up && \
             /etc/init.d/frr stop && \
@@ -81,6 +83,7 @@ services:
     command: |
       sh -x -c 'touch /etc/frr/vtysh.conf && \
             sed -i "s/bgpd=no/bgpd=yes/g" /etc/frr/daemons && \
+            sed -i "s/127.0.0.1/0.0.0.0/g" /etc/frr/daemons && \
             ip link add name lo0 type dummy && \
             ifconfig lo0 10.0.0.3 netmask 255.255.255.255 up && \
             ip link add blue type vrf table 1000 && \
@@ -145,6 +148,7 @@ services:
     command: |
       sh -x -c 'touch /etc/frr/vtysh.conf && \
             sed -i "s/bgpd=no/bgpd=yes/g" /etc/frr/daemons && \
+            sed -i "s/127.0.0.1/0.0.0.0/g" /etc/frr/daemons && \
             ip link add name lo0 type dummy && \
             ifconfig lo0 10.0.0.4 netmask 255.255.255.255 up && \
             ip link add blue type vrf table 1000 && \
