@@ -7,8 +7,11 @@ package evpn
 
 import (
 	"context"
+	"encoding/binary"
 	"fmt"
 	"log"
+	"math"
+	"net"
 	"path"
 
 	"github.com/vishvananda/netlink"
@@ -52,17 +55,81 @@ func (s *Server) CreateVrf(_ context.Context, in *pb.CreateVrfRequest) (*pb.Vrf,
 		return obj, nil
 	}
 	// not found, so create a new one
-	vrf := &netlink.Vrf{LinkAttrs: netlink.LinkAttrs{Name: resourceID}, Table: in.Vrf.Spec.Vni}
+	vrfName := resourceID
+	tableID := uint32(1000 + math.Mod(float64(in.Vrf.Spec.Vni), 10.0))
+	// Example: ip link add blue type vrf table 1000
+	vrf := &netlink.Vrf{LinkAttrs: netlink.LinkAttrs{Name: vrfName}, Table: tableID}
 	if err := netlink.LinkAdd(vrf); err != nil {
-		fmt.Printf("Failed to create link: %v", err)
+		fmt.Printf("Failed to create VRF link: %v", err)
 		return nil, err
 	}
+	// Example: ip link set blue up
 	if err := netlink.LinkSetUp(vrf); err != nil {
-		fmt.Printf("Failed to up link: %v", err)
+		fmt.Printf("Failed to up VRF link: %v", err)
+		return nil, err
+	}
+	// Example: ip address add <vrf-loopback> dev <vrf-name>
+	if in.Vrf.Spec.LoopbackIpPrefix != nil && in.Vrf.Spec.LoopbackIpPrefix.Addr != nil && in.Vrf.Spec.LoopbackIpPrefix.Len > 0 {
+		myip := make(net.IP, 4)
+		binary.BigEndian.PutUint32(myip, in.Vrf.Spec.LoopbackIpPrefix.Addr.GetV4Addr())
+		addr := &netlink.Addr{IPNet: &net.IPNet{IP: myip, Mask: net.CIDRMask(int(in.Vrf.Spec.LoopbackIpPrefix.Len), 32)}}
+		if err := netlink.AddrAdd(vrf, addr); err != nil {
+			fmt.Printf("Failed to set IP on VRF link: %v", err)
+			return nil, err
+		}
+	}
+	// TODO: Add low-prio default route. Otherwise a miss leads to lookup in the next higher table
+	// Example: ip route add throw default table <routing-table-number> proto evpn-gw-br metric 9999
+
+	// Example: ip link add br100 type bridge
+	bridgeName := fmt.Sprintf("br%d", in.Vrf.Spec.Vni)
+	bridge := &netlink.Bridge{LinkAttrs: netlink.LinkAttrs{Name: bridgeName}}
+	if err := netlink.LinkAdd(bridge); err != nil {
+		fmt.Printf("Failed to create Bridge link: %v", err)
+		return nil, err
+	}
+	// Example: ip link set br100 master blue addrgenmode none
+	if err := netlink.LinkSetMaster(bridge, vrf); err != nil {
+		fmt.Printf("Failed to add Bridge to VRF: %v", err)
+		return nil, err
+	}
+	// Example: ip link set br100 addr aa:bb:cc:00:00:02
+	mac, err := generateRandMAC()
+	if err != nil {
+		fmt.Printf("Failed to generate random MAC: %v", err)
+		return nil, err
+	}
+	if err := netlink.LinkSetHardwareAddr(bridge, mac); err != nil {
+		fmt.Printf("Failed to set MAC on Bridge link: %v", err)
+		return nil, err
+	}
+	// Example: ip link set br100 up
+	if err := netlink.LinkSetUp(bridge); err != nil {
+		fmt.Printf("Failed to up Bridge link: %v", err)
+		return nil, err
+	}
+	// Example: ip link add vni100 type vxlan local 10.0.0.4 dstport 4789 id 100 nolearning
+	vxlanName := fmt.Sprintf("vni%d", in.Vrf.Spec.Vni)
+	myip := make(net.IP, 4)
+	binary.BigEndian.PutUint32(myip, in.Vrf.Spec.VtepIpPrefix.Addr.GetV4Addr())
+	// TODO: take Port from proto instead of hard-coded
+	vxlan := &netlink.Vxlan{LinkAttrs: netlink.LinkAttrs{Name: vxlanName}, VxlanId: int(in.Vrf.Spec.Vni), Port: 4789, Learning: false, SrcAddr: myip}
+	if err := netlink.LinkAdd(vxlan); err != nil {
+		fmt.Printf("Failed to create Vxlan link: %v", err)
+		return nil, err
+	}
+	// Example: ip link set vni100 master br100 addrgenmode none
+	if err := netlink.LinkSetMaster(vxlan, bridge); err != nil {
+		fmt.Printf("Failed to add Vxlan to bridge: %v", err)
+		return nil, err
+	}
+	// Example: ip link set vni100 up
+	if err := netlink.LinkSetUp(vxlan); err != nil {
+		fmt.Printf("Failed to up Vxlan link: %v", err)
 		return nil, err
 	}
 	response := proto.Clone(in.Vrf).(*pb.Vrf)
-	response.Status = &pb.VrfStatus{LocalAs: 4}
+	response.Status = &pb.VrfStatus{LocalAs: 4, RoutingTable: tableID}
 	s.Vrfs[in.Vrf.Name] = response
 	log.Printf("CreateVrf: Sending to client: %v", response)
 	return response, nil
