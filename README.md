@@ -30,7 +30,7 @@ Run `docker-compose up -d`
 ## Manual gRPC example
 
 ```bash
-docker-compose exec opi-evpn-bridge grpcurl -plaintext -d '{"vrf" : {"spec" : {"vni" : 1234, "loopback_ip_prefix" : {} }}, "vrf_id" : "testvrf" }' localhost:50151 opi_api.network.cloud.v1alpha1.CloudInfraService.CreateVrf"
+docker-compose exec opi-evpn-bridge grpcurl -plaintext -d '{"vrf" : {"spec" : {"vni" : 1234, "loopback_ip_prefix" : {"addr": {"af": "IP_AF_INET", "v4_addr": 167772162} }, "len": 24}, "vtep_ip_prefix": {"addr": {"af": "IP_AF_INET", "v4_addr": 167772162} }, "len": 24} }}, "vrf_id" : "testvrf" }' localhost:50151 opi_api.network.cloud.v1alpha1.CloudInfraService.CreateVrf"
 docker-compose exec opi-evpn-bridge grpcurl -plaintext -d '{"subnet" : {"spec" : {"vpc_name_ref": "//network.opiproject.org/vrfs/blue", "virtual_router_mac": "qrvMAAAB", "v4_prefix": {"addr": 336860161, "len": 24} } }, "subnet_id" : "testbridge", "parent" : "todo" }' localhost:50151 opi_api.network.cloud.v1alpha1.CloudInfraService.CreateSubnet
 docker-compose exec opi-evpn-bridge grpcurl -plaintext -d '{"interface" : {"spec" : {"ifid": 11, "l3_if_spec": {"vpc_name_ref": "//network.opiproject.org/subnets/testbridge", mac_address: "qrvMAAAB"}} }, "interface_id" : "testinterface", "parent" : "todo" }' localhost:50151 opi_api.network.cloud.v1alpha1.CloudInfraService.CreateInterface
 docker-compose exec opi-evpn-bridge grpcurl -plaintext -d '{"tunnel" : {"spec" : {"vpc_name_ref": "//network.opiproject.org/subnets/testbridge", "local_ip": {"af": "IP_AF_INET", "v4_addr": 336860161}, "encap": {"type": "ENCAP_TYPE_VXLAN", "value": {"vnid": 100}} } }, "tunnel_id" : "testvxlan", "parent" : "todo" }' localhost:50151 opi_api.network.cloud.v1alpha1.CloudInfraService.CreateTunnel
