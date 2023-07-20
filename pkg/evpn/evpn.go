@@ -6,6 +6,7 @@
 package evpn
 
 import (
+	"crypto/rand"
 	"fmt"
 
 	pb "github.com/opiproject/opi-api/network/cloud/v1alpha1/gen/go"
@@ -34,4 +35,16 @@ func NewServer() *Server {
 
 func resourceIDToFullName(container string, resourceID string) string {
 	return fmt.Sprintf("//network.opiproject.org/%s/%s", container, resourceID)
+}
+
+func generateRandMAC() ([]byte, error) {
+	buf := make([]byte, 6)
+	if _, err := rand.Read(buf); err != nil {
+		return nil, fmt.Errorf("unable to retrieve 6 rnd bytes: %s", err)
+	}
+
+	// Set locally administered addresses bit and reset multicast bit
+	buf[0] = (buf[0] | 0x02) & 0xfe
+
+	return buf, nil
 }
