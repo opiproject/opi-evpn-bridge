@@ -9,6 +9,8 @@ github.com/opiproject/opi-api v0.0.0-20230713170304-889c595181d2 h1:sjpGWvvQuhU9
 github.com/opiproject/opi-api v0.0.0-20230713170304-889c595181d2/go.mod h1:92pv4ulvvPMuxCJ9ND3aYbmBfEMLx0VCjpkiR7ZTqPY=
 github.com/opiproject/opi-api v0.0.0-20230713203751-f1f72eaaee0e h1:dFlwXYeXuRPKe5w40eDYMpc3+1zCQDXS+9W/5LWCnbU=
 github.com/opiproject/opi-api v0.0.0-20230713203751-f1f72eaaee0e/go.mod h1:92pv4ulvvPMuxCJ9ND3aYbmBfEMLx0VCjpkiR7ZTqPY=
+github.com/opiproject/opi-api v0.0.0-20230721161716-ea8314a63ccb h1:N8wK6C6A7Y4fr9SECSvTTUMhcD2xZ6t2W+/NO9vy768=
+github.com/opiproject/opi-api v0.0.0-20230721161716-ea8314a63ccb/go.mod h1:92pv4ulvvPMuxCJ9ND3aYbmBfEMLx0VCjpkiR7ZTqPY=
 github.com/vishvananda/netlink v1.2.1-beta.2 h1:Llsql0lnQEbHj0I1OuKyp8otXp0r3q0mPkuhwHfStVs=
 github.com/vishvananda/netlink v1.2.1-beta.2/go.mod h1:twkDnbuQxJYemMlGd4JFIcuhgX83tXhKS2B/PRMpOho=
 github.com/vishvananda/netns v0.0.0-20200728191858-db3c7e526aae/go.mod h1:DD4vA1DwXk04H54A1oHXtwZmA0grkVMdPxx/VGLCah0=
