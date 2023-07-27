@@ -47,8 +47,6 @@ services:
       n1l1tos1:
         ipv4_address: 10.168.1.5
       n2htoleaf1:
-      n3htoleafbn1:
-      n5h1tol1r:
       n6h1tol1y:
     command: |
       sh -x -c 'touch /etc/frr/vtysh.conf && \
@@ -56,6 +54,93 @@ services:
             sed -i "s/127.0.0.1/0.0.0.0/g" /etc/frr/daemons && \
             ip link add name lo0 type dummy && \
             ifconfig lo0 10.0.0.2 netmask 255.255.255.255 up && \
+
+            ip link add br-tenant type bridge vlan_default_pvid 0 vlan_filtering 1 vlan_protocol 802.1Q && \
+            ip link set br-tenant up && \
+
+            ip link add blue type vrf table 1000 && \
+            ip link set blue up && \
+            ip link add name lo1 type dummy && \
+            ip link set lo1 master blue up && \
+            ip address add 10.0.1.2/32 dev lo1 && \
+
+            ip link add green type vrf table 1001 && \
+            ip link set green up && \
+            ip link add name lo2 type dummy && \
+            ip link set lo2 master green up && \
+            ip address add 10.0.2.2/32 dev lo2 && \
+
+            ip link add yellow type vrf table 1002 && \
+            ip link set yellow up && \
+            ip link add name lo3 type dummy && \
+            ip link set lo3 master yellow up && \
+            ip address add 10.0.3.2/32 dev lo3 && \
+
+            ip link add br100 addr aa:bb:cc:00:00:02 type bridge && \
+            ip link set br100 master green up && \
+            ip link add vni100 type vxlan local 10.0.0.2 dstport 4789 id 100 nolearning && \
+            ip link set vni100 master br100 up && \
+
+            ip link add br101 addr aa:bb:cc:00:00:03 type bridge && \
+            ip link set br101 master yellow up && \
+            ip link add vni101 type vxlan local 10.0.0.2 dstport 4789 id 101 nolearning && \
+            ip link set vni101 master br101 up && \
+
+            ip link add vni10 type vxlan id 10 local 10.0.0.2 dstport 4789 nolearning && \
+            ip link set vni10 master br-tenant up && \
+            bridge vlan add dev vni10 vid 10 pvid untagged && \
+            bridge link set dev vni10 neigh_suppress on learning off && \
+
+            ip link add vni20 type vxlan id 20 local 10.0.0.2 dstport 4789 nolearning && \
+            ip link set vni20 master br-tenant up && \
+            bridge vlan add dev vni20 vid 20 pvid untagged && \
+            bridge link set dev vni20 neigh_suppress on learning off && \
+
+            ip link add vni30 type vxlan id 30 local 10.0.0.2 dstport 4789 nolearning && \
+            ip link set vni30 master br-tenant up && \
+            bridge vlan add dev vni30 vid 30 pvid untagged && \
+            bridge link set dev vni30 neigh_suppress on learning off && \
+
+            ip link add vni40 type vxlan id 40 local 10.0.0.2 dstport 4789 nolearning && \
+            ip link set vni40 master br-tenant up && \
+            bridge vlan add dev vni40 vid 40 pvid untagged && \
+            bridge link set dev vni40 neigh_suppress on learning off && \
+
+            bridge vlan add dev br-tenant vid 20 self && \
+            ip link add link br-tenant name vlan20 type vlan id 20 && \
+            ip link set vlan20 address aa:bb:cc:00:00:21 && \
+            ip link set vlan20 master blue up && \
+            ip address add 20.20.20.1/24 dev vlan20 && \
+
+            bridge vlan add dev br-tenant vid 30 self && \
+            ip link add link br-tenant name vlan30 type vlan id 30 && \
+            ip link set vlan30 address aa:bb:cc:00:00:31 && \
+            ip link set vlan30 master blue up && \
+            ip address add 30.30.30.1/24 dev vlan30 && \
+
+            bridge vlan add dev br-tenant vid 40 self && \
+            ip link add link br-tenant name vlan40 type vlan id 40 && \
+            ip link set vlan40 address aa:bb:cc:00:00:41 && \
+            ip link set vlan40 master green up && \
+            ip address add 40.40.40.1/24 dev vlan40 && \
+
+            bridge vlan add dev br-tenant vid 50 self && \
+            ip link add link br-tenant name vlan50 type vlan id 50 && \
+            ip link set vlan50 address aa:bb:cc:00:00:51 && \
+            ip link set vlan50 master yellow up && \
+            ip address add 50.50.50.1/24 dev vlan50 && \
+
+            ip link set eth1 up && ip addr flush dev eth1 && \
+            ip link set eth1 master br-tenant up && \
+            bridge vlan add dev eth1 vid 10 && \
+
+            bridge vlan add dev eth1 vid 20 && \
+
+            bridge vlan add dev eth1 vid 40 && \
+
+            ip addr flush dev eth2 && ip link set eth2 master br-tenant up && \
+            bridge vlan add dev eth2 vid 50 && \
+
             /etc/init.d/frr stop && \
             /usr/lib/frr/watchfrr -d -F traditional zebra bgpd staticd && \
             sleep infinity'
@@ -74,8 +159,6 @@ services:
     networks:
       btos1:
         ipv4_address: 10.168.3.5
-      internet:
-        ipv4_address: 5.5.5.5
       internet1:
         ipv4_address: 6.6.6.6
       internet2:
@@ -86,21 +169,18 @@ services:
             sed -i "s/127.0.0.1/0.0.0.0/g" /etc/frr/daemons && \
             ip link add name lo0 type dummy && \
             ifconfig lo0 10.0.0.3 netmask 255.255.255.255 up && \
-            ip link add blue type vrf table 1000 && \
-            ip link set blue up && \
-            ip link set eth1 master blue && \
 
             ip link add green type vrf table 1001 && \
             ip link set green up && \
-            ip link set eth2 master green && \
+            ip link set eth1 master green && \
 
             ip link add yellow type vrf table 1002 && \
             ip link set yellow up && \
-            ip link set eth3 master yellow && \
+            ip link set eth2 master yellow && \
 
             ip link add br100 type bridge && \
-            ip link set br100 master blue addrgenmode none && \
-            ip link set br100 addr aa:bb:cc:00:00:33 && \
+            ip link set br100 master green addrgenmode none && \
+            ip link set br100 addr aa:bb:cc:00:00:44 && \
             ip link add vni100 type vxlan local 10.0.0.3 dstport 4789 id 100 nolearning && \
             ip link set vni100 master br100 addrgenmode none && \
             ip link set vni100 type bridge_slave neigh_suppress on learning off && \
@@ -108,22 +188,13 @@ services:
             ip link set br100 up && \
 
             ip link add br101 type bridge && \
-            ip link set br101 master green addrgenmode none && \
-            ip link set br101 addr aa:bb:cc:00:00:44 && \
+            ip link set br101 master yellow addrgenmode none && \
+            ip link set br101 addr aa:bb:cc:00:00:55 && \
             ip link add vni101 type vxlan local 10.0.0.3 dstport 4789 id 101 nolearning && \
             ip link set vni101 master br101 addrgenmode none && \
             ip link set vni101 type bridge_slave neigh_suppress on learning off && \
             ip link set vni101 up && \
             ip link set br101 up && \
-
-            ip link add br102 type bridge && \
-            ip link set br102 master yellow addrgenmode none && \
-            ip link set br102 addr aa:bb:cc:00:00:55 && \
-            ip link add vni102 type vxlan local 10.0.0.3 dstport 4789 id 102 nolearning && \
-            ip link set vni102 master br102 addrgenmode none && \
-            ip link set vni102 type bridge_slave neigh_suppress on learning off && \
-            ip link set vni102 up && \
-            ip link set br102 up && \
 
             /etc/init.d/frr stop && \
             /usr/lib/frr/watchfrr -d -F traditional zebra bgpd staticd && \
@@ -145,6 +216,7 @@ services:
         ipv4_address: 10.168.2.5
       n2htoleaf2:
       n4htoleafbn2:
+      n7htoleafbn2:
     command: |
       sh -x -c 'touch /etc/frr/vtysh.conf && \
             sed -i "s/bgpd=no/bgpd=yes/g" /etc/frr/daemons && \
@@ -155,35 +227,6 @@ services:
             ip link set blue up && \
             ip link add green type vrf table 1001 && \
             ip link set green up && \
-            ip link add yellow type vrf table 1002 && \
-            ip link set yellow up && \
-
-            ip link add br100 type bridge && \
-            ip link set br100 master blue addrgenmode none && \
-            ip link set br100 addr aa:bb:cc:00:00:02 && \
-            ip link add vni100 type vxlan local 10.0.0.4 dstport 4789 id 100 nolearning && \
-            ip link set vni100 master br100 addrgenmode none && \
-            ip link set vni100 type bridge_slave neigh_suppress on learning off && \
-            ip link set vni100 up && \
-            ip link set br100 up && \
-
-            ip link add br101 type bridge && \
-            ip link set br101 master green addrgenmode none && \
-            ip link set br101 addr aa:bb:cc:00:00:03 && \
-            ip link add vni101 type vxlan local 10.0.0.4 dstport 4789 id 101 nolearning && \
-            ip link set vni101 master br101 addrgenmode none && \
-            ip link set vni101 type bridge_slave neigh_suppress on learning off && \
-            ip link set vni101 up && \
-            ip link set br101 up && \
-
-            ip link add br102 type bridge && \
-            ip link set br102 master yellow addrgenmode none && \
-            ip link set br102 addr aa:bb:cc:00:00:04 && \
-            ip link add vni102 type vxlan local 10.0.0.4 dstport 4789 id 102 nolearning && \
-            ip link set vni102 master br102 addrgenmode none && \
-            ip link set vni102 type bridge_slave neigh_suppress on learning off && \
-            ip link set vni102 up && \
-            ip link set br102 up && \
 
             ip link add br10 type bridge && \
             ip link set br10 addr aa:bb:cc:00:00:22 && \
@@ -223,6 +266,10 @@ services:
 
             ip link add br40 type bridge && \
             ip link set br40 master green addrgenmode none && \
+            ip link set eth3 up && ip addr flush dev eth3 && \
+            ip link add link eth3 name eth3.40 type vlan id 40 && \
+            ip link set eth3.40 up && \
+            ip link set eth3.40 master br40 addrgenmode none && \
             ip link set br40 addr aa:bb:cc:00:00:25 && \
             ip addr add 40.40.40.1/24 dev br40 && \
             ip link add vni40 type vxlan local 10.0.0.4 dstport 4789 id 40 nolearning && \
@@ -230,18 +277,6 @@ services:
             ip link set vni40 type bridge_slave neigh_suppress on learning off && \
             ip link set vni40 up && \
             ip link set br40 up && \
-
-
-            ip link add br50 type bridge && \
-            ip link set br50 master green addrgenmode none && \
-            ip link set br50 addr aa:bb:cc:00:00:26 && \
-            ip addr add 50.50.50.1/24 dev br50 && \
-            ip link add vni50 type vxlan local 10.0.0.4 dstport 4789 id 50 nolearning && \
-            ip link set vni50 master br50 addrgenmode none && \
-            ip link set vni50 type bridge_slave neigh_suppress on learning off && \
-            ip link set vni50 up && \
-            ip link set br50 up && \
-
 
             /etc/init.d/frr stop && \
             /usr/lib/frr/watchfrr -d -F traditional zebra bgpd staticd && \
@@ -286,42 +321,6 @@ services:
       /entrypoint.sh ls localhost:50151 opi_api.network.evpn_gw.v1alpha1.VrfService.GetVrf -l && \
       /entrypoint.sh ls localhost:50151 opi_api.network.evpn_gw.v1alpha1.VrfService.DeleteVrf -l && \
       /entrypoint.sh ls localhost:50151 opi_api.network.evpn_gw.v1alpha1.VrfService.UpdateVrf -l && \
-      echo create && \
-      /entrypoint.sh call --json_input --json_output localhost:50151 CreateVrf    "{\"vrf\" : {\"spec\" : {\"vni\" : 100, \"loopback_ip_prefix\": {}, \"vtep_ip_prefix\": {\"addr\": {\"af\": \"IP_AF_INET\", \"v4_addr\": 167772162}, \"len\": 24} }}, \"vrf_id\" : \"blue\" }" && \
-      /entrypoint.sh call --json_input --json_output localhost:50151 CreateVrf    "{\"vrf\" : {\"spec\" : {\"vni\" : 101, \"loopback_ip_prefix\": {}, \"vtep_ip_prefix\": {\"addr\": {\"af\": \"IP_AF_INET\", \"v4_addr\": 167772162}, \"len\": 24} }}, \"vrf_id\" : \"green\" }" && \
-      /entrypoint.sh call --json_input --json_output localhost:50151 CreateVrf    "{\"vrf\" : {\"spec\" : {\"vni\" : 102, \"loopback_ip_prefix\": {}, \"vtep_ip_prefix\": {\"addr\": {\"af\": \"IP_AF_INET\", \"v4_addr\": 167772162}, \"len\": 24} }}, \"vrf_id\" : \"yellow\" }" && \
-      /entrypoint.sh call --json_input --json_output localhost:50151 CreateSubnet "{\"subnet\" : {\"spec\" : {                                                             \"virtual_router_mac\": \"qrvMAAAR\" }                                                    }, \"subnet_id\" : \"br10\",  \"parent\" : \"todo\" }" && \
-      /entrypoint.sh call --json_input --json_output localhost:50151 CreateSubnet "{\"subnet\" : {\"spec\" : {\"vpc_name_ref\" : \"//network.opiproject.org/vrfs/blue\",   \"virtual_router_mac\": \"qrvMAAAh\", \"v4_prefix\": {\"addr\": 336860161, \"len\": 24} } }, \"subnet_id\" : \"br20\",  \"parent\" : \"todo\" }" && \
-      /entrypoint.sh call --json_input --json_output localhost:50151 CreateSubnet "{\"subnet\" : {\"spec\" : {\"vpc_name_ref\" : \"//network.opiproject.org/vrfs/blue\",   \"virtual_router_mac\": \"qrvMAAAx\", \"v4_prefix\": {\"addr\": 505290241, \"len\": 24} } }, \"subnet_id\" : \"br30\",  \"parent\" : \"todo\" }" && \
-      /entrypoint.sh call --json_input --json_output localhost:50151 CreateSubnet "{\"subnet\" : {\"spec\" : {\"vpc_name_ref\" : \"//network.opiproject.org/vrfs/green\",  \"virtual_router_mac\": \"qrvMAABB\", \"v4_prefix\": {\"addr\": 673720321, \"len\": 24} } }, \"subnet_id\" : \"br40\",  \"parent\" : \"todo\" }" && \
-      /entrypoint.sh call --json_input --json_output localhost:50151 CreateSubnet "{\"subnet\" : {\"spec\" : {\"vpc_name_ref\" : \"//network.opiproject.org/vrfs/yellow\", \"virtual_router_mac\": \"qrvMAABC\", \"v4_prefix\": {\"addr\": 842150401, \"len\": 24} } }, \"subnet_id\" : \"br50\",  \"parent\" : \"todo\" }" && \
-      /entrypoint.sh call --json_input --json_output localhost:50151 CreateTunnel "{\"tunnel\" : {\"spec\" : {\"vpc_name_ref\" : \"//network.opiproject.org/subnets/br10\",  \"local_ip\": {\"af\": \"IP_AF_INET\", \"v4_addr\": 167772162}, \"encap\": {\"type\": \"ENCAP_TYPE_VXLAN\", \"value\": {\"vnid\": 10}} } },  \"tunnel_id\" : \"vni10\",   \"parent\" : \"todo\" }" && \
-      /entrypoint.sh call --json_input --json_output localhost:50151 CreateTunnel "{\"tunnel\" : {\"spec\" : {\"vpc_name_ref\" : \"//network.opiproject.org/subnets/br20\",  \"local_ip\": {\"af\": \"IP_AF_INET\", \"v4_addr\": 167772162}, \"encap\": {\"type\": \"ENCAP_TYPE_VXLAN\", \"value\": {\"vnid\": 20}} } },  \"tunnel_id\" : \"vni20\",   \"parent\" : \"todo\" }" && \
-      /entrypoint.sh call --json_input --json_output localhost:50151 CreateTunnel "{\"tunnel\" : {\"spec\" : {\"vpc_name_ref\" : \"//network.opiproject.org/subnets/br30\",  \"local_ip\": {\"af\": \"IP_AF_INET\", \"v4_addr\": 167772162}, \"encap\": {\"type\": \"ENCAP_TYPE_VXLAN\", \"value\": {\"vnid\": 30}} } },  \"tunnel_id\" : \"vni30\",   \"parent\" : \"todo\" }" && \
-      /entrypoint.sh call --json_input --json_output localhost:50151 CreateTunnel "{\"tunnel\" : {\"spec\" : {\"vpc_name_ref\" : \"//network.opiproject.org/subnets/br40\",  \"local_ip\": {\"af\": \"IP_AF_INET\", \"v4_addr\": 167772162}, \"encap\": {\"type\": \"ENCAP_TYPE_VXLAN\", \"value\": {\"vnid\": 40}} } },  \"tunnel_id\" : \"vni40\",   \"parent\" : \"todo\" }" && \
-      /entrypoint.sh call --json_input --json_output localhost:50151 CreateTunnel "{\"tunnel\" : {\"spec\" : {\"vpc_name_ref\" : \"//network.opiproject.org/subnets/br50\",  \"local_ip\": {\"af\": \"IP_AF_INET\", \"v4_addr\": 167772162}, \"encap\": {\"type\": \"ENCAP_TYPE_VXLAN\", \"value\": {\"vnid\": 50}} } },  \"tunnel_id\" : \"vni50\",   \"parent\" : \"todo\" }" && \
-      /entrypoint.sh call --json_input --json_output localhost:50151 CreateInterface "{\"interface\" : {\"spec\" : {\"ifid\": 10, \"l3_if_spec\": {\"vpc_name_ref\" : \"//network.opiproject.org/subnets/br10\"}} }, \"interface_id\" : \"eth1\", \"parent\" : \"todo\" }" && \
-      /entrypoint.sh call --json_input --json_output localhost:50151 CreateInterface "{\"interface\" : {\"spec\" : {\"ifid\": 20, \"l3_if_spec\": {\"vpc_name_ref\" : \"//network.opiproject.org/subnets/br20\"}} }, \"interface_id\" : \"eth2\", \"parent\" : \"todo\" }" && \
-      /entrypoint.sh call --json_input --json_output localhost:50151 CreateInterface "{\"interface\" : {\"spec\" : {\"ifid\": 40, \"l3_if_spec\": {\"vpc_name_ref\" : \"//network.opiproject.org/subnets/br40\"}} }, \"interface_id\" : \"eth3\", \"parent\" : \"todo\" }" && \
-      /entrypoint.sh call --json_input --json_output localhost:50151 CreateInterface "{\"interface\" : {\"spec\" : {\"ifid\": 50, \"l3_if_spec\": {\"vpc_name_ref\" : \"//network.opiproject.org/subnets/br50\"}} }, \"interface_id\" : \"eth4\", \"parent\" : \"todo\" }" && \
-      echo get && \
-      /entrypoint.sh call --json_input --json_output localhost:50151 GetVrf       "{\"name\" : \"//network.opiproject.org/vrfs/blue\" }" && \
-      /entrypoint.sh call --json_input --json_output localhost:50151 GetVrf       "{\"name\" : \"//network.opiproject.org/vrfs/green\" }" && \
-      /entrypoint.sh call --json_input --json_output localhost:50151 GetVrf       "{\"name\" : \"//network.opiproject.org/vrfs/yellow\" }" && \
-      /entrypoint.sh call --json_input --json_output localhost:50151 GetSubnet    "{\"name\" : \"//network.opiproject.org/subnets/br10\" }" && \
-      /entrypoint.sh call --json_input --json_output localhost:50151 GetSubnet    "{\"name\" : \"//network.opiproject.org/subnets/br20\" }" && \
-      /entrypoint.sh call --json_input --json_output localhost:50151 GetSubnet    "{\"name\" : \"//network.opiproject.org/subnets/br30\" }" && \
-      /entrypoint.sh call --json_input --json_output localhost:50151 GetSubnet    "{\"name\" : \"//network.opiproject.org/subnets/br40\" }" && \
-      /entrypoint.sh call --json_input --json_output localhost:50151 GetSubnet    "{\"name\" : \"//network.opiproject.org/subnets/br50\" }" && \
-      /entrypoint.sh call --json_input --json_output localhost:50151 GetTunnel    "{\"name\" : \"//network.opiproject.org/tunnels/vni10\" }" && \
-      /entrypoint.sh call --json_input --json_output localhost:50151 GetTunnel    "{\"name\" : \"//network.opiproject.org/tunnels/vni20\" }" && \
-      /entrypoint.sh call --json_input --json_output localhost:50151 GetTunnel    "{\"name\" : \"//network.opiproject.org/tunnels/vni30\" }" && \
-      /entrypoint.sh call --json_input --json_output localhost:50151 GetTunnel    "{\"name\" : \"//network.opiproject.org/tunnels/vni40\" }" && \
-      /entrypoint.sh call --json_input --json_output localhost:50151 GetTunnel    "{\"name\" : \"//network.opiproject.org/tunnels/vni50\" }" && \
-      /entrypoint.sh call --json_input --json_output localhost:50151 GetInterface "{\"name\" : \"//network.opiproject.org/interfaces/eth1\" }" && \
-      /entrypoint.sh call --json_input --json_output localhost:50151 GetInterface "{\"name\" : \"//network.opiproject.org/interfaces/eth2\" }" && \
-      /entrypoint.sh call --json_input --json_output localhost:50151 GetInterface "{\"name\" : \"//network.opiproject.org/interfaces/eth3\" }" && \
-      /entrypoint.sh call --json_input --json_output localhost:50151 GetInterface "{\"name\" : \"//network.opiproject.org/interfaces/eth4\" }" && \
       echo done'
 
   host2-leaf2:
@@ -332,8 +331,7 @@ services:
       n2htoleaf2:
     # L2 VXLAN - VLAN10 stretched with VNI10 to leaf2 from leaf1 (ping 10.10.10.3)
     command: |
-      sh -x -c 'sleep 30 && \
-                ip link add link eth0 name eth0.10 type vlan id 10 && \
+      sh -x -c 'ip link add link eth0 name eth0.10 type vlan id 10 && \
                 ip link set eth0 up && ip addr flush dev eth0 && \
                 ip link set eth0.10 up && \
                 ip addr add 10.10.10.11/24 dev eth0.10 && sleep infinity'
@@ -345,12 +343,23 @@ services:
     networks:
       n4htoleafbn2:
     command: |
-      sh -x -c 'sleep 30 && \
-                ip link add link eth0 name eth0.30 type vlan id 30 && \
+      sh -x -c 'ip link add link eth0 name eth0.30 type vlan id 30 && \
                 ip link set eth0 up && ip addr flush dev eth0 && \
                 ip link set eth0.30 up && \
                 ip addr add 30.30.30.31/24 dev eth0.30 &&
                 ip route replace default via 30.30.30.1 && sleep infinity'
+  host4-leaf2:
+    image: docker.io/library/alpine:3.18
+    cap_add:
+      - NET_ADMIN
+    networks:
+      n7htoleafbn2:
+    command: |
+      sh -x -c 'ip link add link eth0 name eth0.40 type vlan id 40 && \
+                ip link set eth0 up && ip addr flush dev eth0 && \
+                ip link set eth0.40 up && \
+                ip addr add 40.40.40.41/24 dev eth0.40 &&
+                ip route replace default via 40.40.40.1 && sleep infinity'
 
   opi-test:
     image: docker.io/library/alpine:3.18
@@ -358,8 +367,6 @@ services:
       - NET_ADMIN
     networks:
       n2htoleaf1:
-      n3htoleafbn1:
-      n5h1tol1r:
       n6h1tol1y:
     depends_on:
       - spine1
@@ -368,6 +375,7 @@ services:
       - bleaf
       - host2-leaf2
       - host3-leaf2
+      - host4-leaf2
       - opi-evpn-bridge
       - testgrpc
     # HOST1
@@ -377,30 +385,33 @@ services:
     # L3VXLAN Symmetric IRB:
     #   Ping to Bleaf internet connectivity IPs from Host1 via green and yellow VRFs from Leaf1
     command: |
-      sh -x -c 'sleep 30 && \
-                ip link add link eth0 name eth0.10 type vlan id 10 && \
+      sh -x -c 'ip link add link eth0 name eth0.10 type vlan id 10 && \
                 ip link set eth0 up && ip addr flush dev eth0 && \
                 ip link set eth0.10 up && \
                 ip addr add 10.10.10.10/24 dev eth0.10 && \
+                sleep 5 && \
                 ping -c 3 10.10.10.11 && \
-                ip link add link eth1 name eth1.20 type vlan id 20 && \
-                ip link set eth1 up && ip addr flush dev eth1 && \
-                ip link set eth1.20 up && \
-                ip addr add 20.20.20.20/24 dev eth1.20 && \
-                ip route replace default via 20.20.20.1 && \
-                ping -c 3 30.30.30.31 && ping -c 3 5.5.5.5 && \
-                ip link add link eth2 name eth2.40 type vlan id 40 && \
-                ip link set eth2 up && ip addr flush dev eth2 && \
-                ip link set eth2.40 up && \
-                ip addr add 40.40.40.40/24 dev eth2.40 && \
-                ip route replace default via 40.40.40.1 && \
-                ping -c 3 6.6.6.6 && \
-                ip link add link eth3 name eth3.50 type vlan id 50 && \
-                ip link set eth3 up && ip addr flush dev eth3 && \
-                ip link set eth3.50 up && \
-                ip addr add 50.50.50.50/24 dev eth3.50 && \
-                ip route replace default via 50.50.50.1 && \
-                ping -c 3 7.7.7.7'
+                ip link add link eth0 name eth0.20 type vlan id 20 && \
+                ip link set eth0.20 up && \
+                ip addr add 20.20.20.20/24 dev eth0.20 && \
+                ip rule add from 20.20.20.20 lookup 1000
+                ip route add default via 20.20.20.1 dev eth0.20 table 1000
+                sleep 5 && \
+                ping -c 3 30.30.30.31 -I 20.20.20.20 && \
+                ip link add link eth0 name eth0.40 type vlan id 40 && \
+                ip link set eth0.40 up && \
+                ip addr add 40.40.40.40/24 dev eth0.40 && \
+                ip rule add from 40.40.40.40 lookup 1001
+                ip route add default via 40.40.40.1 dev eth0.40 table 1001
+                sleep 5 && \
+                ping -c 3 6.6.6.6 -I 40.40.40.40 && ping -c 3 40.40.40.41 && \
+                ip link add link eth1 name eth1.50 type vlan id 50 && \
+                ip link set eth1.50 up && \
+                ip addr add 50.50.50.50/24 dev eth1.50 && \
+                ip rule add from 50.50.50.50 lookup 1002
+                ip route add default via 50.50.50.1 dev eth1.50 table 1002
+                sleep 5 && \
+                ping -c 3 7.7.7.7 -I 50.50.50.50'
 
 networks:
   n1l1tos1:
@@ -466,11 +477,16 @@ networks:
     ipam:
       driver: default
       config:
-        - subnet: 40.40.40.0/24
-
+        - subnet: 40.40.40.16/28
 
   n6h1tol1y:
     ipam:
       driver: default
       config:
         - subnet: 50.50.50.0/24
+
+  n7htoleafbn2:
+    ipam:
+      driver: default
+      config:
+        - subnet: 40.40.40.41/28
