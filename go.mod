@@ -6,7 +6,7 @@ require (
 	github.com/opiproject/opi-api v0.0.0-20230728150746-cc0946b7cec4
 	github.com/vishvananda/netlink v1.2.1-beta.2
 	go.einride.tech/aip v0.60.0
-	google.golang.org/grpc v1.56.2
+	google.golang.org/grpc v1.57.0
 	google.golang.org/protobuf v1.31.0
 )
 
