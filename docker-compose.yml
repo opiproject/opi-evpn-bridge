@@ -276,16 +276,31 @@ services:
       /entrypoint.sh ls localhost:50151 opi_api.network.evpn_gw.v1alpha1.VrfService.GetVrf -l && \
       /entrypoint.sh ls localhost:50151 opi_api.network.evpn_gw.v1alpha1.VrfService.DeleteVrf -l && \
       /entrypoint.sh ls localhost:50151 opi_api.network.evpn_gw.v1alpha1.VrfService.UpdateVrf -l && \
+      /entrypoint.sh ls localhost:50151 opi_api.network.evpn_gw.v1alpha1.LogicalBridgeService -l && \
+      /entrypoint.sh ls localhost:50151 opi_api.network.evpn_gw.v1alpha1.LogicalBridgeService.CreateLogicalBridge -l && \
+      /entrypoint.sh ls localhost:50151 opi_api.network.evpn_gw.v1alpha1.LogicalBridgeService.ListLogicalBridges -l && \
+      /entrypoint.sh ls localhost:50151 opi_api.network.evpn_gw.v1alpha1.LogicalBridgeService.GetLogicalBridge -l && \
+      /entrypoint.sh ls localhost:50151 opi_api.network.evpn_gw.v1alpha1.LogicalBridgeService.DeleteLogicalBridge -l && \
+      /entrypoint.sh ls localhost:50151 opi_api.network.evpn_gw.v1alpha1.LogicalBridgeService.UpdateLogicalBridge -l && \
+      echo toremove && \
+      apt update && apt install iproute2 -y && \
+      ip link add br-tenant type bridge vlan_default_pvid 0 vlan_filtering 1 vlan_protocol 802.1Q && \
+      ip link set br-tenant up && \
       echo create && \
       /entrypoint.sh call --json_input --json_output localhost:50151 CreateVrf    "{\"vrf\" : {\"spec\" : {\"vni\" : 100, \"loopback_ip_prefix\": {}, \"vtep_ip_prefix\": {\"addr\": {\"af\": \"IP_AF_INET\", \"v4_addr\": 167772162}, \"len\": 24} }}, \"vrf_id\" : \"blue\" }" && \
       /entrypoint.sh call --json_input --json_output localhost:50151 CreateVrf    "{\"vrf\" : {\"spec\" : {\"vni\" : 101, \"loopback_ip_prefix\": {}, \"vtep_ip_prefix\": {\"addr\": {\"af\": \"IP_AF_INET\", \"v4_addr\": 167772162}, \"len\": 24} }}, \"vrf_id\" : \"green\" }" && \
       /entrypoint.sh call --json_input --json_output localhost:50151 CreateVrf    "{\"vrf\" : {\"spec\" : {\"vni\" : 102, \"loopback_ip_prefix\": {}, \"vtep_ip_prefix\": {\"addr\": {\"af\": \"IP_AF_INET\", \"v4_addr\": 167772162}, \"len\": 24} }}, \"vrf_id\" : \"yellow\" }" && \
+      /entrypoint.sh call --json_input --json_output localhost:50151 CreateLogicalBridge    "{\"logical_bridge\" : {\"spec\" : {\"vni\" : 11, \"vlan_id\": 11 }}, \"logical_bridge_id\" : \"vxlan11\" }" && \
+      /entrypoint.sh call --json_input --json_output localhost:50151 CreateLogicalBridge    "{\"logical_bridge\" : {\"spec\" : {\"vni\" : 22, \"vlan_id\": 22 }}, \"logical_bridge_id\" : \"vxlan22\" }" && \
+      /entrypoint.sh call --json_input --json_output localhost:50151 CreateLogicalBridge    "{\"logical_bridge\" : {\"spec\" : {\"vni\" : 33, \"vlan_id\": 33 }}, \"logical_bridge_id\" : \"vxlan33\" }" && \
       echo get && \
       /entrypoint.sh call --json_input --json_output localhost:50151 GetVrf       "{\"name\" : \"//network.opiproject.org/vrfs/blue\" }" && \
       /entrypoint.sh call --json_input --json_output localhost:50151 GetVrf       "{\"name\" : \"//network.opiproject.org/vrfs/green\" }" && \
       /entrypoint.sh call --json_input --json_output localhost:50151 GetVrf       "{\"name\" : \"//network.opiproject.org/vrfs/yellow\" }" && \
+      /entrypoint.sh call --json_input --json_output localhost:50151 GetLogicalBridge       "{\"name\" : \"//network.opiproject.org/bridges/vxlan11\" }" && \
+      /entrypoint.sh call --json_input --json_output localhost:50151 GetLogicalBridge       "{\"name\" : \"//network.opiproject.org/bridges/vxlan22\" }" && \
+      /entrypoint.sh call --json_input --json_output localhost:50151 GetLogicalBridge       "{\"name\" : \"//network.opiproject.org/bridges/vxlan33\" }" && \
       echo toremove && \
-      apt update && apt install iproute2 -y && \
       ip link add br10 type bridge && \
       ip link set br10 addr aa:bb:cc:00:00:11 && \
       ip link add link eth1 name eth1.10 type vlan id 10 && \
