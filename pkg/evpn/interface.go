@@ -83,7 +83,7 @@ func (s *Server) CreateInterface(_ context.Context, in *pb.CreateInterfaceReques
 			return nil, err
 		}
 		// now get Subnet/Bridge to plug this port/interface into
-		bridge, ok := s.Subnets[ifaceobj.VpcNameRef]
+		bridge, ok := s.Bridges[ifaceobj.VpcNameRef]
 		if !ok {
 			err := status.Errorf(codes.NotFound, "unable to find key %s", ifaceobj.VpcNameRef)
 			log.Printf("error: %v", err)

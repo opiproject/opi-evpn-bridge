@@ -77,7 +77,7 @@ func (s *Server) CreateTunnel(_ context.Context, in *pb.CreateTunnelRequest) (*p
 			return nil, err
 		}
 		// now get Subnet/Bridge to plug this vxlan into
-		bridge, ok := s.Subnets[in.Tunnel.Spec.VpcNameRef]
+		bridge, ok := s.Bridges[in.Tunnel.Spec.VpcNameRef]
 		if !ok {
 			err := status.Errorf(codes.NotFound, "unable to find key %s", in.Tunnel.Spec.VpcNameRef)
 			log.Printf("error: %v", err)

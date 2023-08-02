@@ -20,46 +20,41 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/fieldmaskpb"
 
-	pb "github.com/opiproject/opi-api/network/cloud/v1alpha1/gen/go"
-	pc "github.com/opiproject/opi-api/network/opinetcommon/v1alpha1/gen/go"
+	pb "github.com/opiproject/opi-api/network/evpn-gw/v1alpha1/gen/go"
 )
 
 var (
-	testSubnetID   = "opi-subnet9"
-	testSubnetName = resourceIDToFullName("subnets", testSubnetID)
-	testSubnet     = pb.Subnet{
-		Spec: &pb.SubnetSpec{
-			VpcNameRef:       testVrfName,
-			VirtualRouterMac: []byte("qrvMAAAB"),
-			V4Prefix: &pc.IPv4Prefix{
-				Addr: 336860161,
-				Len:  24,
-			},
+	testLogicalBridgeID   = "opi-bridge9"
+	testLogicalBridgeName = resourceIDToFullName("bridges", testLogicalBridgeID)
+	testLogicalBridge     = pb.LogicalBridge{
+		Spec: &pb.LogicalBridgeSpec{
+			Vni:    11,
+			VlanId: 22,
 		},
 	}
 )
 
-func Test_CreateSubnet(t *testing.T) {
+func Test_CreateLogicalBridge(t *testing.T) {
 	tests := map[string]struct {
 		id      string
-		in      *pb.Subnet
-		out     *pb.Subnet
+		in      *pb.LogicalBridge
+		out     *pb.LogicalBridge
 		errCode codes.Code
 		errMsg  string
 		exist   bool
 	}{
 		"illegal resource_id": {
 			"CapitalLettersNotAllowed",
-			&testSubnet,
+			&testLogicalBridge,
 			nil,
 			codes.Unknown,
 			fmt.Sprintf("user-settable ID must only contain lowercase, numbers and hyphens (%v)", "got: 'C' in position 0"),
 			false,
 		},
 		"already exists": {
-			testSubnetID,
-			&testSubnet,
-			&testSubnet,
+			testLogicalBridgeID,
+			&testLogicalBridge,
+			&testLogicalBridge,
 			codes.OK,
 			"",
 			true,
@@ -85,17 +80,17 @@ func Test_CreateSubnet(t *testing.T) {
 					log.Fatal(err)
 				}
 			}(conn)
-			client := pb.NewCloudInfraServiceClient(conn)
+			client := pb.NewLogicalBridgeServiceClient(conn)
 
 			if tt.exist {
-				opi.Subnets[testSubnetName] = &testSubnet
+				opi.Bridges[testLogicalBridgeName] = &testLogicalBridge
 			}
 			if tt.out != nil {
-				tt.out.Name = testSubnetName
+				tt.out.Name = testLogicalBridgeName
 			}
 
-			request := &pb.CreateSubnetRequest{Subnet: tt.in, SubnetId: tt.id, Parent: "todo"}
-			response, err := client.CreateSubnet(ctx, request)
+			request := &pb.CreateLogicalBridgeRequest{LogicalBridge: tt.in, LogicalBridgeId: tt.id}
+			response, err := client.CreateLogicalBridge(ctx, request)
 			if !proto.Equal(tt.out, response) {
 				t.Error("response: expected", tt.out, "received", response)
 			}
@@ -114,7 +109,7 @@ func Test_CreateSubnet(t *testing.T) {
 	}
 }
 
-func Test_DeleteSubnet(t *testing.T) {
+func Test_DeleteLogicalBridge(t *testing.T) {
 	tests := map[string]struct {
 		in      string
 		out     *emptypb.Empty
@@ -123,7 +118,7 @@ func Test_DeleteSubnet(t *testing.T) {
 		missing bool
 	}{
 		// "valid request": {
-		// 	testSubnetID,
+		// 	testLogicalBridgeID,
 		// 	&emptypb.Empty{},
 		// 	codes.OK,
 		// 	"",
@@ -133,7 +128,7 @@ func Test_DeleteSubnet(t *testing.T) {
 			"unknown-id",
 			nil,
 			codes.NotFound,
-			fmt.Sprintf("unable to find key %v", resourceIDToFullName("subnets", "unknown-id")),
+			fmt.Sprintf("unable to find key %v", resourceIDToFullName("bridges", "unknown-id")),
 			false,
 		},
 		"unknown key with missing allowed": {
@@ -171,13 +166,13 @@ func Test_DeleteSubnet(t *testing.T) {
 					log.Fatal(err)
 				}
 			}(conn)
-			client := pb.NewCloudInfraServiceClient(conn)
+			client := pb.NewLogicalBridgeServiceClient(conn)
 
-			fname1 := resourceIDToFullName("subnets", tt.in)
-			opi.Subnets[testSubnetName] = &testSubnet
+			fname1 := resourceIDToFullName("bridges", tt.in)
+			opi.Bridges[testLogicalBridgeName] = &testLogicalBridge
 
-			request := &pb.DeleteSubnetRequest{Name: fname1, AllowMissing: tt.missing}
-			response, err := client.DeleteSubnet(ctx, request)
+			request := &pb.DeleteLogicalBridgeRequest{Name: fname1, AllowMissing: tt.missing}
+			response, err := client.DeleteLogicalBridge(ctx, request)
 
 			if er, ok := status.FromError(err); ok {
 				if er.Code() != tt.errCode {
@@ -197,19 +192,15 @@ func Test_DeleteSubnet(t *testing.T) {
 	}
 }
 
-func Test_UpdateSubnet(t *testing.T) {
-	spec := &pb.SubnetSpec{
-		VpcNameRef:       testVrfName,
-		VirtualRouterMac: []byte("qrvMAAAB"),
-		V4Prefix: &pc.IPv4Prefix{
-			Addr: 336860161,
-			Len:  24,
-		},
+func Test_UpdateLogicalBridge(t *testing.T) {
+	spec := &pb.LogicalBridgeSpec{
+		Vni:    11,
+		VlanId: 22,
 	}
 	tests := map[string]struct {
 		mask    *fieldmaskpb.FieldMask
-		in      *pb.Subnet
-		out     *pb.Subnet
+		in      *pb.LogicalBridge
+		out     *pb.LogicalBridge
 		spdk    []string
 		errCode codes.Code
 		errMsg  string
@@ -218,8 +209,8 @@ func Test_UpdateSubnet(t *testing.T) {
 	}{
 		"invalid fieldmask": {
 			&fieldmaskpb.FieldMask{Paths: []string{"*", "author"}},
-			&pb.Subnet{
-				Name: testSubnetName,
+			&pb.LogicalBridge{
+				Name: testLogicalBridgeName,
 				Spec: spec,
 			},
 			nil,
@@ -231,13 +222,14 @@ func Test_UpdateSubnet(t *testing.T) {
 		},
 		"valid request with unknown key": {
 			nil,
-			&pb.Subnet{
-				Name: resourceIDToFullName("subnets", "unknown-id"),
+			&pb.LogicalBridge{
+				Name: resourceIDToFullName("bridges", "unknown-id"),
+				Spec: spec,
 			},
 			nil,
 			[]string{""},
 			codes.NotFound,
-			fmt.Sprintf("unable to find key %v", resourceIDToFullName("subnets", "unknown-id")),
+			fmt.Sprintf("unable to find key %v", resourceIDToFullName("bridges", "unknown-id")),
 			false,
 			true,
 		},
@@ -262,17 +254,17 @@ func Test_UpdateSubnet(t *testing.T) {
 					log.Fatal(err)
 				}
 			}(conn)
-			client := pb.NewCloudInfraServiceClient(conn)
+			client := pb.NewLogicalBridgeServiceClient(conn)
 
 			if tt.exist {
-				opi.Subnets[testSubnetName] = &testSubnet
+				opi.Bridges[testLogicalBridgeName] = &testLogicalBridge
 			}
 			if tt.out != nil {
-				tt.out.Name = testSubnetName
+				tt.out.Name = testLogicalBridgeName
 			}
 
-			request := &pb.UpdateSubnetRequest{Subnet: tt.in, UpdateMask: tt.mask}
-			response, err := client.UpdateSubnet(ctx, request)
+			request := &pb.UpdateLogicalBridgeRequest{LogicalBridge: tt.in, UpdateMask: tt.mask}
+			response, err := client.UpdateLogicalBridge(ctx, request)
 			if !proto.Equal(tt.out, response) {
 				t.Error("response: expected", tt.out, "received", response)
 			}
@@ -291,18 +283,18 @@ func Test_UpdateSubnet(t *testing.T) {
 	}
 }
 
-func Test_GetSubnet(t *testing.T) {
+func Test_GetLogicalBridge(t *testing.T) {
 	tests := map[string]struct {
 		in      string
-		out     *pb.Subnet
+		out     *pb.LogicalBridge
 		errCode codes.Code
 		errMsg  string
 	}{
 		// "valid request": {
-		// 	testSubnetID,
-		// 	&pb.Subnet{
-		// 		Name:      testSubnetName,
-		// 		Multipath: testSubnet.Multipath,
+		// 	testLogicalBridgeID,
+		// 	&pb.LogicalBridge{
+		// 		Name:      testLogicalBridgeName,
+		// 		Multipath: testLogicalBridge.Multipath,
 		// 	},
 		// 	codes.OK,
 		// 	"",
@@ -340,12 +332,12 @@ func Test_GetSubnet(t *testing.T) {
 					log.Fatal(err)
 				}
 			}(conn)
-			client := pb.NewCloudInfraServiceClient(conn)
+			client := pb.NewLogicalBridgeServiceClient(conn)
 
-			opi.Subnets[testSubnetID] = &testSubnet
+			opi.Bridges[testLogicalBridgeID] = &testLogicalBridge
 
-			request := &pb.GetSubnetRequest{Name: tt.in}
-			response, err := client.GetSubnet(ctx, request)
+			request := &pb.GetLogicalBridgeRequest{Name: tt.in}
+			response, err := client.GetLogicalBridge(ctx, request)
 			if !proto.Equal(tt.out, response) {
 				t.Error("response: expected", tt.out, "received", response)
 			}
