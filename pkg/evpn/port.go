@@ -195,7 +195,7 @@ func (s *Server) UpdateInterface(_ context.Context, in *pb.UpdateInterfaceReques
 		return nil, err
 	}
 	// fetch object from the database
-	volume, ok := s.Interfaces[in.Interface.Name]
+	port, ok := s.Interfaces[in.Interface.Name]
 	if !ok {
 		// TODO: introduce "in.AllowMissing" field. In case "true", create a new resource, don't return error
 		err := status.Errorf(codes.NotFound, "unable to find key %s", in.Interface.Name)
@@ -207,7 +207,7 @@ func (s *Server) UpdateInterface(_ context.Context, in *pb.UpdateInterfaceReques
 		log.Printf("error: %v", err)
 		return nil, err
 	}
-	resourceID := path.Base(volume.Name)
+	resourceID := path.Base(port.Name)
 	iface, err := netlink.LinkByName(resourceID)
 	if err != nil {
 		err := status.Errorf(codes.NotFound, "unable to find key %s", resourceID)

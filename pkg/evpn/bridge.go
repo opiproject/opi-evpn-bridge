@@ -165,7 +165,7 @@ func (s *Server) UpdateLogicalBridge(_ context.Context, in *pb.UpdateLogicalBrid
 		return nil, err
 	}
 	// fetch object from the database
-	volume, ok := s.Bridges[in.LogicalBridge.Name]
+	bridge, ok := s.Bridges[in.LogicalBridge.Name]
 	if !ok {
 		// TODO: introduce "in.AllowMissing" field. In case "true", create a new resource, don't return error
 		err := status.Errorf(codes.NotFound, "unable to find key %s", in.LogicalBridge.Name)
@@ -177,7 +177,7 @@ func (s *Server) UpdateLogicalBridge(_ context.Context, in *pb.UpdateLogicalBrid
 		log.Printf("error: %v", err)
 		return nil, err
 	}
-	resourceID := path.Base(volume.Name)
+	resourceID := path.Base(bridge.Name)
 	iface, err := netlink.LinkByName(resourceID)
 	if err != nil {
 		err := status.Errorf(codes.NotFound, "unable to find key %s", resourceID)

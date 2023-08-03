@@ -166,7 +166,7 @@ func (s *Server) UpdateTunnel(_ context.Context, in *pb.UpdateTunnelRequest) (*p
 		return nil, err
 	}
 	// fetch object from the database
-	volume, ok := s.Tunnels[in.Tunnel.Name]
+	svi, ok := s.Tunnels[in.Tunnel.Name]
 	if !ok {
 		// TODO: introduce "in.AllowMissing" field. In case "true", create a new resource, don't return error
 		err := status.Errorf(codes.NotFound, "unable to find key %s", in.Tunnel.Name)
@@ -178,7 +178,7 @@ func (s *Server) UpdateTunnel(_ context.Context, in *pb.UpdateTunnelRequest) (*p
 		log.Printf("error: %v", err)
 		return nil, err
 	}
-	resourceID := path.Base(volume.Name)
+	resourceID := path.Base(svi.Name)
 	iface, err := netlink.LinkByName(resourceID)
 	if err != nil {
 		err := status.Errorf(codes.NotFound, "unable to find key %s", resourceID)
