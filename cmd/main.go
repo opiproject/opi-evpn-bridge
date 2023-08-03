@@ -35,6 +35,7 @@ func main() {
 	// TODO: replace cloud -> evpn
 	pb.RegisterCloudInfraServiceServer(s, opi)
 	pe.RegisterLogicalBridgeServiceServer(s, opi)
+	pe.RegisterBridgePortServiceServer(s, opi)
 	pe.RegisterVrfServiceServer(s, opi)
 
 	reflection.Register(s)
