@@ -48,12 +48,17 @@ func (s *Server) CreateLogicalBridge(_ context.Context, in *pb.CreateLogicalBrid
 	}
 	in.LogicalBridge.Name = resourceIDToFullName("bridges", resourceID)
 	// idempotent API when called with same key, should return same object
-	snet, ok := s.Bridges[in.LogicalBridge.Name]
+	obj, ok := s.Bridges[in.LogicalBridge.Name]
 	if ok {
 		log.Printf("Already existing LogicalBridge with id %v", in.LogicalBridge.Name)
-		return snet, nil
+		return obj, nil
 	}
 	// not found, so create a new one
+	if in.LogicalBridge.Spec.VlanId > 4095 {
+		msg := fmt.Sprintf("VlanId value (%d) have to be between 1 and 4095", in.LogicalBridge.Spec.VlanId)
+		log.Print(msg)
+		return nil, status.Errorf(codes.InvalidArgument, msg)
+	}
 	bridgeName := "br-tenant"
 	bridge, err := netlink.LinkByName(bridgeName)
 	if err != nil {
@@ -207,13 +212,13 @@ func (s *Server) GetLogicalBridge(_ context.Context, in *pb.GetLogicalBridgeRequ
 		return nil, err
 	}
 	// fetch object from the database
-	snet, ok := s.Bridges[in.Name]
+	bridge, ok := s.Bridges[in.Name]
 	if !ok {
 		err := status.Errorf(codes.NotFound, "unable to find key %s", in.Name)
 		log.Printf("error: %v", err)
 		return nil, err
 	}
-	resourceID := path.Base(snet.Name)
+	resourceID := path.Base(bridge.Name)
 	_, err := netlink.LinkByName(resourceID)
 	if err != nil {
 		err := status.Errorf(codes.NotFound, "unable to find key %s", resourceID)
@@ -221,5 +226,5 @@ func (s *Server) GetLogicalBridge(_ context.Context, in *pb.GetLogicalBridgeRequ
 		return nil, err
 	}
 	// TODO
-	return &pb.LogicalBridge{Name: in.Name, Spec: &pb.LogicalBridgeSpec{Vni: snet.Spec.Vni, VlanId: snet.Spec.VlanId}, Status: &pb.LogicalBridgeStatus{OperStatus: pb.LBOperStatus_LB_OPER_STATUS_UP}}, nil
+	return &pb.LogicalBridge{Name: in.Name, Spec: &pb.LogicalBridgeSpec{Vni: bridge.Spec.Vni, VlanId: bridge.Spec.VlanId}, Status: &pb.LogicalBridgeStatus{OperStatus: pb.LBOperStatus_LB_OPER_STATUS_UP}}, nil
 }
