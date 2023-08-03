@@ -51,6 +51,19 @@ func Test_CreateLogicalBridge(t *testing.T) {
 			fmt.Sprintf("user-settable ID must only contain lowercase, numbers and hyphens (%v)", "got: 'C' in position 0"),
 			false,
 		},
+		"illegal VlanId": {
+			testLogicalBridgeID,
+			&pb.LogicalBridge{
+				Spec: &pb.LogicalBridgeSpec{
+					Vni:    11,
+					VlanId: 4096,
+				},
+			},
+			nil,
+			codes.InvalidArgument,
+			fmt.Sprintf("VlanId value (%v) have to be between 1 and 4095", 4096),
+			false,
+		},
 		"already exists": {
 			testLogicalBridgeID,
 			&testLogicalBridge,
