@@ -24,6 +24,7 @@ func dialer(opi *Server) func(context.Context, string) (net.Conn, error) {
 	// TODO: replace cloud -> evpn
 	pb.RegisterCloudInfraServiceServer(server, opi)
 	pe.RegisterLogicalBridgeServiceServer(server, opi)
+	pe.RegisterBridgePortServiceServer(server, opi)
 	pe.RegisterVrfServiceServer(server, opi)
 
 	go func() {

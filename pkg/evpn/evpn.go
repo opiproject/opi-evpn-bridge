@@ -18,19 +18,20 @@ type Server struct {
 	pb.UnimplementedCloudInfraServiceServer
 	pe.UnimplementedVrfServiceServer
 	pe.UnimplementedLogicalBridgeServiceServer
-	Bridges    map[string]*pe.LogicalBridge
-	Interfaces map[string]*pb.Interface
-	Tunnels    map[string]*pb.Tunnel
-	Vrfs       map[string]*pe.Vrf
+	pe.UnimplementedBridgePortServiceServer
+	Bridges map[string]*pe.LogicalBridge
+	Ports   map[string]*pe.BridgePort
+	Tunnels map[string]*pb.Tunnel
+	Vrfs    map[string]*pe.Vrf
 }
 
 // NewServer creates initialized instance of EVPN server
 func NewServer() *Server {
 	return &Server{
-		Bridges:    make(map[string]*pe.LogicalBridge),
-		Interfaces: make(map[string]*pb.Interface),
-		Tunnels:    make(map[string]*pb.Tunnel),
-		Vrfs:       make(map[string]*pe.Vrf),
+		Bridges: make(map[string]*pe.LogicalBridge),
+		Ports:   make(map[string]*pe.BridgePort),
+		Tunnels: make(map[string]*pb.Tunnel),
+		Vrfs:    make(map[string]*pe.Vrf),
 	}
 }
 

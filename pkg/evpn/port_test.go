@@ -20,40 +20,42 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/fieldmaskpb"
 
-	pb "github.com/opiproject/opi-api/network/cloud/v1alpha1/gen/go"
+	pb "github.com/opiproject/opi-api/network/evpn-gw/v1alpha1/gen/go"
 )
 
 var (
-	testInterfaceID   = "opi-interface8"
-	testInterfaceName = resourceIDToFullName("interfaces", testInterfaceID)
-	testInterface     = pb.Interface{
-		Spec: &pb.InterfaceSpec{
-			Ifid: 11,
+	testBridgePortID   = "opi-port8"
+	testBridgePortName = resourceIDToFullName("ports", testBridgePortID)
+	testBridgePort     = pb.BridgePort{
+		Spec: &pb.BridgePortSpec{
+			MacAddress:     []byte{0xCB, 0xB8, 0x33, 0x4C, 0x88, 0x4F},
+			Ptype:          pb.BridgePortType_ACCESS,
+			LogicalBridges: []string{"Japan", "Australia", "Germany"},
 		},
 	}
 )
 
-func Test_CreateInterface(t *testing.T) {
+func Test_CreateBridgePort(t *testing.T) {
 	tests := map[string]struct {
 		id      string
-		in      *pb.Interface
-		out     *pb.Interface
+		in      *pb.BridgePort
+		out     *pb.BridgePort
 		errCode codes.Code
 		errMsg  string
 		exist   bool
 	}{
 		"illegal resource_id": {
 			"CapitalLettersNotAllowed",
-			&testInterface,
+			&testBridgePort,
 			nil,
 			codes.Unknown,
 			fmt.Sprintf("user-settable ID must only contain lowercase, numbers and hyphens (%v)", "got: 'C' in position 0"),
 			false,
 		},
 		"already exists": {
-			testInterfaceID,
-			&testInterface,
-			&testInterface,
+			testBridgePortID,
+			&testBridgePort,
+			&testBridgePort,
 			codes.OK,
 			"",
 			true,
@@ -79,17 +81,17 @@ func Test_CreateInterface(t *testing.T) {
 					log.Fatal(err)
 				}
 			}(conn)
-			client := pb.NewCloudInfraServiceClient(conn)
+			client := pb.NewBridgePortServiceClient(conn)
 
 			if tt.exist {
-				opi.Interfaces[testInterfaceName] = &testInterface
+				opi.Ports[testBridgePortName] = &testBridgePort
 			}
 			if tt.out != nil {
-				tt.out.Name = testInterfaceName
+				tt.out.Name = testBridgePortName
 			}
 
-			request := &pb.CreateInterfaceRequest{Interface: tt.in, InterfaceId: tt.id, Parent: "todo"}
-			response, err := client.CreateInterface(ctx, request)
+			request := &pb.CreateBridgePortRequest{BridgePort: tt.in, BridgePortId: tt.id}
+			response, err := client.CreateBridgePort(ctx, request)
 			if !proto.Equal(tt.out, response) {
 				t.Error("response: expected", tt.out, "received", response)
 			}
@@ -108,7 +110,7 @@ func Test_CreateInterface(t *testing.T) {
 	}
 }
 
-func Test_DeleteInterface(t *testing.T) {
+func Test_DeleteBridgePort(t *testing.T) {
 	tests := map[string]struct {
 		in      string
 		out     *emptypb.Empty
@@ -117,7 +119,7 @@ func Test_DeleteInterface(t *testing.T) {
 		missing bool
 	}{
 		// "valid request": {
-		// 	testInterfaceID,
+		// 	testBridgePortID,
 		// 	&emptypb.Empty{},
 		// 	codes.OK,
 		// 	"",
@@ -127,7 +129,7 @@ func Test_DeleteInterface(t *testing.T) {
 			"unknown-id",
 			nil,
 			codes.NotFound,
-			fmt.Sprintf("unable to find key %v", resourceIDToFullName("interfaces", "unknown-id")),
+			fmt.Sprintf("unable to find key %v", resourceIDToFullName("ports", "unknown-id")),
 			false,
 		},
 		"unknown key with missing allowed": {
@@ -165,13 +167,13 @@ func Test_DeleteInterface(t *testing.T) {
 					log.Fatal(err)
 				}
 			}(conn)
-			client := pb.NewCloudInfraServiceClient(conn)
+			client := pb.NewBridgePortServiceClient(conn)
 
-			fname1 := resourceIDToFullName("interfaces", tt.in)
-			opi.Interfaces[testInterfaceName] = &testInterface
+			fname1 := resourceIDToFullName("ports", tt.in)
+			opi.Ports[testBridgePortName] = &testBridgePort
 
-			request := &pb.DeleteInterfaceRequest{Name: fname1, AllowMissing: tt.missing}
-			response, err := client.DeleteInterface(ctx, request)
+			request := &pb.DeleteBridgePortRequest{Name: fname1, AllowMissing: tt.missing}
+			response, err := client.DeleteBridgePort(ctx, request)
 
 			if er, ok := status.FromError(err); ok {
 				if er.Code() != tt.errCode {
@@ -191,14 +193,16 @@ func Test_DeleteInterface(t *testing.T) {
 	}
 }
 
-func Test_UpdateInterface(t *testing.T) {
-	spec := &pb.InterfaceSpec{
-		Ifid: 11,
+func Test_UpdateBridgePort(t *testing.T) {
+	spec := &pb.BridgePortSpec{
+		MacAddress:     []byte{0xCB, 0xB8, 0x33, 0x4C, 0x88, 0x4F},
+		Ptype:          pb.BridgePortType_ACCESS,
+		LogicalBridges: []string{"Japan", "Australia", "Germany"},
 	}
 	tests := map[string]struct {
 		mask    *fieldmaskpb.FieldMask
-		in      *pb.Interface
-		out     *pb.Interface
+		in      *pb.BridgePort
+		out     *pb.BridgePort
 		spdk    []string
 		errCode codes.Code
 		errMsg  string
@@ -207,8 +211,8 @@ func Test_UpdateInterface(t *testing.T) {
 	}{
 		"invalid fieldmask": {
 			&fieldmaskpb.FieldMask{Paths: []string{"*", "author"}},
-			&pb.Interface{
-				Name: testInterfaceName,
+			&pb.BridgePort{
+				Name: testBridgePortName,
 				Spec: spec,
 			},
 			nil,
@@ -220,13 +224,13 @@ func Test_UpdateInterface(t *testing.T) {
 		},
 		"valid request with unknown key": {
 			nil,
-			&pb.Interface{
-				Name: resourceIDToFullName("interfaces", "unknown-id"),
+			&pb.BridgePort{
+				Name: resourceIDToFullName("ports", "unknown-id"),
 			},
 			nil,
 			[]string{""},
 			codes.NotFound,
-			fmt.Sprintf("unable to find key %v", resourceIDToFullName("interfaces", "unknown-id")),
+			fmt.Sprintf("unable to find key %v", resourceIDToFullName("ports", "unknown-id")),
 			false,
 			true,
 		},
@@ -251,17 +255,17 @@ func Test_UpdateInterface(t *testing.T) {
 					log.Fatal(err)
 				}
 			}(conn)
-			client := pb.NewCloudInfraServiceClient(conn)
+			client := pb.NewBridgePortServiceClient(conn)
 
 			if tt.exist {
-				opi.Interfaces[testInterfaceName] = &testInterface
+				opi.Ports[testBridgePortName] = &testBridgePort
 			}
 			if tt.out != nil {
-				tt.out.Name = testInterfaceName
+				tt.out.Name = testBridgePortName
 			}
 
-			request := &pb.UpdateInterfaceRequest{Interface: tt.in, UpdateMask: tt.mask}
-			response, err := client.UpdateInterface(ctx, request)
+			request := &pb.UpdateBridgePortRequest{BridgePort: tt.in, UpdateMask: tt.mask}
+			response, err := client.UpdateBridgePort(ctx, request)
 			if !proto.Equal(tt.out, response) {
 				t.Error("response: expected", tt.out, "received", response)
 			}
@@ -280,18 +284,18 @@ func Test_UpdateInterface(t *testing.T) {
 	}
 }
 
-func Test_GetInterface(t *testing.T) {
+func Test_GetBridgePort(t *testing.T) {
 	tests := map[string]struct {
 		in      string
-		out     *pb.Interface
+		out     *pb.BridgePort
 		errCode codes.Code
 		errMsg  string
 	}{
 		// "valid request": {
-		// 	testInterfaceID,
-		// 	&pb.Interface{
-		// 		Name:      testInterfaceName,
-		// 		Multipath: testInterface.Multipath,
+		// 	testBridgePortID,
+		// 	&pb.BridgePort{
+		// 		Name:      testBridgePortName,
+		// 		Multipath: testBridgePort.Multipath,
 		// 	},
 		// 	codes.OK,
 		// 	"",
@@ -329,12 +333,12 @@ func Test_GetInterface(t *testing.T) {
 					log.Fatal(err)
 				}
 			}(conn)
-			client := pb.NewCloudInfraServiceClient(conn)
+			client := pb.NewBridgePortServiceClient(conn)
 
-			opi.Interfaces[testInterfaceID] = &testInterface
+			opi.Ports[testBridgePortID] = &testBridgePort
 
-			request := &pb.GetInterfaceRequest{Name: tt.in}
-			response, err := client.GetInterface(ctx, request)
+			request := &pb.GetBridgePortRequest{Name: tt.in}
+			response, err := client.GetBridgePort(ctx, request)
 			if !proto.Equal(tt.out, response) {
 				t.Error("response: expected", tt.out, "received", response)
 			}

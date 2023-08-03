@@ -282,6 +282,12 @@ services:
       /entrypoint.sh ls localhost:50151 opi_api.network.evpn_gw.v1alpha1.LogicalBridgeService.GetLogicalBridge -l && \
       /entrypoint.sh ls localhost:50151 opi_api.network.evpn_gw.v1alpha1.LogicalBridgeService.DeleteLogicalBridge -l && \
       /entrypoint.sh ls localhost:50151 opi_api.network.evpn_gw.v1alpha1.LogicalBridgeService.UpdateLogicalBridge -l && \
+      /entrypoint.sh ls localhost:50151 opi_api.network.evpn_gw.v1alpha1.BridgePortService -l && \
+      /entrypoint.sh ls localhost:50151 opi_api.network.evpn_gw.v1alpha1.BridgePortService.CreateBridgePort -l && \
+      /entrypoint.sh ls localhost:50151 opi_api.network.evpn_gw.v1alpha1.BridgePortService.ListBridgePorts -l && \
+      /entrypoint.sh ls localhost:50151 opi_api.network.evpn_gw.v1alpha1.BridgePortService.GetBridgePort -l && \
+      /entrypoint.sh ls localhost:50151 opi_api.network.evpn_gw.v1alpha1.BridgePortService.DeleteBridgePort -l && \
+      /entrypoint.sh ls localhost:50151 opi_api.network.evpn_gw.v1alpha1.BridgePortService.UpdateBridgePort -l && \
       echo toremove && \
       apt update && apt install iproute2 -y && \
       ip link add br-tenant type bridge vlan_default_pvid 0 vlan_filtering 1 vlan_protocol 802.1Q && \
@@ -293,6 +299,8 @@ services:
       /entrypoint.sh call --json_input --json_output localhost:50151 CreateLogicalBridge    "{\"logical_bridge\" : {\"spec\" : {\"vni\" : 11, \"vlan_id\": 11 }}, \"logical_bridge_id\" : \"vxlan11\" }" && \
       /entrypoint.sh call --json_input --json_output localhost:50151 CreateLogicalBridge    "{\"logical_bridge\" : {\"spec\" : {\"vni\" : 22, \"vlan_id\": 22 }}, \"logical_bridge_id\" : \"vxlan22\" }" && \
       /entrypoint.sh call --json_input --json_output localhost:50151 CreateLogicalBridge    "{\"logical_bridge\" : {\"spec\" : {\"vni\" : 33, \"vlan_id\": 33 }}, \"logical_bridge_id\" : \"vxlan33\" }" && \
+      /entrypoint.sh call --json_input --json_output localhost:50151 CreateBridgePort    "{\"bridge_port\" : {\"spec\" : {\"mac_address\" : \"qrvMAAAB\", \"ptype\": \"ACCESS\", \"logical_bridges\": [] }}, \"bridge_port_id\" : \"eth2\" }" && \
+      /entrypoint.sh call --json_input --json_output localhost:50151 CreateBridgePort    "{\"bridge_port\" : {\"spec\" : {\"mac_address\" : \"qrvMAAAB\", \"ptype\": \"TRUNK\" , \"logical_bridges\": [] }}, \"bridge_port_id\" : \"eth3\" }" && \
       echo get && \
       /entrypoint.sh call --json_input --json_output localhost:50151 GetVrf       "{\"name\" : \"//network.opiproject.org/vrfs/blue\" }" && \
       /entrypoint.sh call --json_input --json_output localhost:50151 GetVrf       "{\"name\" : \"//network.opiproject.org/vrfs/green\" }" && \
@@ -300,6 +308,8 @@ services:
       /entrypoint.sh call --json_input --json_output localhost:50151 GetLogicalBridge       "{\"name\" : \"//network.opiproject.org/bridges/vxlan11\" }" && \
       /entrypoint.sh call --json_input --json_output localhost:50151 GetLogicalBridge       "{\"name\" : \"//network.opiproject.org/bridges/vxlan22\" }" && \
       /entrypoint.sh call --json_input --json_output localhost:50151 GetLogicalBridge       "{\"name\" : \"//network.opiproject.org/bridges/vxlan33\" }" && \
+      /entrypoint.sh call --json_input --json_output localhost:50151 GetBridgePort          "{\"name\" : \"//network.opiproject.org/ports/eth2\" }" && \
+      /entrypoint.sh call --json_input --json_output localhost:50151 GetBridgePort          "{\"name\" : \"//network.opiproject.org/ports/eth3\" }" && \
       echo toremove && \
       ip link add br10 type bridge && \
       ip link set br10 addr aa:bb:cc:00:00:11 && \

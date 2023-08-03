@@ -7,15 +7,13 @@ package evpn
 
 import (
 	"context"
-	"encoding/binary"
 	"fmt"
 	"log"
-	"net"
 	"path"
 
 	"github.com/vishvananda/netlink"
 
-	pb "github.com/opiproject/opi-api/network/cloud/v1alpha1/gen/go"
+	pb "github.com/opiproject/opi-api/network/evpn-gw/v1alpha1/gen/go"
 
 	"go.einride.tech/aip/fieldbehavior"
 	"go.einride.tech/aip/fieldmask"
@@ -27,9 +25,9 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
-// CreateInterface executes the creation of the interface
-func (s *Server) CreateInterface(_ context.Context, in *pb.CreateInterfaceRequest) (*pb.Interface, error) {
-	log.Printf("CreateInterface: Received from client: %v", in)
+// CreateBridgePort executes the creation of the port
+func (s *Server) CreateBridgePort(_ context.Context, in *pb.CreateBridgePortRequest) (*pb.BridgePort, error) {
+	log.Printf("CreateBridgePort: Received from client: %v", in)
 	// check required fields
 	if err := fieldbehavior.ValidateRequiredFields(in); err != nil {
 		log.Printf("error: %v", err)
@@ -37,107 +35,95 @@ func (s *Server) CreateInterface(_ context.Context, in *pb.CreateInterfaceReques
 	}
 	// see https://google.aip.dev/133#user-specified-ids
 	resourceID := resourceid.NewSystemGenerated()
-	if in.InterfaceId != "" {
-		err := resourceid.ValidateUserSettable(in.InterfaceId)
+	if in.BridgePortId != "" {
+		err := resourceid.ValidateUserSettable(in.BridgePortId)
 		if err != nil {
 			log.Printf("error: %v", err)
 			return nil, err
 		}
-		log.Printf("client provided the ID of a resource %v, ignoring the name field %v", in.InterfaceId, in.Interface.Name)
-		resourceID = in.InterfaceId
+		log.Printf("client provided the ID of a resource %v, ignoring the name field %v", in.BridgePortId, in.BridgePort.Name)
+		resourceID = in.BridgePortId
 	}
-	in.Interface.Name = resourceIDToFullName("interfaces", resourceID)
+	in.BridgePort.Name = resourceIDToFullName("ports", resourceID)
 	// idempotent API when called with same key, should return same object
-	iface, ok := s.Interfaces[in.Interface.Name]
+	obj, ok := s.Ports[in.BridgePort.Name]
 	if ok {
-		log.Printf("Already existing Interface with id %v", in.Interface.Name)
-		return iface, nil
+		log.Printf("Already existing BridgePort with id %v", in.BridgePort.Name)
+		return obj, nil
 	}
-	// get base interface
-	dummy, err := netlink.LinkByName(resourceID)
+	// not found, so create a new one
+	bridgeName := "br-tenant"
+	// get tenant bridge device by name
+	bridge, err := netlink.LinkByName(bridgeName)
+	if err != nil {
+		err := status.Errorf(codes.NotFound, "unable to find key %s", bridgeName)
+		log.Printf("error: %v", err)
+		return nil, err
+	}
+	// get base interface (e.g.: eth2)
+	iface, err := netlink.LinkByName(resourceID)
 	if err != nil {
 		err := status.Errorf(codes.NotFound, "unable to find key %s", resourceID)
 		log.Printf("error: %v", err)
 		return nil, err
 	}
-	// create the vlan device
-	vlandev := &netlink.Vlan{
-		LinkAttrs: netlink.LinkAttrs{
-			Name:        fmt.Sprintf("%s.%d", dummy.Attrs().Name, in.Interface.Spec.Ifid),
-			ParentIndex: dummy.Attrs().Index,
-		},
-		// TODO: use vlanid instead of Ifid
-		VlanId: int(in.Interface.Spec.Ifid),
-	}
-	// up
-	if err := netlink.LinkAdd(vlandev); err != nil {
-		fmt.Printf("Failed to create link: %v", err)
-		return nil, err
-	}
-	// TODO: gap... instead of VPC we are looking for Subnet/Bridge here...
-	ifaceobj := in.Interface.Spec.GetL3IfSpec()
-	if ifaceobj.VpcNameRef != "" {
-		// Validate that a Subnet/Bridge resource name conforms to the restrictions outlined in AIP-122.
-		if err := resourcename.Validate(ifaceobj.VpcNameRef); err != nil {
-			log.Printf("error: %v", err)
-			return nil, err
-		}
-		// now get Subnet/Bridge to plug this port/interface into
-		bridge, ok := s.Bridges[ifaceobj.VpcNameRef]
-		if !ok {
-			err := status.Errorf(codes.NotFound, "unable to find key %s", ifaceobj.VpcNameRef)
-			log.Printf("error: %v", err)
-			return nil, err
-		}
-		brdev, err := netlink.LinkByName(path.Base(bridge.Name))
-		if err != nil {
-			err := status.Errorf(codes.NotFound, "unable to find key %s", bridge.Name)
-			log.Printf("error: %v", err)
-			return nil, err
-		}
-		if err := netlink.LinkSetMaster(vlandev, brdev); err != nil {
-			fmt.Printf("Failed to add port/interface to bridge: %v", err)
-			return nil, err
-		}
-	}
-	if err := netlink.LinkSetUp(vlandev); err != nil {
-		fmt.Printf("Failed to up link: %v", err)
-		return nil, err
-	}
-	// set MAC
-	if len(ifaceobj.MacAddress) > 0 {
-		// TODO: dummy or vlandev ?
-		if err := netlink.LinkSetHardwareAddr(dummy, ifaceobj.MacAddress); err != nil {
+	// Example: ip link set eth2 addr aa:bb:cc:00:00:41
+	if len(in.BridgePort.Spec.MacAddress) > 0 {
+		if err := netlink.LinkSetHardwareAddr(iface, in.BridgePort.Spec.MacAddress); err != nil {
 			fmt.Printf("Failed to set MAC on link: %v", err)
 			return nil, err
 		}
 	}
-	// set IPv4
-	for _, item := range ifaceobj.Prefix {
-		myip := make(net.IP, 4)
-		binary.BigEndian.PutUint32(myip, item.Addr.GetV4Addr())
-		addr := &netlink.Addr{IPNet: &net.IPNet{IP: myip, Mask: net.CIDRMask(int(item.Len), 32)}}
-		// TODO: dummy or vlandev ?
-		if err := netlink.AddrAdd(dummy, addr); err != nil {
-			fmt.Printf("Failed to set IP on link: %v", err)
-			return nil, err
-		}
-	}
-	// up
-	if err := netlink.LinkSetUp(dummy); err != nil {
-		fmt.Printf("Failed to up link: %v", err)
+	// Example: ip link set eth2 master br-tenant
+	if err := netlink.LinkSetMaster(iface, bridge); err != nil {
+		fmt.Printf("Failed to add iface to bridge: %v", err)
 		return nil, err
 	}
-	response := proto.Clone(in.Interface).(*pb.Interface)
-	response.Status = &pb.InterfaceStatus{IfIndex: 8, OperStatus: pb.IfStatus_IF_STATUS_UP}
-	s.Interfaces[in.Interface.Name] = response
-	log.Printf("CreateInterface: Sending to client: %v", response)
+	// add port to specified logical bridges
+	for _, bridgeRefName := range in.BridgePort.Spec.LogicalBridges {
+		fmt.Printf("add iface to logical bridge %s", bridgeRefName)
+		// get object from DB
+		bridgeObject, ok := s.Bridges[bridgeRefName]
+		if !ok {
+			err := status.Errorf(codes.NotFound, "unable to find key %s", bridgeRefName)
+			log.Printf("error: %v", err)
+			return nil, err
+		}
+		vid := uint16(bridgeObject.Spec.VlanId)
+		switch in.BridgePort.Spec.Ptype {
+		case pb.BridgePortType_ACCESS:
+			// Example: bridge vlan add dev eth2 vid 20 pvid untagged
+			if err := netlink.BridgeVlanAdd(iface, vid, true, true, false, false); err != nil {
+				fmt.Printf("Failed to add vlan to bridge: %v", err)
+				return nil, err
+			}
+		case pb.BridgePortType_TRUNK:
+			// Example: bridge vlan add dev eth2 vid 20
+			if err := netlink.BridgeVlanAdd(iface, vid, false, false, false, false); err != nil {
+				fmt.Printf("Failed to add vlan to bridge: %v", err)
+				return nil, err
+			}
+		default:
+			msg := fmt.Sprintf("Only ACCESS or TRUNK supported and not (%d)", in.BridgePort.Spec.Ptype)
+			log.Print(msg)
+			return nil, status.Errorf(codes.InvalidArgument, msg)
+		}
+	}
+	// Example: ip link set eth2 up
+	if err := netlink.LinkSetUp(iface); err != nil {
+		fmt.Printf("Failed to up iface link: %v", err)
+		return nil, err
+	}
+	response := proto.Clone(in.BridgePort).(*pb.BridgePort)
+	response.Status = &pb.BridgePortStatus{OperStatus: pb.BPOperStatus_BP_OPER_STATUS_UP}
+	s.Ports[in.BridgePort.Name] = response
+	log.Printf("CreateBridgePort: Sending to client: %v", response)
 	return response, nil
 }
 
-// DeleteInterface deletes an interface
-func (s *Server) DeleteInterface(_ context.Context, in *pb.DeleteInterfaceRequest) (*emptypb.Empty, error) {
-	log.Printf("DeleteInterface: Received from client: %v", in)
+// DeleteBridgePort deletes a port
+func (s *Server) DeleteBridgePort(_ context.Context, in *pb.DeleteBridgePortRequest) (*emptypb.Empty, error) {
+	log.Printf("DeleteBridgePort: Received from client: %v", in)
 	// check required fields
 	if err := fieldbehavior.ValidateRequiredFields(in); err != nil {
 		log.Printf("error: %v", err)
@@ -149,7 +135,7 @@ func (s *Server) DeleteInterface(_ context.Context, in *pb.DeleteInterfaceReques
 		return nil, err
 	}
 	// fetch object from the database
-	iface, ok := s.Interfaces[in.Name]
+	iface, ok := s.Ports[in.Name]
 	if !ok {
 		if in.AllowMissing {
 			return &emptypb.Empty{}, nil
@@ -171,39 +157,54 @@ func (s *Server) DeleteInterface(_ context.Context, in *pb.DeleteInterfaceReques
 		fmt.Printf("Failed to up link: %v", err)
 		return nil, err
 	}
+	// delete bridge vlan
+	for _, bridgeRefName := range iface.Spec.LogicalBridges {
+		// get object from DB
+		bridgeObject, ok := s.Bridges[bridgeRefName]
+		if !ok {
+			err := status.Errorf(codes.NotFound, "unable to find key %s", bridgeRefName)
+			log.Printf("error: %v", err)
+			return nil, err
+		}
+		vid := uint16(bridgeObject.Spec.VlanId)
+		if err := netlink.BridgeVlanDel(dummy, vid, true, true, false, false); err != nil {
+			fmt.Printf("Failed to delete vlan to bridge: %v", err)
+			return nil, err
+		}
+	}
 	// use netlink to delete dummy interface
 	if err := netlink.LinkDel(dummy); err != nil {
 		fmt.Printf("Failed to delete link: %v", err)
 		return nil, err
 	}
 	// remove from the Database
-	delete(s.Interfaces, iface.Name)
+	delete(s.Ports, iface.Name)
 	return &emptypb.Empty{}, nil
 }
 
-// UpdateInterface updates an Nvme Subsystem
-func (s *Server) UpdateInterface(_ context.Context, in *pb.UpdateInterfaceRequest) (*pb.Interface, error) {
-	log.Printf("UpdateInterface: Received from client: %v", in)
+// UpdateBridgePort updates an Nvme Subsystem
+func (s *Server) UpdateBridgePort(_ context.Context, in *pb.UpdateBridgePortRequest) (*pb.BridgePort, error) {
+	log.Printf("UpdateBridgePort: Received from client: %v", in)
 	// check required fields
 	if err := fieldbehavior.ValidateRequiredFields(in); err != nil {
 		log.Printf("error: %v", err)
 		return nil, err
 	}
 	// Validate that a resource name conforms to the restrictions outlined in AIP-122.
-	if err := resourcename.Validate(in.Interface.Name); err != nil {
+	if err := resourcename.Validate(in.BridgePort.Name); err != nil {
 		log.Printf("error: %v", err)
 		return nil, err
 	}
 	// fetch object from the database
-	port, ok := s.Interfaces[in.Interface.Name]
+	port, ok := s.Ports[in.BridgePort.Name]
 	if !ok {
 		// TODO: introduce "in.AllowMissing" field. In case "true", create a new resource, don't return error
-		err := status.Errorf(codes.NotFound, "unable to find key %s", in.Interface.Name)
+		err := status.Errorf(codes.NotFound, "unable to find key %s", in.BridgePort.Name)
 		log.Printf("error: %v", err)
 		return nil, err
 	}
 	// update_mask = 2
-	if err := fieldmask.Validate(in.UpdateMask, in.Interface); err != nil {
+	if err := fieldmask.Validate(in.UpdateMask, in.BridgePort); err != nil {
 		log.Printf("error: %v", err)
 		return nil, err
 	}
@@ -221,16 +222,16 @@ func (s *Server) UpdateInterface(_ context.Context, in *pb.UpdateInterfaceReques
 		return nil, err
 	}
 	// TODO: replace cloud -> evpn
-	response := proto.Clone(in.Interface).(*pb.Interface)
-	response.Status = &pb.InterfaceStatus{IfIndex: 8, OperStatus: pb.IfStatus_IF_STATUS_UP}
-	s.Interfaces[in.Interface.Name] = response
-	log.Printf("UpdateInterface: Sending to client: %v", response)
+	response := proto.Clone(in.BridgePort).(*pb.BridgePort)
+	response.Status = &pb.BridgePortStatus{OperStatus: pb.BPOperStatus_BP_OPER_STATUS_UP}
+	s.Ports[in.BridgePort.Name] = response
+	log.Printf("UpdateBridgePort: Sending to client: %v", response)
 	return response, nil
 }
 
-// GetInterface gets an Interface
-func (s *Server) GetInterface(_ context.Context, in *pb.GetInterfaceRequest) (*pb.Interface, error) {
-	log.Printf("GetInterface: Received from client: %v", in)
+// GetBridgePort gets an BridgePort
+func (s *Server) GetBridgePort(_ context.Context, in *pb.GetBridgePortRequest) (*pb.BridgePort, error) {
+	log.Printf("GetBridgePort: Received from client: %v", in)
 	// check required fields
 	if err := fieldbehavior.ValidateRequiredFields(in); err != nil {
 		log.Printf("error: %v", err)
@@ -242,13 +243,13 @@ func (s *Server) GetInterface(_ context.Context, in *pb.GetInterfaceRequest) (*p
 		return nil, err
 	}
 	// fetch object from the database
-	snet, ok := s.Interfaces[in.Name]
+	port, ok := s.Ports[in.Name]
 	if !ok {
 		err := status.Errorf(codes.NotFound, "unable to find key %s", in.Name)
 		log.Printf("error: %v", err)
 		return nil, err
 	}
-	resourceID := path.Base(snet.Name)
+	resourceID := path.Base(port.Name)
 	_, err := netlink.LinkByName(resourceID)
 	if err != nil {
 		err := status.Errorf(codes.NotFound, "unable to find key %s", resourceID)
@@ -256,5 +257,5 @@ func (s *Server) GetInterface(_ context.Context, in *pb.GetInterfaceRequest) (*p
 		return nil, err
 	}
 	// TODO
-	return &pb.Interface{Name: in.Name, Spec: &pb.InterfaceSpec{Ifid: snet.Spec.Ifid}, Status: &pb.InterfaceStatus{IfIndex: 55}}, nil
+	return &pb.BridgePort{Name: in.Name, Spec: &pb.BridgePortSpec{MacAddress: port.Spec.MacAddress}, Status: &pb.BridgePortStatus{OperStatus: pb.BPOperStatus_BP_OPER_STATUS_UP}}, nil
 }
