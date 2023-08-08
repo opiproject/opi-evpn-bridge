@@ -62,6 +62,63 @@ func Test_CreateSvi(t *testing.T) {
 			"",
 			true,
 		},
+		"no required svi field": {
+			testSviID,
+			nil,
+			nil,
+			codes.Unknown,
+			"missing required field: svi",
+			false,
+		},
+		"no required vrf field": {
+			testSviID,
+			&pb.Svi{
+				Spec: &pb.SviSpec{},
+			},
+			nil,
+			codes.Unknown,
+			"missing required field: svi.spec.vrf",
+			false,
+		},
+		"no required bridge field": {
+			testSviID,
+			&pb.Svi{
+				Spec: &pb.SviSpec{
+					Vrf: testVrfName,
+				},
+			},
+			nil,
+			codes.Unknown,
+			"missing required field: svi.spec.logical_bridge",
+			false,
+		},
+		"no required mac field": {
+			testSviID,
+			&pb.Svi{
+				Spec: &pb.SviSpec{
+					Vrf:           testVrfName,
+					LogicalBridge: testLogicalBridgeName,
+				},
+			},
+			nil,
+			codes.Unknown,
+			"missing required field: svi.spec.mac_address",
+			false,
+		},
+		"no required gw ip field": {
+			testSviID,
+			&pb.Svi{
+				Spec: &pb.SviSpec{
+					Vrf:           testVrfName,
+					LogicalBridge: testLogicalBridgeName,
+					MacAddress:    []byte{0xCB, 0xB8, 0x33, 0x4C, 0x88, 0x4F},
+				},
+			},
+			nil,
+			codes.Unknown,
+			"missing required field: svi.spec.gw_ip_prefix",
+			false,
+		},
 	}
 
 	// run tests

@@ -51,6 +51,24 @@ func Test_CreateLogicalBridge(t *testing.T) {
 			fmt.Sprintf("user-settable ID must only contain lowercase, numbers and hyphens (%v)", "got: 'C' in position 0"),
 			false,
 		},
+		"no required bridge field": {
+			testLogicalBridgeID,
+			nil,
+			nil,
+			codes.Unknown,
+			"missing required field: logical_bridge",
+			false,
+		},
+		"no required vlan_id field": {
+			testLogicalBridgeID,
+			&pb.LogicalBridge{
+				Spec: &pb.LogicalBridgeSpec{},
+			},
+			nil,
+			codes.Unknown,
+			"missing required field: logical_bridge.spec.vlan_id",
+			false,
+		},
 		"illegal VlanId": {
 			testLogicalBridgeID,
 			&pb.LogicalBridge{
