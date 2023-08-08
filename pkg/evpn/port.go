@@ -226,7 +226,6 @@ func (s *Server) UpdateBridgePort(_ context.Context, in *pb.UpdateBridgePortRequ
 		fmt.Printf("Failed to update link: %v", err)
 		return nil, err
 	}
-	// TODO: replace cloud -> evpn
 	response := proto.Clone(in.BridgePort).(*pb.BridgePort)
 	response.Status = &pb.BridgePortStatus{OperStatus: pb.BPOperStatus_BP_OPER_STATUS_UP}
 	s.Ports[in.BridgePort.Name] = response

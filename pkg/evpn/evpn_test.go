@@ -13,7 +13,6 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/test/bufconn"
 
-	pb "github.com/opiproject/opi-api/network/cloud/v1alpha1/gen/go"
 	pe "github.com/opiproject/opi-api/network/evpn-gw/v1alpha1/gen/go"
 )
 
@@ -21,11 +20,10 @@ func dialer(opi *Server) func(context.Context, string) (net.Conn, error) {
 	listener := bufconn.Listen(1024 * 1024)
 	server := grpc.NewServer()
 
-	// TODO: replace cloud -> evpn
-	pb.RegisterCloudInfraServiceServer(server, opi)
 	pe.RegisterLogicalBridgeServiceServer(server, opi)
 	pe.RegisterBridgePortServiceServer(server, opi)
 	pe.RegisterVrfServiceServer(server, opi)
+	pe.RegisterSviServiceServer(server, opi)
 
 	go func() {
 		if err := server.Serve(listener); err != nil {

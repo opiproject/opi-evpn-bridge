@@ -192,7 +192,6 @@ func (s *Server) UpdateLogicalBridge(_ context.Context, in *pb.UpdateLogicalBrid
 		fmt.Printf("Failed to update link: %v", err)
 		return nil, err
 	}
-	// TODO: replace cloud -> evpn
 	response := proto.Clone(in.LogicalBridge).(*pb.LogicalBridge)
 	response.Status = &pb.LogicalBridgeStatus{OperStatus: pb.LBOperStatus_LB_OPER_STATUS_UP}
 	s.Bridges[in.LogicalBridge.Name] = response

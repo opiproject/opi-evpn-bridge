@@ -11,7 +11,6 @@ import (
 	"log"
 	"net"
 
-	pb "github.com/opiproject/opi-api/network/cloud/v1alpha1/gen/go"
 	pe "github.com/opiproject/opi-api/network/evpn-gw/v1alpha1/gen/go"
 	"github.com/opiproject/opi-evpn-bridge/pkg/evpn"
 
@@ -32,11 +31,10 @@ func main() {
 	s := grpc.NewServer()
 	opi := evpn.NewServer()
 
-	// TODO: replace cloud -> evpn
-	pb.RegisterCloudInfraServiceServer(s, opi)
 	pe.RegisterLogicalBridgeServiceServer(s, opi)
 	pe.RegisterBridgePortServiceServer(s, opi)
 	pe.RegisterVrfServiceServer(s, opi)
+	pe.RegisterSviServiceServer(s, opi)
 
 	reflection.Register(s)
 
