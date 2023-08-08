@@ -59,40 +59,43 @@ func (s *Server) CreateLogicalBridge(_ context.Context, in *pb.CreateLogicalBrid
 		log.Print(msg)
 		return nil, status.Errorf(codes.InvalidArgument, msg)
 	}
-	bridgeName := "br-tenant"
-	bridge, err := netlink.LinkByName(bridgeName)
-	if err != nil {
-		err := status.Errorf(codes.NotFound, "unable to find key %s", bridgeName)
-		log.Printf("error: %v", err)
-		return nil, err
+	// create vxlan only if VNI is not empty
+	if in.LogicalBridge.Spec.Vni > 0 {
+		bridgeName := "br-tenant"
+		bridge, err := netlink.LinkByName(bridgeName)
+		if err != nil {
+			err := status.Errorf(codes.NotFound, "unable to find key %s", bridgeName)
+			log.Printf("error: %v", err)
+			return nil, err
+		}
+		// Example: ip link add vxlan-<LB-vlan-id> type vxlan id <LB-vni> local <vtep-ip> dstport 4789 nolearning proxy
+		vxlanName := fmt.Sprintf("vxlan%d", in.LogicalBridge.Spec.VlanId)
+		myip := make(net.IP, 4)
+		// TODO: remove hard-coded 167772260 == "10.0.0.100"
+		binary.BigEndian.PutUint32(myip, 167772260)
+		vxlan := &netlink.Vxlan{LinkAttrs: netlink.LinkAttrs{Name: vxlanName}, VxlanId: int(in.LogicalBridge.Spec.Vni), Port: 4789, Learning: false, SrcAddr: myip}
+		// TODO: take Port from proto instead of hard-coded
+		if err := netlink.LinkAdd(vxlan); err != nil {
+			fmt.Printf("Failed to create Vxlan link: %v", err)
+			return nil, err
+		}
+		// Example: ip link set vxlan-<LB-vlan-id> master br-tenant addrgenmode none
+		if err := netlink.LinkSetMaster(vxlan, bridge); err != nil {
+			fmt.Printf("Failed to add Vxlan to bridge: %v", err)
+			return nil, err
+		}
+		// Example: ip link set vxlan-<LB-vlan-id> up
+		if err := netlink.LinkSetUp(vxlan); err != nil {
+			fmt.Printf("Failed to up Vxlan link: %v", err)
+			return nil, err
+		}
+		// Example: bridge vlan add dev vxlan-<LB-vlan-id> vid <LB-vlan-id> pvid untagged
+		if err := netlink.BridgeVlanAdd(vxlan, uint16(in.LogicalBridge.Spec.VlanId), true, true, false, false); err != nil {
+			fmt.Printf("Failed to add vlan to bridge: %v", err)
+			return nil, err
+		}
+		// TODO: bridge link set dev vxlan-<LB-vlan-id> neigh_suppress on
 	}
-	// Example: ip link add vxlan-<LB-vlan-id> type vxlan id <LB-vni> local <vtep-ip> dstport 4789 nolearning proxy
-	vxlanName := fmt.Sprintf("vxlan%d", in.LogicalBridge.Spec.VlanId)
-	myip := make(net.IP, 4)
-	// TODO: remove hard-coded 167772260 == "10.0.0.100"
-	binary.BigEndian.PutUint32(myip, 167772260)
-	vxlan := &netlink.Vxlan{LinkAttrs: netlink.LinkAttrs{Name: vxlanName}, VxlanId: int(in.LogicalBridge.Spec.Vni), Port: 4789, Learning: false, SrcAddr: myip}
-	// TODO: take Port from proto instead of hard-coded
-	if err := netlink.LinkAdd(vxlan); err != nil {
-		fmt.Printf("Failed to create Vxlan link: %v", err)
-		return nil, err
-	}
-	// Example: ip link set vxlan-<LB-vlan-id> master br-tenant addrgenmode none
-	if err := netlink.LinkSetMaster(vxlan, bridge); err != nil {
-		fmt.Printf("Failed to add Vxlan to bridge: %v", err)
-		return nil, err
-	}
-	// Example: ip link set vxlan-<LB-vlan-id> up
-	if err := netlink.LinkSetUp(vxlan); err != nil {
-		fmt.Printf("Failed to up Vxlan link: %v", err)
-		return nil, err
-	}
-	// Example: bridge vlan add dev vxlan-<LB-vlan-id> vid <LB-vlan-id> pvid untagged
-	if err := netlink.BridgeVlanAdd(vxlan, uint16(in.LogicalBridge.Spec.VlanId), true, true, false, false); err != nil {
-		fmt.Printf("Failed to add vlan to bridge: %v", err)
-		return nil, err
-	}
-	// TODO: bridge link set dev vxlan-<LB-vlan-id> neigh_suppress on
 	response := proto.Clone(in.LogicalBridge).(*pb.LogicalBridge)
 	response.Status = &pb.LogicalBridgeStatus{OperStatus: pb.LBOperStatus_LB_OPER_STATUS_UP}
 	s.Bridges[in.LogicalBridge.Name] = response

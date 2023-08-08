@@ -64,6 +64,25 @@ func Test_CreateLogicalBridge(t *testing.T) {
 			fmt.Sprintf("VlanId value (%v) have to be between 1 and 4095", 4096),
 			false,
 		},
+		"empty vni": {
+			testLogicalBridgeID,
+			&pb.LogicalBridge{
+				Spec: &pb.LogicalBridgeSpec{
+					VlanId: 11,
+				},
+			},
+			&pb.LogicalBridge{
+				Spec: &pb.LogicalBridgeSpec{
+					VlanId: 11,
+				},
+				Status: &pb.LogicalBridgeStatus{
+					OperStatus: pb.LBOperStatus_LB_OPER_STATUS_UP,
+				},
+			},
+			codes.OK,
+			"",
+			false,
+		},
 		"already exists": {
 			testLogicalBridgeID,
 			&testLogicalBridge,
