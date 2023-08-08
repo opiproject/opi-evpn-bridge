@@ -51,6 +51,13 @@ func (s *Server) CreateBridgePort(_ context.Context, in *pb.CreateBridgePortRequ
 		log.Printf("Already existing BridgePort with id %v", in.BridgePort.Name)
 		return obj, nil
 	}
+	// for Access type, the LogicalBridge list must have only one item
+	length := len(in.BridgePort.Spec.LogicalBridges)
+	if in.BridgePort.Spec.Ptype == pb.BridgePortType_ACCESS && length > 1 {
+		msg := fmt.Sprintf("ACCESS type must have single LogicalBridge and not (%d)", length)
+		log.Print(msg)
+		return nil, status.Errorf(codes.InvalidArgument, msg)
+	}
 	// not found, so create a new one
 	bridgeName := "br-tenant"
 	// get tenant bridge device by name

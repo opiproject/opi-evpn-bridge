@@ -29,7 +29,7 @@ var (
 	testBridgePort     = pb.BridgePort{
 		Spec: &pb.BridgePortSpec{
 			MacAddress:     []byte{0xCB, 0xB8, 0x33, 0x4C, 0x88, 0x4F},
-			Ptype:          pb.BridgePortType_ACCESS,
+			Ptype:          pb.BridgePortType_TRUNK,
 			LogicalBridges: []string{"Japan", "Australia", "Germany"},
 		},
 	}
@@ -59,6 +59,20 @@ func Test_CreateBridgePort(t *testing.T) {
 			codes.OK,
 			"",
 			true,
+		},
+		"access port and list bridge": {
+			testBridgePortID,
+			&pb.BridgePort{
+				Spec: &pb.BridgePortSpec{
+					MacAddress:     []byte{0xCB, 0xB8, 0x33, 0x4C, 0x88, 0x4F},
+					Ptype:          pb.BridgePortType_ACCESS,
+					LogicalBridges: []string{"Japan", "Australia", "Germany"},
+				},
+			},
+			nil,
+			codes.InvalidArgument,
+			fmt.Sprintf("ACCESS type must have single LogicalBridge and not (%d)", len(testBridgePort.Spec.LogicalBridges)),
+			false,
 		},
 	}
 
