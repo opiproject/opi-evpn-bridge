@@ -9,7 +9,6 @@ import (
 	"crypto/rand"
 	"fmt"
 
-	pb "github.com/opiproject/opi-api/network/cloud/v1alpha1/gen/go"
 	pe "github.com/opiproject/opi-api/network/evpn-gw/v1alpha1/gen/go"
 )
 
@@ -19,13 +18,13 @@ const (
 
 // Server represents the Server object
 type Server struct {
-	pb.UnimplementedCloudInfraServiceServer
 	pe.UnimplementedVrfServiceServer
+	pe.UnimplementedSviServiceServer
 	pe.UnimplementedLogicalBridgeServiceServer
 	pe.UnimplementedBridgePortServiceServer
 	Bridges map[string]*pe.LogicalBridge
 	Ports   map[string]*pe.BridgePort
-	Tunnels map[string]*pb.Tunnel
+	Svis    map[string]*pe.Svi
 	Vrfs    map[string]*pe.Vrf
 }
 
@@ -34,7 +33,7 @@ func NewServer() *Server {
 	return &Server{
 		Bridges: make(map[string]*pe.LogicalBridge),
 		Ports:   make(map[string]*pe.BridgePort),
-		Tunnels: make(map[string]*pb.Tunnel),
+		Svis:    make(map[string]*pe.Svi),
 		Vrfs:    make(map[string]*pe.Vrf),
 	}
 }

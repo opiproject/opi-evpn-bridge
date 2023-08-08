@@ -276,6 +276,12 @@ services:
       /entrypoint.sh ls localhost:50151 opi_api.network.evpn_gw.v1alpha1.VrfService.GetVrf -l && \
       /entrypoint.sh ls localhost:50151 opi_api.network.evpn_gw.v1alpha1.VrfService.DeleteVrf -l && \
       /entrypoint.sh ls localhost:50151 opi_api.network.evpn_gw.v1alpha1.VrfService.UpdateVrf -l && \
+      /entrypoint.sh ls localhost:50151 opi_api.network.evpn_gw.v1alpha1.SviService -l && \
+      /entrypoint.sh ls localhost:50151 opi_api.network.evpn_gw.v1alpha1.SviService.CreateSvi -l && \
+      /entrypoint.sh ls localhost:50151 opi_api.network.evpn_gw.v1alpha1.SviService.ListSvis -l && \
+      /entrypoint.sh ls localhost:50151 opi_api.network.evpn_gw.v1alpha1.SviService.GetSvi -l && \
+      /entrypoint.sh ls localhost:50151 opi_api.network.evpn_gw.v1alpha1.SviService.DeleteSvi -l && \
+      /entrypoint.sh ls localhost:50151 opi_api.network.evpn_gw.v1alpha1.SviService.UpdateSvi -l && \
       /entrypoint.sh ls localhost:50151 opi_api.network.evpn_gw.v1alpha1.LogicalBridgeService -l && \
       /entrypoint.sh ls localhost:50151 opi_api.network.evpn_gw.v1alpha1.LogicalBridgeService.CreateLogicalBridge -l && \
       /entrypoint.sh ls localhost:50151 opi_api.network.evpn_gw.v1alpha1.LogicalBridgeService.ListLogicalBridges -l && \

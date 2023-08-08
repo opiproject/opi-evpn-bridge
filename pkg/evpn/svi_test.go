@@ -20,51 +20,44 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/fieldmaskpb"
 
-	pb "github.com/opiproject/opi-api/network/cloud/v1alpha1/gen/go"
+	pb "github.com/opiproject/opi-api/network/evpn-gw/v1alpha1/gen/go"
 	pc "github.com/opiproject/opi-api/network/opinetcommon/v1alpha1/gen/go"
 )
 
 var (
-	testTunnelID   = "opi-tunnel8"
-	testTunnelName = resourceIDToFullName("tunnels", testTunnelID)
-	testTunnel     = pb.Tunnel{
-		Spec: &pb.TunnelSpec{
-			VpcNameRef: testLogicalBridgeName,
-			LocalIp: &pc.IPAddress{
-				Af:     pc.IpAf_IP_AF_INET,
-				V4OrV6: &pc.IPAddress_V4Addr{V4Addr: 336860161},
-			},
-			Encap: &pc.Encap{
-				Type: pc.EncapType_ENCAP_TYPE_VXLAN,
-				Value: &pc.EncapVal{
-					Val: &pc.EncapVal_Vnid{Vnid: 100},
-				},
-			},
+	testSviID   = "opi-svi8"
+	testSviName = resourceIDToFullName("svis", testSviID)
+	testSvi     = pb.Svi{
+		Spec: &pb.SviSpec{
+			Vrf:           testVrfName,
+			LogicalBridge: testLogicalBridgeName,
+			MacAddress:    []byte{0xCB, 0xB8, 0x33, 0x4C, 0x88, 0x4F},
+			GwIpPrefix:    []*pc.IPPrefix{{Len: 24}},
 		},
 	}
 )
 
-func Test_CreateTunnel(t *testing.T) {
+func Test_CreateSvi(t *testing.T) {
 	tests := map[string]struct {
 		id      string
-		in      *pb.Tunnel
-		out     *pb.Tunnel
+		in      *pb.Svi
+		out     *pb.Svi
 		errCode codes.Code
 		errMsg  string
 		exist   bool
 	}{
 		"illegal resource_id": {
 			"CapitalLettersNotAllowed",
-			&testTunnel,
+			&testSvi,
 			nil,
 			codes.Unknown,
 			fmt.Sprintf("user-settable ID must only contain lowercase, numbers and hyphens (%v)", "got: 'C' in position 0"),
 			false,
 		},
 		"already exists": {
-			testTunnelID,
-			&testTunnel,
-			&testTunnel,
+			testSviID,
+			&testSvi,
+			&testSvi,
 			codes.OK,
 			"",
 			true,
@@ -90,17 +83,17 @@ func Test_CreateTunnel(t *testing.T) {
 					log.Fatal(err)
 				}
 			}(conn)
-			client := pb.NewCloudInfraServiceClient(conn)
+			client := pb.NewSviServiceClient(conn)
 
 			if tt.exist {
-				opi.Tunnels[testTunnelName] = &testTunnel
+				opi.Svis[testSviName] = &testSvi
 			}
 			if tt.out != nil {
-				tt.out.Name = testTunnelName
+				tt.out.Name = testSviName
 			}
 
-			request := &pb.CreateTunnelRequest{Tunnel: tt.in, TunnelId: tt.id, Parent: "todo"}
-			response, err := client.CreateTunnel(ctx, request)
+			request := &pb.CreateSviRequest{Svi: tt.in, SviId: tt.id}
+			response, err := client.CreateSvi(ctx, request)
 			if !proto.Equal(tt.out, response) {
 				t.Error("response: expected", tt.out, "received", response)
 			}
@@ -119,7 +112,7 @@ func Test_CreateTunnel(t *testing.T) {
 	}
 }
 
-func Test_DeleteTunnel(t *testing.T) {
+func Test_DeleteSvi(t *testing.T) {
 	tests := map[string]struct {
 		in      string
 		out     *emptypb.Empty
@@ -128,7 +121,7 @@ func Test_DeleteTunnel(t *testing.T) {
 		missing bool
 	}{
 		// "valid request": {
-		// 	testTunnelID,
+		// 	testSviID,
 		// 	&emptypb.Empty{},
 		// 	codes.OK,
 		// 	"",
@@ -138,7 +131,7 @@ func Test_DeleteTunnel(t *testing.T) {
 			"unknown-id",
 			nil,
 			codes.NotFound,
-			fmt.Sprintf("unable to find key %v", resourceIDToFullName("tunnels", "unknown-id")),
+			fmt.Sprintf("unable to find key %v", resourceIDToFullName("svis", "unknown-id")),
 			false,
 		},
 		"unknown key with missing allowed": {
@@ -176,13 +169,13 @@ func Test_DeleteTunnel(t *testing.T) {
 					log.Fatal(err)
 				}
 			}(conn)
-			client := pb.NewCloudInfraServiceClient(conn)
+			client := pb.NewSviServiceClient(conn)
 
-			fname1 := resourceIDToFullName("tunnels", tt.in)
-			opi.Tunnels[testTunnelName] = &testTunnel
+			fname1 := resourceIDToFullName("svis", tt.in)
+			opi.Svis[testSviName] = &testSvi
 
-			request := &pb.DeleteTunnelRequest{Name: fname1, AllowMissing: tt.missing}
-			response, err := client.DeleteTunnel(ctx, request)
+			request := &pb.DeleteSviRequest{Name: fname1, AllowMissing: tt.missing}
+			response, err := client.DeleteSvi(ctx, request)
 
 			if er, ok := status.FromError(err); ok {
 				if er.Code() != tt.errCode {
@@ -202,24 +195,17 @@ func Test_DeleteTunnel(t *testing.T) {
 	}
 }
 
-func Test_UpdateTunnel(t *testing.T) {
-	spec := &pb.TunnelSpec{
-		VpcNameRef: testLogicalBridgeName,
-		LocalIp: &pc.IPAddress{
-			Af:     pc.IpAf_IP_AF_INET,
-			V4OrV6: &pc.IPAddress_V4Addr{V4Addr: 336860161},
-		},
-		Encap: &pc.Encap{
-			Type: pc.EncapType_ENCAP_TYPE_VXLAN,
-			Value: &pc.EncapVal{
-				Val: &pc.EncapVal_Vnid{Vnid: 100},
-			},
-		},
+func Test_UpdateSvi(t *testing.T) {
+	spec := &pb.SviSpec{
+		Vrf:           testVrfName,
+		LogicalBridge: testLogicalBridgeName,
+		MacAddress:    []byte{0xCB, 0xB8, 0x33, 0x4C, 0x88, 0x4F},
+		GwIpPrefix:    []*pc.IPPrefix{{Len: 24}},
 	}
 	tests := map[string]struct {
 		mask    *fieldmaskpb.FieldMask
-		in      *pb.Tunnel
-		out     *pb.Tunnel
+		in      *pb.Svi
+		out     *pb.Svi
 		spdk    []string
 		errCode codes.Code
 		errMsg  string
@@ -228,8 +214,8 @@ func Test_UpdateTunnel(t *testing.T) {
 	}{
 		"invalid fieldmask": {
 			&fieldmaskpb.FieldMask{Paths: []string{"*", "author"}},
-			&pb.Tunnel{
-				Name: testTunnelName,
+			&pb.Svi{
+				Name: testSviName,
 				Spec: spec,
 			},
 			nil,
@@ -241,13 +227,14 @@ func Test_UpdateTunnel(t *testing.T) {
 		},
 		"valid request with unknown key": {
 			nil,
-			&pb.Tunnel{
-				Name: resourceIDToFullName("tunnels", "unknown-id"),
+			&pb.Svi{
+				Name: resourceIDToFullName("svis", "unknown-id"),
+				Spec: spec,
 			},
 			nil,
 			[]string{""},
 			codes.NotFound,
-			fmt.Sprintf("unable to find key %v", resourceIDToFullName("tunnels", "unknown-id")),
+			fmt.Sprintf("unable to find key %v", resourceIDToFullName("svis", "unknown-id")),
 			false,
 			true,
 		},
@@ -272,17 +259,17 @@ func Test_UpdateTunnel(t *testing.T) {
 					log.Fatal(err)
 				}
 			}(conn)
-			client := pb.NewCloudInfraServiceClient(conn)
+			client := pb.NewSviServiceClient(conn)
 
 			if tt.exist {
-				opi.Tunnels[testTunnelName] = &testTunnel
+				opi.Svis[testSviName] = &testSvi
 			}
 			if tt.out != nil {
-				tt.out.Name = testTunnelName
+				tt.out.Name = testSviName
 			}
 
-			request := &pb.UpdateTunnelRequest{Tunnel: tt.in, UpdateMask: tt.mask}
-			response, err := client.UpdateTunnel(ctx, request)
+			request := &pb.UpdateSviRequest{Svi: tt.in, UpdateMask: tt.mask}
+			response, err := client.UpdateSvi(ctx, request)
 			if !proto.Equal(tt.out, response) {
 				t.Error("response: expected", tt.out, "received", response)
 			}
@@ -301,18 +288,18 @@ func Test_UpdateTunnel(t *testing.T) {
 	}
 }
 
-func Test_GetTunnel(t *testing.T) {
+func Test_GetSvi(t *testing.T) {
 	tests := map[string]struct {
 		in      string
-		out     *pb.Tunnel
+		out     *pb.Svi
 		errCode codes.Code
 		errMsg  string
 	}{
 		// "valid request": {
-		// 	testTunnelID,
-		// 	&pb.Tunnel{
-		// 		Name:      testTunnelName,
-		// 		Multipath: testTunnel.Multipath,
+		// 	testSviID,
+		// 	&pb.Svi{
+		// 		Name: testSviName,
+		// 		Spec: testSvi.Spec,
 		// 	},
 		// 	codes.OK,
 		// 	"",
@@ -350,12 +337,12 @@ func Test_GetTunnel(t *testing.T) {
 					log.Fatal(err)
 				}
 			}(conn)
-			client := pb.NewCloudInfraServiceClient(conn)
+			client := pb.NewSviServiceClient(conn)
 
-			opi.Tunnels[testTunnelID] = &testTunnel
+			opi.Svis[testSviID] = &testSvi
 
-			request := &pb.GetTunnelRequest{Name: tt.in}
-			response, err := client.GetTunnel(ctx, request)
+			request := &pb.GetSviRequest{Name: tt.in}
+			response, err := client.GetSvi(ctx, request)
 			if !proto.Equal(tt.out, response) {
 				t.Error("response: expected", tt.out, "received", response)
 			}
