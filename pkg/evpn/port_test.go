@@ -60,6 +60,36 @@ func Test_CreateBridgePort(t *testing.T) {
 			"",
 			true,
 		},
+		"no required port field": {
+			testBridgePortID,
+			nil,
+			nil,
+			codes.Unknown,
+			"missing required field: bridge_port",
+			false,
+		},
+		"no required mac_address field": {
+			testBridgePortID,
+			&pb.BridgePort{
+				Spec: &pb.BridgePortSpec{},
+			},
+			nil,
+			codes.Unknown,
+			"missing required field: bridge_port.spec.mac_address",
+			false,
+		},
+		"no required ptype field": {
+			testBridgePortID,
+			&pb.BridgePort{
+				Spec: &pb.BridgePortSpec{
+					MacAddress: []byte{0xCB, 0xB8, 0x33, 0x4C, 0x88, 0x4F},
+				},
+			},
+			nil,
+			codes.Unknown,
+			"missing required field: bridge_port.spec.ptype",
+			false,
+		},
 		"access port and list bridge": {
 			testBridgePortID,
 			&pb.BridgePort{

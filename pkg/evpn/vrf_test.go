@@ -54,6 +54,24 @@ func Test_CreateVrf(t *testing.T) {
 			fmt.Sprintf("user-settable ID must only contain lowercase, numbers and hyphens (%v)", "got: 'C' in position 0"),
 			false,
 		},
+		"no required vrf field": {
+			testVrfID,
+			nil,
+			nil,
+			codes.Unknown,
+			"missing required field: vrf",
+			false,
+		},
+		"no required loopback_ip_prefix field": {
+			testVrfID,
+			&pb.Vrf{
+				Spec: &pb.VrfSpec{},
+			},
+			nil,
+			codes.Unknown,
+			"missing required field: vrf.spec.loopback_ip_prefix",
+			false,
+		},
 		"already exists": {
 			testVrfID,
 			&testVrf,
