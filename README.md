@@ -46,13 +46,13 @@ docker-compose exec opi-evpn-bridge grpcurl -plaintext -d '{"name" : "//network.
 
 ## Architecture Diagram
 
-![OPI EVPN Bridge Architcture Diagram](./OPI-EVPN-GW-FRR-bridge.png)
+![OPI EVPN Bridge Architcture Diagram](./docs/OPI-EVPN-GW-FRR-bridge.png)
 
 ## POC diagrams
 
-![OPI EVPN Bridge POC Diagram for CI/CD](./OPI-EVPN-PoC.png)
-![OPI EVPN Bridge Diagram for L2VXLAN](./OPI-EVPN-L2-VXLAN.png)
-![OPI EVPN Bridge Diagram for L3VXLAN Asymmetric IRB](./OPI-EVPN-L3-Asymmetric-IRB.png)
-![OPI EVPN Bridge Diagram for L3VXLAN Symmetric IRB](./OPI-EVPN-L3-Symmetric-IRB.png)
-![OPI EVPN Bridge Diagram for L2VXLAN in_Symmetric IRB](./OPI-EVPN-L2-VXLAN-In-Symmetric-IRB-setup.png)
-![OPI EVPN Bridge Diagram for Leaf1_Detailed_View](./OPI-EVPN-Leaf1-Detailed-View.png)
+![OPI EVPN Bridge POC Diagram for CI/CD](./docs/OPI-EVPN-PoC.png)
+![OPI EVPN Bridge Diagram for L2VXLAN](./docs/OPI-EVPN-L2-VXLAN.png)
+![OPI EVPN Bridge Diagram for L3VXLAN Asymmetric IRB](./docs/OPI-EVPN-L3-Asymmetric-IRB.png)
+![OPI EVPN Bridge Diagram for L3VXLAN Symmetric IRB](./docs/OPI-EVPN-L3-Symmetric-IRB.png)
+![OPI EVPN Bridge Diagram for L2VXLAN in_Symmetric IRB](./docs/OPI-EVPN-L2-VXLAN-In-Symmetric-IRB-setup.png)
+![OPI EVPN Bridge Diagram for Leaf1_Detailed_View](./docs/OPI-EVPN-Leaf1-Detailed-View.png)
