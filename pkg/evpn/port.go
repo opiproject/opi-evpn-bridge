@@ -59,11 +59,9 @@ func (s *Server) CreateBridgePort(_ context.Context, in *pb.CreateBridgePortRequ
 		return nil, status.Errorf(codes.InvalidArgument, msg)
 	}
 	// not found, so create a new one
-	bridgeName := "br-tenant"
-	// get tenant bridge device by name
-	bridge, err := netlink.LinkByName(bridgeName)
+	bridge, err := netlink.LinkByName(tenantbridgeName)
 	if err != nil {
-		err := status.Errorf(codes.NotFound, "unable to find key %s", bridgeName)
+		err := status.Errorf(codes.NotFound, "unable to find key %s", tenantbridgeName)
 		log.Printf("error: %v", err)
 		return nil, err
 	}

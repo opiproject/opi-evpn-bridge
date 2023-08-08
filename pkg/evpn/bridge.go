@@ -61,10 +61,9 @@ func (s *Server) CreateLogicalBridge(_ context.Context, in *pb.CreateLogicalBrid
 	}
 	// create vxlan only if VNI is not empty
 	if in.LogicalBridge.Spec.Vni > 0 {
-		bridgeName := "br-tenant"
-		bridge, err := netlink.LinkByName(bridgeName)
+		bridge, err := netlink.LinkByName(tenantbridgeName)
 		if err != nil {
-			err := status.Errorf(codes.NotFound, "unable to find key %s", bridgeName)
+			err := status.Errorf(codes.NotFound, "unable to find key %s", tenantbridgeName)
 			log.Printf("error: %v", err)
 			return nil, err
 		}

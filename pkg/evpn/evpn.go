@@ -13,6 +13,10 @@ import (
 	pe "github.com/opiproject/opi-api/network/evpn-gw/v1alpha1/gen/go"
 )
 
+const (
+	tenantbridgeName = "br-tenant"
+)
+
 // Server represents the Server object
 type Server struct {
 	pb.UnimplementedCloudInfraServiceServer
