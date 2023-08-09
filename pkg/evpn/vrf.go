@@ -129,7 +129,7 @@ func (s *Server) CreateVrf(_ context.Context, in *pb.CreateVrfRequest) (*pb.Vrf,
 		return nil, err
 	}
 	response := proto.Clone(in.Vrf).(*pb.Vrf)
-	response.Status = &pb.VrfStatus{LocalAs: 4, RoutingTable: tableID}
+	response.Status = &pb.VrfStatus{LocalAs: 4, RoutingTable: tableID, Rmac: mac}
 	s.Vrfs[in.Vrf.Name] = response
 	log.Printf("CreateVrf: Sending to client: %v", response)
 	return response, nil
