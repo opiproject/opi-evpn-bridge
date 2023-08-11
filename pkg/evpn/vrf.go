@@ -94,6 +94,7 @@ func (s *Server) CreateVrf(_ context.Context, in *pb.CreateVrfRequest) (*pb.Vrf,
 		// Example: ip link add br100 type bridge
 		bridgeName := fmt.Sprintf("br%d", in.Vrf.Spec.Vni)
 		bridge := &netlink.Bridge{LinkAttrs: netlink.LinkAttrs{Name: bridgeName}}
+		log.Printf("Creating Linux Bridge %v", bridge)
 		if err := netlink.LinkAdd(bridge); err != nil {
 			fmt.Printf("Failed to create Bridge link: %v", err)
 			return nil, err
@@ -119,6 +120,7 @@ func (s *Server) CreateVrf(_ context.Context, in *pb.CreateVrfRequest) (*pb.Vrf,
 		binary.BigEndian.PutUint32(myip, in.Vrf.Spec.VtepIpPrefix.Addr.GetV4Addr())
 		// TODO: take Port from proto instead of hard-coded
 		vxlan := &netlink.Vxlan{LinkAttrs: netlink.LinkAttrs{Name: vxlanName}, VxlanId: int(in.Vrf.Spec.Vni), Port: 4789, Learning: false, SrcAddr: myip}
+		log.Printf("Creating VXLAN %v", vxlan)
 		if err := netlink.LinkAdd(vxlan); err != nil {
 			fmt.Printf("Failed to create Vxlan link: %v", err)
 			return nil, err
