@@ -126,28 +126,31 @@ func (s *Server) DeleteLogicalBridge(_ context.Context, in *pb.DeleteLogicalBrid
 		return nil, err
 	}
 	resourceID := path.Base(obj.Name)
-	// use netlink to find vxlan device
-	vxlan, err := netlink.LinkByName(resourceID)
-	if err != nil {
-		err := status.Errorf(codes.NotFound, "unable to find key %s", resourceID)
-		log.Printf("error: %v", err)
-		return nil, err
-	}
-	log.Printf("Deleting Vxlan %v", vxlan)
-	// bring link down
-	if err := netlink.LinkSetDown(vxlan); err != nil {
-		fmt.Printf("Failed to up link: %v", err)
-		return nil, err
-	}
-	// delete bridge vlan
-	if err := netlink.BridgeVlanDel(vxlan, uint16(obj.Spec.VlanId), true, true, false, false); err != nil {
-		fmt.Printf("Failed to delete vlan to bridge: %v", err)
-		return nil, err
-	}
-	// use netlink to delete vxlan device
-	if err := netlink.LinkDel(vxlan); err != nil {
-		fmt.Printf("Failed to delete link: %v", err)
-		return nil, err
+	// only if VNI is not empty
+	if obj.Spec.Vni > 0 {
+		// use netlink to find vxlan device
+		vxlan, err := netlink.LinkByName(resourceID)
+		if err != nil {
+			err := status.Errorf(codes.NotFound, "unable to find key %s", resourceID)
+			log.Printf("error: %v", err)
+			return nil, err
+		}
+		log.Printf("Deleting Vxlan %v", vxlan)
+		// bring link down
+		if err := netlink.LinkSetDown(vxlan); err != nil {
+			fmt.Printf("Failed to up link: %v", err)
+			return nil, err
+		}
+		// delete bridge vlan
+		if err := netlink.BridgeVlanDel(vxlan, uint16(obj.Spec.VlanId), true, true, false, false); err != nil {
+			fmt.Printf("Failed to delete vlan to bridge: %v", err)
+			return nil, err
+		}
+		// use netlink to delete vxlan device
+		if err := netlink.LinkDel(vxlan); err != nil {
+			fmt.Printf("Failed to delete link: %v", err)
+			return nil, err
+		}
 	}
 	// remove from the Database
 	delete(s.Bridges, obj.Name)
@@ -221,11 +224,14 @@ func (s *Server) GetLogicalBridge(_ context.Context, in *pb.GetLogicalBridgeRequ
 		return nil, err
 	}
 	resourceID := path.Base(bridge.Name)
-	_, err := netlink.LinkByName(resourceID)
-	if err != nil {
-		err := status.Errorf(codes.NotFound, "unable to find key %s", resourceID)
-		log.Printf("error: %v", err)
-		return nil, err
+	// only if VNI is not empty
+	if bridge.Spec.Vni > 0 {
+		_, err := netlink.LinkByName(resourceID)
+		if err != nil {
+			err := status.Errorf(codes.NotFound, "unable to find key %s", resourceID)
+			log.Printf("error: %v", err)
+			return nil, err
+		}
 	}
 	// TODO
 	return &pb.LogicalBridge{Name: in.Name, Spec: &pb.LogicalBridgeSpec{Vni: bridge.Spec.Vni, VlanId: bridge.Spec.VlanId}, Status: &pb.LogicalBridgeStatus{OperStatus: pb.LBOperStatus_LB_OPER_STATUS_UP}}, nil
