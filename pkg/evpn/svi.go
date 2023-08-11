@@ -86,6 +86,7 @@ func (s *Server) CreateSvi(_ context.Context, in *pb.CreateSviRequest) (*pb.Svi,
 		},
 		VlanId: int(bridgeObject.Spec.VlanId),
 	}
+	log.Printf("Creating VLAN %v", vlandev)
 	if err := netlink.LinkAdd(vlandev); err != nil {
 		fmt.Printf("Failed to create vlan link: %v", err)
 		return nil, err
@@ -175,6 +176,7 @@ func (s *Server) DeleteSvi(_ context.Context, in *pb.DeleteSviRequest) (*emptypb
 		log.Printf("error: %v", err)
 		return nil, err
 	}
+	log.Printf("Deleting VLAN %v", vlandev)
 	// bring link down
 	if err := netlink.LinkSetDown(vlandev); err != nil {
 		fmt.Printf("Failed to up link: %v", err)

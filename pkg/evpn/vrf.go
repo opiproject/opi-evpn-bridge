@@ -59,6 +59,7 @@ func (s *Server) CreateVrf(_ context.Context, in *pb.CreateVrfRequest) (*pb.Vrf,
 	tableID := uint32(1000 + math.Mod(float64(in.Vrf.Spec.Vni), 10.0))
 	// Example: ip link add blue type vrf table 1000
 	vrf := &netlink.Vrf{LinkAttrs: netlink.LinkAttrs{Name: vrfName}, Table: tableID}
+	log.Printf("Creating VRF %v", vrf)
 	if err := netlink.LinkAdd(vrf); err != nil {
 		fmt.Printf("Failed to create VRF link: %v", err)
 		return nil, err
@@ -166,6 +167,7 @@ func (s *Server) DeleteVrf(_ context.Context, in *pb.DeleteVrfRequest) (*emptypb
 	resourceID := path.Base(obj.Name)
 	// use netlink to find VRF
 	vrf, err := netlink.LinkByName(resourceID)
+	log.Printf("Deleting VRF %v", vrf)
 	if err != nil {
 		err := status.Errorf(codes.NotFound, "unable to find key %s", resourceID)
 		log.Printf("error: %v", err)

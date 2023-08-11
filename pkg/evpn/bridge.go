@@ -72,6 +72,7 @@ func (s *Server) CreateLogicalBridge(_ context.Context, in *pb.CreateLogicalBrid
 		// TODO: remove hard-coded 167772260 == "10.0.0.100"
 		binary.BigEndian.PutUint32(myip, 167772260)
 		vxlan := &netlink.Vxlan{LinkAttrs: netlink.LinkAttrs{Name: resourceID}, VxlanId: int(in.LogicalBridge.Spec.Vni), Port: 4789, Learning: false, SrcAddr: myip}
+		log.Printf("Creating Vxlan %v", vxlan)
 		// TODO: take Port from proto instead of hard-coded
 		if err := netlink.LinkAdd(vxlan); err != nil {
 			fmt.Printf("Failed to create Vxlan link: %v", err)
@@ -132,6 +133,7 @@ func (s *Server) DeleteLogicalBridge(_ context.Context, in *pb.DeleteLogicalBrid
 		log.Printf("error: %v", err)
 		return nil, err
 	}
+	log.Printf("Deleting Vxlan %v", vxlan)
 	// bring link down
 	if err := netlink.LinkSetDown(vxlan); err != nil {
 		fmt.Printf("Failed to up link: %v", err)
