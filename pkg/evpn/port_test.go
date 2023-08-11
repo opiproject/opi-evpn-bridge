@@ -270,6 +270,7 @@ func Test_UpdateBridgePort(t *testing.T) {
 			nil,
 			&pb.BridgePort{
 				Name: resourceIDToFullName("ports", "unknown-id"),
+				Spec: spec,
 			},
 			nil,
 			[]string{""},
