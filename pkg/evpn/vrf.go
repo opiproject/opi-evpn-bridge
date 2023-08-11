@@ -18,7 +18,9 @@ import (
 	"github.com/google/uuid"
 	"github.com/vishvananda/netlink"
 
+	badger "github.com/dgraph-io/badger/v4"
 	pb "github.com/opiproject/opi-api/network/evpn-gw/v1alpha1/gen/go"
+	"github.com/opiproject/opi-evpn-bridge/pkg/infradb"
 
 	"go.einride.tech/aip/fieldbehavior"
 	"go.einride.tech/aip/fieldmask"
@@ -37,6 +39,9 @@ func sortVrfs(vrfs []*pb.Vrf) {
 
 // CreateVrf executes the creation of the VRF
 func (s *Server) CreateVrf(_ context.Context, in *pb.CreateVrfRequest) (*pb.Vrf, error) {
+	//vrfManager := &infradb.VrfManager{}
+	var infraVrf *infradb.Vrf
+
 	log.Printf("CreateVrf: Received from client: %v", in)
 	// check required fields
 	if err := fieldbehavior.ValidateRequiredFields(in); err != nil {
@@ -56,11 +61,17 @@ func (s *Server) CreateVrf(_ context.Context, in *pb.CreateVrfRequest) (*pb.Vrf,
 	}
 	in.Vrf.Name = resourceIDToFullName("vrfs", resourceID)
 	// idempotent API when called with same key, should return same object
-	obj, ok := s.Vrfs[in.Vrf.Name]
-	if ok {
+	infraVrf, err := infradb.GetVrf(in.Vrf.Name)
+	if err != nil {
+		if err != badger.ErrKeyNotFound {
+			fmt.Printf("Failed to read VRF object from DB: %v", err)
+			return nil, err
+		}
+	} else {
 		log.Printf("Already existing Vrf with id %v", in.Vrf.Name)
-		return obj, nil
+		return infraVrf.PbVrf, nil
 	}
+
 	// not found, so create a new one
 	vrfName := resourceID
 	// TODO: consider choosing random table ID
@@ -147,11 +158,17 @@ func (s *Server) CreateVrf(_ context.Context, in *pb.CreateVrfRequest) (*pb.Vrf,
 			return nil, err
 		}
 	}
+
 	response := protoClone(in.Vrf)
 	response.Status = &pb.VrfStatus{LocalAs: 4, RoutingTable: tableID, Rmac: mac}
-	s.Vrfs[in.Vrf.Name] = response
-	log.Printf("CreateVrf: Sending to client: %v", response)
-	return response, nil
+	infraVrf = &infradb.Vrf{PbVrf: response}
+	err = infradb.AddVrf(infraVrf)
+	if err != nil {
+		fmt.Printf("Failed to save VRF obj to DB: %v", err)
+		return nil, err
+	}
+	log.Printf("CreateVrf: Sending to client: %v", infraVrf.PbVrf)
+	return infraVrf.PbVrf, nil
 }
 
 // DeleteVrf deletes a VRF
@@ -168,7 +185,7 @@ func (s *Server) DeleteVrf(_ context.Context, in *pb.DeleteVrfRequest) (*emptypb
 		return nil, err
 	}
 	// fetch object from the database
-	obj, ok := s.Vrfs[in.Name]
+	/*obj, ok := s.Vrfs[in.Name]
 	if !ok {
 		if in.AllowMissing {
 			return &emptypb.Empty{}, nil
@@ -176,11 +193,27 @@ func (s *Server) DeleteVrf(_ context.Context, in *pb.DeleteVrfRequest) (*emptypb
 		err := status.Errorf(codes.NotFound, "unable to find key %s", in.Name)
 		log.Printf("error: %v", err)
 		return nil, err
+	}*/
+
+	infraVrf, err := infradb.GetVrf(in.Name)
+	if err != nil {
+		if err != badger.ErrKeyNotFound {
+			fmt.Printf("Failed to read VRF object from DB: %v", err)
+			return nil, err
+		}
+		if in.AllowMissing {
+			return &emptypb.Empty{}, nil
+		}
+		err := status.Errorf(codes.NotFound, "unable to find key %s", in.Name)
+		fmt.Printf("error: %v", err)
+		return nil, err
+
 	}
+
 	// delete bridge and vxlan only if VNI value is not empty
-	if obj.Spec.Vni != nil {
+	if infraVrf.PbVrf.Spec.Vni != nil {
 		// use netlink to find VXLAN device
-		vxlanName := fmt.Sprintf("vni%d", *obj.Spec.Vni)
+		vxlanName := fmt.Sprintf("vni%d", *infraVrf.PbVrf.Spec.Vni)
 		vxlandev, err := s.nLink.LinkByName(vxlanName)
 		log.Printf("Deleting VXLAN %v", vxlandev)
 		if err != nil {
@@ -199,7 +232,7 @@ func (s *Server) DeleteVrf(_ context.Context, in *pb.DeleteVrfRequest) (*emptypb
 			return nil, err
 		}
 		// use netlink to find BRIDGE device
-		bridgeName := fmt.Sprintf("br%d", *obj.Spec.Vni)
+		bridgeName := fmt.Sprintf("br%d", *infraVrf.PbVrf.Spec.Vni)
 		bridgedev, err := s.nLink.LinkByName(bridgeName)
 		log.Printf("Deleting BRIDGE %v", bridgedev)
 		if err != nil {
@@ -218,7 +251,9 @@ func (s *Server) DeleteVrf(_ context.Context, in *pb.DeleteVrfRequest) (*emptypb
 			return nil, err
 		}
 	}
-	resourceID := path.Base(obj.Name)
+
+	resourceID := path.Base(infraVrf.PbVrf.Name)
+
 	// use netlink to find VRF
 	vrf, err := s.nLink.LinkByName(resourceID)
 	log.Printf("Deleting VRF %v", vrf)
@@ -238,7 +273,11 @@ func (s *Server) DeleteVrf(_ context.Context, in *pb.DeleteVrfRequest) (*emptypb
 		return nil, err
 	}
 	// remove from the Database
-	delete(s.Vrfs, obj.Name)
+	//delete(s.Vrfs, obj.Name)
+	if err := infradb.DeleteVrf(infraVrf.PbVrf.Name); err != nil {
+		fmt.Printf("Failed to delete VRF obj from DB: %v", err)
+		return nil, err
+	}
 	return &emptypb.Empty{}, nil
 }
 

@@ -17,6 +17,7 @@ import (
 	pc "github.com/opiproject/opi-api/common/v1/gen/go"
 	pe "github.com/opiproject/opi-api/network/evpn-gw/v1alpha1/gen/go"
 	"github.com/opiproject/opi-evpn-bridge/pkg/evpn"
+	"github.com/opiproject/opi-evpn-bridge/pkg/infradb"
 	"github.com/opiproject/opi-evpn-bridge/pkg/utils"
 	"github.com/opiproject/opi-smbios-bridge/pkg/inventory"
 
@@ -81,6 +82,14 @@ func runGrpcServer(grpcPort int, tlsFiles string) {
 	if err := s.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %v", err)
 	}
+
+	// Open InfraDB
+	if err := infradb.NewInfraDB("/tmp/badger"); err != nil {
+		log.Fatalf("failed to open infraDB: %v", err)
+	}
+
+	// Dimitris Note: Should I handle the error here ?
+	defer infradb.Close()
 }
 
 func runGatewayServer(grpcPort int, httpPort int) {
