@@ -3,7 +3,7 @@ module github.com/opiproject/opi-evpn-bridge
 go 1.19
 
 require (
-	github.com/opiproject/opi-api v0.0.0-20230811153555-425899c0550b
+	github.com/opiproject/opi-api v0.0.0-20230812010918-f241fade9773
 	github.com/vishvananda/netlink v1.2.1-beta.2
 	go.einride.tech/aip v0.61.0
 	google.golang.org/grpc v1.57.0
