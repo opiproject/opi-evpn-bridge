@@ -166,6 +166,47 @@ func (s *Server) DeleteVrf(_ context.Context, in *pb.DeleteVrfRequest) (*emptypb
 		log.Printf("error: %v", err)
 		return nil, err
 	}
+	// delete bridge and vxlan only if VNI value is not empty
+	if obj.Spec.Vni != nil {
+		// use netlink to find VXLAN device
+		vxlanName := fmt.Sprintf("vni%d", *obj.Spec.Vni)
+		vxlandev, err := netlink.LinkByName(vxlanName)
+		log.Printf("Deleting VXLAN %v", vxlandev)
+		if err != nil {
+			err := status.Errorf(codes.NotFound, "unable to find key %s", vxlanName)
+			log.Printf("error: %v", err)
+			return nil, err
+		}
+		// bring link down
+		if err := netlink.LinkSetDown(vxlandev); err != nil {
+			fmt.Printf("Failed to up link: %v", err)
+			return nil, err
+		}
+		// use netlink to delete VXLAN device
+		if err := netlink.LinkDel(vxlandev); err != nil {
+			fmt.Printf("Failed to delete link: %v", err)
+			return nil, err
+		}
+		// use netlink to find BRIDGE device
+		bridgeName := fmt.Sprintf("br%d", *obj.Spec.Vni)
+		bridgedev, err := netlink.LinkByName(bridgeName)
+		log.Printf("Deleting BRIDGE %v", bridgedev)
+		if err != nil {
+			err := status.Errorf(codes.NotFound, "unable to find key %s", bridgeName)
+			log.Printf("error: %v", err)
+			return nil, err
+		}
+		// bring link down
+		if err := netlink.LinkSetDown(bridgedev); err != nil {
+			fmt.Printf("Failed to up link: %v", err)
+			return nil, err
+		}
+		// use netlink to delete BRIDGE device
+		if err := netlink.LinkDel(bridgedev); err != nil {
+			fmt.Printf("Failed to delete link: %v", err)
+			return nil, err
+		}
+	}
 	resourceID := path.Base(obj.Name)
 	// use netlink to find VRF
 	vrf, err := netlink.LinkByName(resourceID)
