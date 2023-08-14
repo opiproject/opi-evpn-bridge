@@ -56,7 +56,7 @@ func (s *Server) CreateVrf(_ context.Context, in *pb.CreateVrfRequest) (*pb.Vrf,
 	}
 	// not found, so create a new one
 	vrfName := resourceID
-	tableID := uint32(1000 + math.Mod(float64(in.Vrf.Spec.Vni), 10.0))
+	tableID := uint32(1000 + math.Mod(float64(*in.Vrf.Spec.Vni), 10.0))
 	// Example: ip link add blue type vrf table 1000
 	vrf := &netlink.Vrf{LinkAttrs: netlink.LinkAttrs{Name: vrfName}, Table: tableID}
 	log.Printf("Creating VRF %v", vrf)
@@ -90,9 +90,9 @@ func (s *Server) CreateVrf(_ context.Context, in *pb.CreateVrfRequest) (*pb.Vrf,
 	}
 
 	// create bridge and vxlan only if VNI value is not empty
-	if in.Vrf.Spec.Vni > 0 {
+	if in.Vrf.Spec.Vni != nil {
 		// Example: ip link add br100 type bridge
-		bridgeName := fmt.Sprintf("br%d", in.Vrf.Spec.Vni)
+		bridgeName := fmt.Sprintf("br%d", *in.Vrf.Spec.Vni)
 		bridge := &netlink.Bridge{LinkAttrs: netlink.LinkAttrs{Name: bridgeName}}
 		log.Printf("Creating Linux Bridge %v", bridge)
 		if err := netlink.LinkAdd(bridge); err != nil {
@@ -115,11 +115,11 @@ func (s *Server) CreateVrf(_ context.Context, in *pb.CreateVrfRequest) (*pb.Vrf,
 			return nil, err
 		}
 		// Example: ip link add vni100 type vxlan local 10.0.0.4 dstport 4789 id 100 nolearning
-		vxlanName := fmt.Sprintf("vni%d", in.Vrf.Spec.Vni)
+		vxlanName := fmt.Sprintf("vni%d", *in.Vrf.Spec.Vni)
 		myip := make(net.IP, 4)
 		binary.BigEndian.PutUint32(myip, in.Vrf.Spec.VtepIpPrefix.Addr.GetV4Addr())
 		// TODO: take Port from proto instead of hard-coded
-		vxlan := &netlink.Vxlan{LinkAttrs: netlink.LinkAttrs{Name: vxlanName}, VxlanId: int(in.Vrf.Spec.Vni), Port: 4789, Learning: false, SrcAddr: myip}
+		vxlan := &netlink.Vxlan{LinkAttrs: netlink.LinkAttrs{Name: vxlanName}, VxlanId: int(*in.Vrf.Spec.Vni), Port: 4789, Learning: false, SrcAddr: myip}
 		log.Printf("Creating VXLAN %v", vxlan)
 		if err := netlink.LinkAdd(vxlan); err != nil {
 			fmt.Printf("Failed to create Vxlan link: %v", err)

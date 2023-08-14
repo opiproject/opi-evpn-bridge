@@ -28,7 +28,7 @@ var (
 	testLogicalBridgeName = resourceIDToFullName("bridges", testLogicalBridgeID)
 	testLogicalBridge     = pb.LogicalBridge{
 		Spec: &pb.LogicalBridgeSpec{
-			Vni:    11,
+			Vni:    proto.Uint32(11),
 			VlanId: 22,
 		},
 	}
@@ -73,7 +73,7 @@ func Test_CreateLogicalBridge(t *testing.T) {
 			testLogicalBridgeID,
 			&pb.LogicalBridge{
 				Spec: &pb.LogicalBridgeSpec{
-					Vni:    11,
+					Vni:    proto.Uint32(11),
 					VlanId: 4096,
 				},
 			},
@@ -244,7 +244,7 @@ func Test_DeleteLogicalBridge(t *testing.T) {
 
 func Test_UpdateLogicalBridge(t *testing.T) {
 	spec := &pb.LogicalBridgeSpec{
-		Vni:    11,
+		Vni:    proto.Uint32(11),
 		VlanId: 22,
 	}
 	tests := map[string]struct {

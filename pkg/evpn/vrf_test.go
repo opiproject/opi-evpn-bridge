@@ -29,7 +29,7 @@ var (
 	testVrfName = resourceIDToFullName("vrfs", testVrfID)
 	testVrf     = pb.Vrf{
 		Spec: &pb.VrfSpec{
-			Vni: 1000,
+			Vni: proto.Uint32(1000),
 			LoopbackIpPrefix: &pc.IPPrefix{
 				Len: 24,
 			},
@@ -215,7 +215,7 @@ func Test_DeleteVrf(t *testing.T) {
 
 func Test_UpdateVrf(t *testing.T) {
 	spec := &pb.VrfSpec{
-		Vni: 1000,
+		Vni: proto.Uint32(1000),
 		LoopbackIpPrefix: &pc.IPPrefix{
 			Len: 24,
 		},
