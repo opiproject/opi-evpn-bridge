@@ -60,7 +60,7 @@ func (s *Server) CreateLogicalBridge(_ context.Context, in *pb.CreateLogicalBrid
 		return nil, status.Errorf(codes.InvalidArgument, msg)
 	}
 	// create vxlan only if VNI is not empty
-	if in.LogicalBridge.Spec.Vni > 0 {
+	if in.LogicalBridge.Spec.Vni != nil {
 		bridge, err := netlink.LinkByName(tenantbridgeName)
 		if err != nil {
 			err := status.Errorf(codes.NotFound, "unable to find key %s", tenantbridgeName)
@@ -71,7 +71,7 @@ func (s *Server) CreateLogicalBridge(_ context.Context, in *pb.CreateLogicalBrid
 		myip := make(net.IP, 4)
 		// TODO: remove hard-coded 167772260 == "10.0.0.100"
 		binary.BigEndian.PutUint32(myip, 167772260)
-		vxlan := &netlink.Vxlan{LinkAttrs: netlink.LinkAttrs{Name: resourceID}, VxlanId: int(in.LogicalBridge.Spec.Vni), Port: 4789, Learning: false, SrcAddr: myip}
+		vxlan := &netlink.Vxlan{LinkAttrs: netlink.LinkAttrs{Name: resourceID}, VxlanId: int(*in.LogicalBridge.Spec.Vni), Port: 4789, Learning: false, SrcAddr: myip}
 		log.Printf("Creating Vxlan %v", vxlan)
 		// TODO: take Port from proto instead of hard-coded
 		if err := netlink.LinkAdd(vxlan); err != nil {
@@ -127,7 +127,7 @@ func (s *Server) DeleteLogicalBridge(_ context.Context, in *pb.DeleteLogicalBrid
 	}
 	resourceID := path.Base(obj.Name)
 	// only if VNI is not empty
-	if obj.Spec.Vni > 0 {
+	if obj.Spec.Vni != nil {
 		// use netlink to find vxlan device
 		vxlan, err := netlink.LinkByName(resourceID)
 		if err != nil {
@@ -225,7 +225,7 @@ func (s *Server) GetLogicalBridge(_ context.Context, in *pb.GetLogicalBridgeRequ
 	}
 	resourceID := path.Base(bridge.Name)
 	// only if VNI is not empty
-	if bridge.Spec.Vni > 0 {
+	if bridge.Spec.Vni != nil {
 		_, err := netlink.LinkByName(resourceID)
 		if err != nil {
 			err := status.Errorf(codes.NotFound, "unable to find key %s", resourceID)
