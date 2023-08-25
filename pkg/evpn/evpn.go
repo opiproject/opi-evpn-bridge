@@ -10,6 +10,8 @@ import (
 	"fmt"
 
 	pe "github.com/opiproject/opi-api/network/evpn-gw/v1alpha1/gen/go"
+
+	"github.com/opiproject/opi-evpn-bridge/pkg/utils"
 )
 
 const (
@@ -26,6 +28,7 @@ type Server struct {
 	Ports   map[string]*pe.BridgePort
 	Svis    map[string]*pe.Svi
 	Vrfs    map[string]*pe.Vrf
+	nLink   utils.Netlink
 }
 
 // NewServer creates initialized instance of EVPN server
@@ -35,6 +38,7 @@ func NewServer() *Server {
 		Ports:   make(map[string]*pe.BridgePort),
 		Svis:    make(map[string]*pe.Svi),
 		Vrfs:    make(map[string]*pe.Vrf),
+		nLink:   &utils.NetlinkWrapper{},
 	}
 }
 
