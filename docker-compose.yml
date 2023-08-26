@@ -259,6 +259,8 @@ services:
       /entrypoint.sh call --json_input --json_output localhost:50151 CreateSvi            "{\"svi_id\"            : \"vlan30\",   \"svi\" :             {\"spec\" : {\"vrf\": \"//network.opiproject.org/vrfs/blue\",   \"logical_bridge\": \"//network.opiproject.org/bridges/vni30\", \"mac_address\" : \"qrvMAAAx\", \"gw_ip_prefix\": [{\"addr\": {\"af\": \"IP_AF_INET\", \"v4_addr\": 505290241}, \"len\": 24}] }} }" && \
       /entrypoint.sh call --json_input --json_output localhost:50151 CreateSvi            "{\"svi_id\"            : \"vlan40\",   \"svi\" :             {\"spec\" : {\"vrf\": \"//network.opiproject.org/vrfs/green\",  \"logical_bridge\": \"//network.opiproject.org/bridges/vni40\", \"mac_address\" : \"qrvMAABB\", \"gw_ip_prefix\": [{\"addr\": {\"af\": \"IP_AF_INET\", \"v4_addr\": 673720321}, \"len\": 24}] }} }" && \
       /entrypoint.sh call --json_input --json_output localhost:50151 CreateSvi            "{\"svi_id\"            : \"vlan50\",   \"svi\" :             {\"spec\" : {\"vrf\": \"//network.opiproject.org/vrfs/yellow\", \"logical_bridge\": \"//network.opiproject.org/bridges/vni50\", \"mac_address\" : \"qrvMAABR\", \"gw_ip_prefix\": [{\"addr\": {\"af\": \"IP_AF_INET\", \"v4_addr\": 842150401}, \"len\": 24}] }} }" && \
+      /entrypoint.sh call --json_input --json_output localhost:50151 CreateBridgePort     "{\"bridge_port_id\"    : \"eth1\",     \"bridge_port\" :     {\"spec\" : {\"mac_address\" : \"qrvMAAAB\", \"ptype\": \"TRUNK\",  \"logical_bridges\": [\"//network.opiproject.org/bridges/vni10\", \"//network.opiproject.org/bridges/vni20\", \"//network.opiproject.org/bridges/vni40\"] }} }" && \
+      /entrypoint.sh call --json_input --json_output localhost:50151 CreateBridgePort     "{\"bridge_port_id\"    : \"eth2\",     \"bridge_port\" :     {\"spec\" : {\"mac_address\" : \"qrvMAAAB\", \"ptype\": \"TRUNK\",  \"logical_bridges\": [\"//network.opiproject.org/bridges/vni50\"] }} }" && \
       echo get && \
       /entrypoint.sh call --json_input --json_output localhost:50151 GetVrf               "{\"name\" : \"//network.opiproject.org/vrfs/blue\" }" && \
       /entrypoint.sh call --json_input --json_output localhost:50151 GetVrf               "{\"name\" : \"//network.opiproject.org/vrfs/green\" }" && \
@@ -272,14 +274,8 @@ services:
       /entrypoint.sh call --json_input --json_output localhost:50151 GetSvi               "{\"name\" : \"//network.opiproject.org/svis/vlan30\" }" && \
       /entrypoint.sh call --json_input --json_output localhost:50151 GetSvi               "{\"name\" : \"//network.opiproject.org/svis/vlan40\" }" && \
       /entrypoint.sh call --json_input --json_output localhost:50151 GetSvi               "{\"name\" : \"//network.opiproject.org/svis/vlan50\" }" && \
-      echo toremove && \
-      ip link set eth1 up && ip addr flush dev eth1 && \
-      ip link set eth1 master br-tenant up && \
-      bridge vlan add dev eth1 vid 10 && \
-      bridge vlan add dev eth1 vid 20 && \
-      bridge vlan add dev eth1 vid 40 && \
-      ip addr flush dev eth2 && ip link set eth2 master br-tenant up && \
-      bridge vlan add dev eth2 vid 50 && \
+      /entrypoint.sh call --json_input --json_output localhost:50151 GetBridgePort        "{\"name\" : \"//network.opiproject.org/ports/eth1\" }" && \
+      /entrypoint.sh call --json_input --json_output localhost:50151 GetBridgePort        "{\"name\" : \"//network.opiproject.org/ports/eth2\" }" && \
       echo done'
 
   host2-leaf2:
