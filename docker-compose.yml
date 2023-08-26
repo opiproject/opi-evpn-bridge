@@ -246,36 +246,15 @@ services:
       apt update && apt install iproute2 -y && \
       ip link add br-tenant type bridge vlan_default_pvid 0 vlan_filtering 1 vlan_protocol 802.1Q && \
       ip link set br-tenant up && \
+      echo create && \
+      /entrypoint.sh call --json_input --json_output localhost:50151 CreateVrf            "{\"vrf_id\"            : \"blue\",     \"vrf\" :             {\"spec\" : {               \"loopback_ip_prefix\": {\"addr\": {\"af\": \"IP_AF_INET\", \"v4_addr\": 167772162}, \"len\": 24}, \"vtep_ip_prefix\": {\"addr\": {\"af\": \"IP_AF_INET\", \"v4_addr\": 167772162}, \"len\": 24} }} }" && \
+      /entrypoint.sh call --json_input --json_output localhost:50151 CreateVrf            "{\"vrf_id\"            : \"green\",    \"vrf\" :             {\"spec\" : {\"vni\" : 100, \"loopback_ip_prefix\": {\"addr\": {\"af\": \"IP_AF_INET\", \"v4_addr\": 167772162}, \"len\": 24}, \"vtep_ip_prefix\": {\"addr\": {\"af\": \"IP_AF_INET\", \"v4_addr\": 167772162}, \"len\": 24} }} }" && \
+      /entrypoint.sh call --json_input --json_output localhost:50151 CreateVrf            "{\"vrf_id\"            : \"yellow\",   \"vrf\" :             {\"spec\" : {\"vni\" : 101, \"loopback_ip_prefix\": {\"addr\": {\"af\": \"IP_AF_INET\", \"v4_addr\": 167772162}, \"len\": 24}, \"vtep_ip_prefix\": {\"addr\": {\"af\": \"IP_AF_INET\", \"v4_addr\": 167772162}, \"len\": 24} }} }" && \
+      echo get && \
+      /entrypoint.sh call --json_input --json_output localhost:50151 GetVrf               "{\"name\" : \"//network.opiproject.org/vrfs/blue\" }" && \
+      /entrypoint.sh call --json_input --json_output localhost:50151 GetVrf               "{\"name\" : \"//network.opiproject.org/vrfs/green\" }" && \
+      /entrypoint.sh call --json_input --json_output localhost:50151 GetVrf               "{\"name\" : \"//network.opiproject.org/vrfs/yellow\" }" && \
       echo toremove && \
-
-      ip link add blue type vrf table 1000 && \
-      ip link set blue up && \
-      ip link add name lo1 type dummy && \
-      ip link set lo1 master blue up && \
-      ip address add 10.0.1.2/32 dev lo1 && \
-
-      ip link add green type vrf table 1001 && \
-      ip link set green up && \
-      ip link add name lo2 type dummy && \
-      ip link set lo2 master green up && \
-      ip address add 10.0.2.2/32 dev lo2 && \
-
-      ip link add yellow type vrf table 1002 && \
-      ip link set yellow up && \
-      ip link add name lo3 type dummy && \
-      ip link set lo3 master yellow up && \
-      ip address add 10.0.3.2/32 dev lo3 && \
-
-      ip link add br100 addr aa:bb:cc:00:00:02 type bridge && \
-      ip link set br100 master green up && \
-      ip link add vni100 type vxlan local 10.0.0.2 dstport 4789 id 100 nolearning && \
-      ip link set vni100 master br100 up && \
-
-      ip link add br101 addr aa:bb:cc:00:00:03 type bridge && \
-      ip link set br101 master yellow up && \
-      ip link add vni101 type vxlan local 10.0.0.2 dstport 4789 id 101 nolearning && \
-      ip link set vni101 master br101 up && \
-
       ip link add vni10 type vxlan id 10 local 10.0.0.2 dstport 4789 nolearning && \
       ip link set vni10 master br-tenant up && \
       bridge vlan add dev vni10 vid 10 pvid untagged && \
@@ -330,24 +309,6 @@ services:
 
       ip addr flush dev eth2 && ip link set eth2 master br-tenant up && \
       bridge vlan add dev eth2 vid 50 && \
-      echo create && \
-      /entrypoint.sh call --json_input --json_output localhost:50151 CreateVrf    "{\"vrf\" : {\"spec\" : {\"vni\" : 100, \"loopback_ip_prefix\": {}, \"vtep_ip_prefix\": {\"addr\": {\"af\": \"IP_AF_INET\", \"v4_addr\": 167772162}, \"len\": 24} }}, \"vrf_id\" : \"blue\" }" && \
-      /entrypoint.sh call --json_input --json_output localhost:50151 CreateVrf    "{\"vrf\" : {\"spec\" : {\"vni\" : 101, \"loopback_ip_prefix\": {}, \"vtep_ip_prefix\": {\"addr\": {\"af\": \"IP_AF_INET\", \"v4_addr\": 167772162}, \"len\": 24} }}, \"vrf_id\" : \"green\" }" && \
-      /entrypoint.sh call --json_input --json_output localhost:50151 CreateVrf    "{\"vrf\" : {\"spec\" : {\"vni\" : 102, \"loopback_ip_prefix\": {}, \"vtep_ip_prefix\": {\"addr\": {\"af\": \"IP_AF_INET\", \"v4_addr\": 167772162}, \"len\": 24} }}, \"vrf_id\" : \"yellow\" }" && \
-      /entrypoint.sh call --json_input --json_output localhost:50151 CreateLogicalBridge    "{\"logical_bridge\" : {\"spec\" : {\"vni\" : 11, \"vlan_id\": 11 }}, \"logical_bridge_id\" : \"vxlan11\" }" && \
-      /entrypoint.sh call --json_input --json_output localhost:50151 CreateLogicalBridge    "{\"logical_bridge\" : {\"spec\" : {\"vni\" : 22, \"vlan_id\": 22 }}, \"logical_bridge_id\" : \"vxlan22\" }" && \
-      /entrypoint.sh call --json_input --json_output localhost:50151 CreateLogicalBridge    "{\"logical_bridge\" : {\"spec\" : {\"vni\" : 33, \"vlan_id\": 33 }}, \"logical_bridge_id\" : \"vxlan33\" }" && \
-      /entrypoint.sh call --json_input --json_output localhost:50151 CreateBridgePort    "{\"bridge_port\" : {\"spec\" : {\"mac_address\" : \"qrvMAAAB\", \"ptype\": \"ACCESS\", \"logical_bridges\": [] }}, \"bridge_port_id\" : \"eth2\" }" && \
-      /entrypoint.sh call --json_input --json_output localhost:50151 CreateBridgePort    "{\"bridge_port\" : {\"spec\" : {\"mac_address\" : \"qrvMAAAB\", \"ptype\": \"TRUNK\" , \"logical_bridges\": [] }}, \"bridge_port_id\" : \"eth3\" }" && \
-      echo get && \
-      /entrypoint.sh call --json_input --json_output localhost:50151 GetVrf       "{\"name\" : \"//network.opiproject.org/vrfs/blue\" }" && \
-      /entrypoint.sh call --json_input --json_output localhost:50151 GetVrf       "{\"name\" : \"//network.opiproject.org/vrfs/green\" }" && \
-      /entrypoint.sh call --json_input --json_output localhost:50151 GetVrf       "{\"name\" : \"//network.opiproject.org/vrfs/yellow\" }" && \
-      /entrypoint.sh call --json_input --json_output localhost:50151 GetLogicalBridge       "{\"name\" : \"//network.opiproject.org/bridges/vxlan11\" }" && \
-      /entrypoint.sh call --json_input --json_output localhost:50151 GetLogicalBridge       "{\"name\" : \"//network.opiproject.org/bridges/vxlan22\" }" && \
-      /entrypoint.sh call --json_input --json_output localhost:50151 GetLogicalBridge       "{\"name\" : \"//network.opiproject.org/bridges/vxlan33\" }" && \
-      /entrypoint.sh call --json_input --json_output localhost:50151 GetBridgePort          "{\"name\" : \"//network.opiproject.org/ports/eth2\" }" && \
-      /entrypoint.sh call --json_input --json_output localhost:50151 GetBridgePort          "{\"name\" : \"//network.opiproject.org/ports/eth3\" }" && \
       echo done'
 
   host2-leaf2:
@@ -412,7 +373,8 @@ services:
     # L3VXLAN Symmetric IRB:
     #   Ping to Bleaf internet connectivity IPs from Host1 via green and yellow VRFs from Leaf1
     command: |
-      sh -x -c 'ip link add link eth0 name eth0.10 type vlan id 10 && \
+      sh -x -c 'sleep 30 && \
+                ip link add link eth0 name eth0.10 type vlan id 10 && \
                 ip link set eth0 up && ip addr flush dev eth0 && \
                 ip link set eth0.10 up && \
                 ip addr add 10.10.10.10/24 dev eth0.10 && \
