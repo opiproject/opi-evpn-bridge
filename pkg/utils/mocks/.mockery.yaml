@@ -1,0 +1,6 @@
+with-expecter: True
+boilerplate-file: pkg/utils/mocks/boilerplate.txt
+packages:
+  github.com/opiproject/opi-evpn-bridge/pkg/utils:
+    interfaces:
+      Netlink:
