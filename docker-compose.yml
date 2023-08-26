@@ -255,6 +255,10 @@ services:
       /entrypoint.sh call --json_input --json_output localhost:50151 CreateLogicalBridge  "{\"logical_bridge_id\" : \"vni30\",    \"logical_bridge\" :  {\"spec\" : {\"vni\" : 30, \"vlan_id\": 30 }} }" && \
       /entrypoint.sh call --json_input --json_output localhost:50151 CreateLogicalBridge  "{\"logical_bridge_id\" : \"vni40\",    \"logical_bridge\" :  {\"spec\" : {\"vni\" : 40, \"vlan_id\": 40 }} }" && \
       /entrypoint.sh call --json_input --json_output localhost:50151 CreateLogicalBridge  "{\"logical_bridge_id\" : \"vni50\",    \"logical_bridge\" :  {\"spec\" : {              \"vlan_id\": 50 }} }" && \
+      /entrypoint.sh call --json_input --json_output localhost:50151 CreateSvi            "{\"svi_id\"            : \"vlan20\",   \"svi\" :             {\"spec\" : {\"vrf\": \"//network.opiproject.org/vrfs/blue\",   \"logical_bridge\": \"//network.opiproject.org/bridges/vni20\", \"mac_address\" : \"qrvMAAAh\", \"gw_ip_prefix\": [{\"addr\": {\"af\": \"IP_AF_INET\", \"v4_addr\": 336860161}, \"len\": 24}] }} }" && \
+      /entrypoint.sh call --json_input --json_output localhost:50151 CreateSvi            "{\"svi_id\"            : \"vlan30\",   \"svi\" :             {\"spec\" : {\"vrf\": \"//network.opiproject.org/vrfs/blue\",   \"logical_bridge\": \"//network.opiproject.org/bridges/vni30\", \"mac_address\" : \"qrvMAAAx\", \"gw_ip_prefix\": [{\"addr\": {\"af\": \"IP_AF_INET\", \"v4_addr\": 505290241}, \"len\": 24}] }} }" && \
+      /entrypoint.sh call --json_input --json_output localhost:50151 CreateSvi            "{\"svi_id\"            : \"vlan40\",   \"svi\" :             {\"spec\" : {\"vrf\": \"//network.opiproject.org/vrfs/green\",  \"logical_bridge\": \"//network.opiproject.org/bridges/vni40\", \"mac_address\" : \"qrvMAABB\", \"gw_ip_prefix\": [{\"addr\": {\"af\": \"IP_AF_INET\", \"v4_addr\": 673720321}, \"len\": 24}] }} }" && \
+      /entrypoint.sh call --json_input --json_output localhost:50151 CreateSvi            "{\"svi_id\"            : \"vlan50\",   \"svi\" :             {\"spec\" : {\"vrf\": \"//network.opiproject.org/vrfs/yellow\", \"logical_bridge\": \"//network.opiproject.org/bridges/vni50\", \"mac_address\" : \"qrvMAABR\", \"gw_ip_prefix\": [{\"addr\": {\"af\": \"IP_AF_INET\", \"v4_addr\": 842150401}, \"len\": 24}] }} }" && \
       echo get && \
       /entrypoint.sh call --json_input --json_output localhost:50151 GetVrf               "{\"name\" : \"//network.opiproject.org/vrfs/blue\" }" && \
       /entrypoint.sh call --json_input --json_output localhost:50151 GetVrf               "{\"name\" : \"//network.opiproject.org/vrfs/green\" }" && \
@@ -264,39 +268,16 @@ services:
       /entrypoint.sh call --json_input --json_output localhost:50151 GetLogicalBridge     "{\"name\" : \"//network.opiproject.org/bridges/vni30\" }" && \
       /entrypoint.sh call --json_input --json_output localhost:50151 GetLogicalBridge     "{\"name\" : \"//network.opiproject.org/bridges/vni40\" }" && \
       /entrypoint.sh call --json_input --json_output localhost:50151 GetLogicalBridge     "{\"name\" : \"//network.opiproject.org/bridges/vni50\" }" && \
+      /entrypoint.sh call --json_input --json_output localhost:50151 GetSvi               "{\"name\" : \"//network.opiproject.org/svis/vlan20\" }" && \
+      /entrypoint.sh call --json_input --json_output localhost:50151 GetSvi               "{\"name\" : \"//network.opiproject.org/svis/vlan30\" }" && \
+      /entrypoint.sh call --json_input --json_output localhost:50151 GetSvi               "{\"name\" : \"//network.opiproject.org/svis/vlan40\" }" && \
+      /entrypoint.sh call --json_input --json_output localhost:50151 GetSvi               "{\"name\" : \"//network.opiproject.org/svis/vlan50\" }" && \
       echo toremove && \
-      bridge vlan add dev br-tenant vid 20 self && \
-      ip link add link br-tenant name vlan20 type vlan id 20 && \
-      ip link set vlan20 address aa:bb:cc:00:00:21 && \
-      ip link set vlan20 master blue up && \
-      ip address add 20.20.20.1/24 dev vlan20 && \
-
-      bridge vlan add dev br-tenant vid 30 self && \
-      ip link add link br-tenant name vlan30 type vlan id 30 && \
-      ip link set vlan30 address aa:bb:cc:00:00:31 && \
-      ip link set vlan30 master blue up && \
-      ip address add 30.30.30.1/24 dev vlan30 && \
-
-      bridge vlan add dev br-tenant vid 40 self && \
-      ip link add link br-tenant name vlan40 type vlan id 40 && \
-      ip link set vlan40 address aa:bb:cc:00:00:41 && \
-      ip link set vlan40 master green up && \
-      ip address add 40.40.40.1/24 dev vlan40 && \
-
-      bridge vlan add dev br-tenant vid 50 self && \
-      ip link add link br-tenant name vlan50 type vlan id 50 && \
-      ip link set vlan50 address aa:bb:cc:00:00:51 && \
-      ip link set vlan50 master yellow up && \
-      ip address add 50.50.50.1/24 dev vlan50 && \
-
       ip link set eth1 up && ip addr flush dev eth1 && \
       ip link set eth1 master br-tenant up && \
       bridge vlan add dev eth1 vid 10 && \
-
       bridge vlan add dev eth1 vid 20 && \
-
       bridge vlan add dev eth1 vid 40 && \
-
       ip addr flush dev eth2 && ip link set eth2 master br-tenant up && \
       bridge vlan add dev eth2 vid 50 && \
       echo done'
