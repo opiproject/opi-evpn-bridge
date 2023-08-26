@@ -54,93 +54,6 @@ services:
             sed -i "s/127.0.0.1/0.0.0.0/g" /etc/frr/daemons && \
             ip link add name lo0 type dummy && \
             ifconfig lo0 10.0.0.2 netmask 255.255.255.255 up && \
-
-            ip link add br-tenant type bridge vlan_default_pvid 0 vlan_filtering 1 vlan_protocol 802.1Q && \
-            ip link set br-tenant up && \
-
-            ip link add blue type vrf table 1000 && \
-            ip link set blue up && \
-            ip link add name lo1 type dummy && \
-            ip link set lo1 master blue up && \
-            ip address add 10.0.1.2/32 dev lo1 && \
-
-            ip link add green type vrf table 1001 && \
-            ip link set green up && \
-            ip link add name lo2 type dummy && \
-            ip link set lo2 master green up && \
-            ip address add 10.0.2.2/32 dev lo2 && \
-
-            ip link add yellow type vrf table 1002 && \
-            ip link set yellow up && \
-            ip link add name lo3 type dummy && \
-            ip link set lo3 master yellow up && \
-            ip address add 10.0.3.2/32 dev lo3 && \
-
-            ip link add br100 addr aa:bb:cc:00:00:02 type bridge && \
-            ip link set br100 master green up && \
-            ip link add vni100 type vxlan local 10.0.0.2 dstport 4789 id 100 nolearning && \
-            ip link set vni100 master br100 up && \
-
-            ip link add br101 addr aa:bb:cc:00:00:03 type bridge && \
-            ip link set br101 master yellow up && \
-            ip link add vni101 type vxlan local 10.0.0.2 dstport 4789 id 101 nolearning && \
-            ip link set vni101 master br101 up && \
-
-            ip link add vni10 type vxlan id 10 local 10.0.0.2 dstport 4789 nolearning && \
-            ip link set vni10 master br-tenant up && \
-            bridge vlan add dev vni10 vid 10 pvid untagged && \
-            bridge link set dev vni10 neigh_suppress on learning off && \
-
-            ip link add vni20 type vxlan id 20 local 10.0.0.2 dstport 4789 nolearning && \
-            ip link set vni20 master br-tenant up && \
-            bridge vlan add dev vni20 vid 20 pvid untagged && \
-            bridge link set dev vni20 neigh_suppress on learning off && \
-
-            ip link add vni30 type vxlan id 30 local 10.0.0.2 dstport 4789 nolearning && \
-            ip link set vni30 master br-tenant up && \
-            bridge vlan add dev vni30 vid 30 pvid untagged && \
-            bridge link set dev vni30 neigh_suppress on learning off && \
-
-            ip link add vni40 type vxlan id 40 local 10.0.0.2 dstport 4789 nolearning && \
-            ip link set vni40 master br-tenant up && \
-            bridge vlan add dev vni40 vid 40 pvid untagged && \
-            bridge link set dev vni40 neigh_suppress on learning off && \
-
-            bridge vlan add dev br-tenant vid 20 self && \
-            ip link add link br-tenant name vlan20 type vlan id 20 && \
-            ip link set vlan20 address aa:bb:cc:00:00:21 && \
-            ip link set vlan20 master blue up && \
-            ip address add 20.20.20.1/24 dev vlan20 && \
-
-            bridge vlan add dev br-tenant vid 30 self && \
-            ip link add link br-tenant name vlan30 type vlan id 30 && \
-            ip link set vlan30 address aa:bb:cc:00:00:31 && \
-            ip link set vlan30 master blue up && \
-            ip address add 30.30.30.1/24 dev vlan30 && \
-
-            bridge vlan add dev br-tenant vid 40 self && \
-            ip link add link br-tenant name vlan40 type vlan id 40 && \
-            ip link set vlan40 address aa:bb:cc:00:00:41 && \
-            ip link set vlan40 master green up && \
-            ip address add 40.40.40.1/24 dev vlan40 && \
-
-            bridge vlan add dev br-tenant vid 50 self && \
-            ip link add link br-tenant name vlan50 type vlan id 50 && \
-            ip link set vlan50 address aa:bb:cc:00:00:51 && \
-            ip link set vlan50 master yellow up && \
-            ip address add 50.50.50.1/24 dev vlan50 && \
-
-            ip link set eth1 up && ip addr flush dev eth1 && \
-            ip link set eth1 master br-tenant up && \
-            bridge vlan add dev eth1 vid 10 && \
-
-            bridge vlan add dev eth1 vid 20 && \
-
-            bridge vlan add dev eth1 vid 40 && \
-
-            ip addr flush dev eth2 && ip link set eth2 master br-tenant up && \
-            bridge vlan add dev eth2 vid 50 && \
-
             /etc/init.d/frr stop && \
             /usr/lib/frr/watchfrr -d -F traditional zebra bgpd staticd && \
             sleep infinity'
@@ -333,6 +246,90 @@ services:
       apt update && apt install iproute2 -y && \
       ip link add br-tenant type bridge vlan_default_pvid 0 vlan_filtering 1 vlan_protocol 802.1Q && \
       ip link set br-tenant up && \
+      echo toremove && \
+
+      ip link add blue type vrf table 1000 && \
+      ip link set blue up && \
+      ip link add name lo1 type dummy && \
+      ip link set lo1 master blue up && \
+      ip address add 10.0.1.2/32 dev lo1 && \
+
+      ip link add green type vrf table 1001 && \
+      ip link set green up && \
+      ip link add name lo2 type dummy && \
+      ip link set lo2 master green up && \
+      ip address add 10.0.2.2/32 dev lo2 && \
+
+      ip link add yellow type vrf table 1002 && \
+      ip link set yellow up && \
+      ip link add name lo3 type dummy && \
+      ip link set lo3 master yellow up && \
+      ip address add 10.0.3.2/32 dev lo3 && \
+
+      ip link add br100 addr aa:bb:cc:00:00:02 type bridge && \
+      ip link set br100 master green up && \
+      ip link add vni100 type vxlan local 10.0.0.2 dstport 4789 id 100 nolearning && \
+      ip link set vni100 master br100 up && \
+
+      ip link add br101 addr aa:bb:cc:00:00:03 type bridge && \
+      ip link set br101 master yellow up && \
+      ip link add vni101 type vxlan local 10.0.0.2 dstport 4789 id 101 nolearning && \
+      ip link set vni101 master br101 up && \
+
+      ip link add vni10 type vxlan id 10 local 10.0.0.2 dstport 4789 nolearning && \
+      ip link set vni10 master br-tenant up && \
+      bridge vlan add dev vni10 vid 10 pvid untagged && \
+      bridge link set dev vni10 neigh_suppress on learning off && \
+
+      ip link add vni20 type vxlan id 20 local 10.0.0.2 dstport 4789 nolearning && \
+      ip link set vni20 master br-tenant up && \
+      bridge vlan add dev vni20 vid 20 pvid untagged && \
+      bridge link set dev vni20 neigh_suppress on learning off && \
+
+      ip link add vni30 type vxlan id 30 local 10.0.0.2 dstport 4789 nolearning && \
+      ip link set vni30 master br-tenant up && \
+      bridge vlan add dev vni30 vid 30 pvid untagged && \
+      bridge link set dev vni30 neigh_suppress on learning off && \
+
+      ip link add vni40 type vxlan id 40 local 10.0.0.2 dstport 4789 nolearning && \
+      ip link set vni40 master br-tenant up && \
+      bridge vlan add dev vni40 vid 40 pvid untagged && \
+      bridge link set dev vni40 neigh_suppress on learning off && \
+
+      bridge vlan add dev br-tenant vid 20 self && \
+      ip link add link br-tenant name vlan20 type vlan id 20 && \
+      ip link set vlan20 address aa:bb:cc:00:00:21 && \
+      ip link set vlan20 master blue up && \
+      ip address add 20.20.20.1/24 dev vlan20 && \
+
+      bridge vlan add dev br-tenant vid 30 self && \
+      ip link add link br-tenant name vlan30 type vlan id 30 && \
+      ip link set vlan30 address aa:bb:cc:00:00:31 && \
+      ip link set vlan30 master blue up && \
+      ip address add 30.30.30.1/24 dev vlan30 && \
+
+      bridge vlan add dev br-tenant vid 40 self && \
+      ip link add link br-tenant name vlan40 type vlan id 40 && \
+      ip link set vlan40 address aa:bb:cc:00:00:41 && \
+      ip link set vlan40 master green up && \
+      ip address add 40.40.40.1/24 dev vlan40 && \
+
+      bridge vlan add dev br-tenant vid 50 self && \
+      ip link add link br-tenant name vlan50 type vlan id 50 && \
+      ip link set vlan50 address aa:bb:cc:00:00:51 && \
+      ip link set vlan50 master yellow up && \
+      ip address add 50.50.50.1/24 dev vlan50 && \
+
+      ip link set eth1 up && ip addr flush dev eth1 && \
+      ip link set eth1 master br-tenant up && \
+      bridge vlan add dev eth1 vid 10 && \
+
+      bridge vlan add dev eth1 vid 20 && \
+
+      bridge vlan add dev eth1 vid 40 && \
+
+      ip addr flush dev eth2 && ip link set eth2 master br-tenant up && \
+      bridge vlan add dev eth2 vid 50 && \
       echo create && \
       /entrypoint.sh call --json_input --json_output localhost:50151 CreateVrf    "{\"vrf\" : {\"spec\" : {\"vni\" : 100, \"loopback_ip_prefix\": {}, \"vtep_ip_prefix\": {\"addr\": {\"af\": \"IP_AF_INET\", \"v4_addr\": 167772162}, \"len\": 24} }}, \"vrf_id\" : \"blue\" }" && \
       /entrypoint.sh call --json_input --json_output localhost:50151 CreateVrf    "{\"vrf\" : {\"spec\" : {\"vni\" : 101, \"loopback_ip_prefix\": {}, \"vtep_ip_prefix\": {\"addr\": {\"af\": \"IP_AF_INET\", \"v4_addr\": 167772162}, \"len\": 24} }}, \"vrf_id\" : \"green\" }" && \
