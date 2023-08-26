@@ -21,6 +21,8 @@ import (
 	"google.golang.org/protobuf/types/known/fieldmaskpb"
 
 	pb "github.com/opiproject/opi-api/network/evpn-gw/v1alpha1/gen/go"
+
+	"github.com/opiproject/opi-evpn-bridge/pkg/utils/mocks"
 )
 
 var (
@@ -112,6 +114,7 @@ func Test_CreateBridgePort(t *testing.T) {
 			// start GRPC mockup server
 			ctx := context.Background()
 			opi := NewServer()
+			opi.nLink = &mocks.Netlink{}
 			conn, err := grpc.DialContext(ctx,
 				"",
 				grpc.WithTransportCredentials(insecure.NewCredentials()),
@@ -198,6 +201,7 @@ func Test_DeleteBridgePort(t *testing.T) {
 			// start GRPC mockup server
 			ctx := context.Background()
 			opi := NewServer()
+			opi.nLink = &mocks.Netlink{}
 			conn, err := grpc.DialContext(ctx,
 				"",
 				grpc.WithTransportCredentials(insecure.NewCredentials()),
@@ -287,6 +291,7 @@ func Test_UpdateBridgePort(t *testing.T) {
 			// start GRPC mockup server
 			ctx := context.Background()
 			opi := NewServer()
+			opi.nLink = &mocks.Netlink{}
 			conn, err := grpc.DialContext(ctx,
 				"",
 				grpc.WithTransportCredentials(insecure.NewCredentials()),
@@ -365,6 +370,7 @@ func Test_GetBridgePort(t *testing.T) {
 			// start GRPC mockup server
 			ctx := context.Background()
 			opi := NewServer()
+			opi.nLink = &mocks.Netlink{}
 			conn, err := grpc.DialContext(ctx,
 				"",
 				grpc.WithTransportCredentials(insecure.NewCredentials()),

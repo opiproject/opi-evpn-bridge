@@ -22,6 +22,8 @@ import (
 
 	pb "github.com/opiproject/opi-api/network/evpn-gw/v1alpha1/gen/go"
 	pc "github.com/opiproject/opi-api/network/opinetcommon/v1alpha1/gen/go"
+
+	"github.com/opiproject/opi-evpn-bridge/pkg/utils/mocks"
 )
 
 var (
@@ -88,6 +90,7 @@ func Test_CreateVrf(t *testing.T) {
 			// start GRPC mockup server
 			ctx := context.Background()
 			opi := NewServer()
+			opi.nLink = &mocks.Netlink{}
 			conn, err := grpc.DialContext(ctx,
 				"",
 				grpc.WithTransportCredentials(insecure.NewCredentials()),
@@ -174,6 +177,7 @@ func Test_DeleteVrf(t *testing.T) {
 			// start GRPC mockup server
 			ctx := context.Background()
 			opi := NewServer()
+			opi.nLink = &mocks.Netlink{}
 			conn, err := grpc.DialContext(ctx,
 				"",
 				grpc.WithTransportCredentials(insecure.NewCredentials()),
@@ -264,6 +268,7 @@ func Test_UpdateVrf(t *testing.T) {
 			// start GRPC mockup server
 			ctx := context.Background()
 			opi := NewServer()
+			opi.nLink = &mocks.Netlink{}
 			conn, err := grpc.DialContext(ctx,
 				"",
 				grpc.WithTransportCredentials(insecure.NewCredentials()),
@@ -342,6 +347,7 @@ func Test_GetVrf(t *testing.T) {
 			// start GRPC mockup server
 			ctx := context.Background()
 			opi := NewServer()
+			opi.nLink = &mocks.Netlink{}
 			conn, err := grpc.DialContext(ctx,
 				"",
 				grpc.WithTransportCredentials(insecure.NewCredentials()),
