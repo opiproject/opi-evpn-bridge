@@ -12,6 +12,8 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/vishvananda/netlink"
+
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
@@ -33,6 +35,12 @@ var (
 		Spec: &pb.VrfSpec{
 			Vni: proto.Uint32(1000),
 			LoopbackIpPrefix: &pc.IPPrefix{
+				Addr: &pc.IPAddress{
+					Af: pc.IpAf_IP_AF_INET,
+					V4OrV6: &pc.IPAddress_V4Addr{
+						V4Addr: 167772162,
+					},
+				},
 				Len: 24,
 			},
 		},
@@ -82,6 +90,31 @@ func Test_CreateVrf(t *testing.T) {
 			"",
 			true,
 		},
+		"valid request empty VNI amd empty Loopback": {
+			testVrfID,
+			&pb.Vrf{
+				Spec: &pb.VrfSpec{
+					LoopbackIpPrefix: &pc.IPPrefix{
+						Len: 24,
+					},
+				},
+			},
+			&pb.Vrf{
+				Spec: &pb.VrfSpec{
+					LoopbackIpPrefix: &pc.IPPrefix{
+						Len: 24,
+					},
+				},
+				Status: &pb.VrfStatus{
+					LocalAs:      4,
+					RoutingTable: 1000,
+					Rmac:         []byte{0xCB, 0xB8, 0x33, 0x4C, 0x88, 0x4F},
+				},
+			},
+			codes.OK,
+			"",
+			false,
+		},
 	}
 
 	// run tests
@@ -114,8 +147,19 @@ func Test_CreateVrf(t *testing.T) {
 				tt.out.Name = testVrfName
 			}
 
+			// TODO: refactor this mocking
+			if tt.out != nil && !tt.exist {
+				vrf := &netlink.Vrf{LinkAttrs: netlink.LinkAttrs{Name: testVrfID}, Table: 1000}
+				mockNetlink.EXPECT().LinkAdd(vrf).Return(nil).Once()
+				mockNetlink.EXPECT().LinkSetUp(vrf).Return(nil).Once()
+			}
+
 			request := &pb.CreateVrfRequest{Vrf: tt.in, VrfId: tt.id}
 			response, err := client.CreateVrf(ctx, request)
+			// TODO: hack the random MAC address for now
+			if tt.out != nil && response != nil && tt.out.Status != nil && response.Status != nil {
+				response.Status.Rmac = tt.out.Status.Rmac
+			}
 			if !proto.Equal(tt.out, response) {
 				t.Error("response: expected", tt.out, "received", response)
 			}
