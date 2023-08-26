@@ -56,7 +56,11 @@ func (s *Server) CreateVrf(_ context.Context, in *pb.CreateVrfRequest) (*pb.Vrf,
 	}
 	// not found, so create a new one
 	vrfName := resourceID
-	tableID := uint32(1000 + math.Mod(float64(*in.Vrf.Spec.Vni), 10.0))
+	// TODO: consider choosing random table ID
+	tableID := uint32(1000)
+	if in.Vrf.Spec.Vni != nil {
+		tableID = uint32(1001 + math.Mod(float64(*in.Vrf.Spec.Vni), 10.0))
+	}
 	// Example: ip link add blue type vrf table 1000
 	vrf := &netlink.Vrf{LinkAttrs: netlink.LinkAttrs{Name: vrfName}, Table: tableID}
 	log.Printf("Creating VRF %v", vrf)
