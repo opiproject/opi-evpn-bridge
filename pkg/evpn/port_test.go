@@ -7,9 +7,11 @@ package evpn
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"reflect"
+	"strings"
 	"testing"
 
 	"google.golang.org/grpc"
@@ -106,6 +108,14 @@ func Test_CreateBridgePort(t *testing.T) {
 			fmt.Sprintf("ACCESS type must have single LogicalBridge and not (%d)", len(testBridgePort.Spec.LogicalBridges)),
 			false,
 		},
+		"failed LinkByName call": {
+			testBridgePortID,
+			&testBridgePort,
+			nil,
+			codes.NotFound,
+			"unable to find key br-tenant",
+			false,
+		},
 	}
 
 	// run tests
@@ -136,6 +146,11 @@ func Test_CreateBridgePort(t *testing.T) {
 			}
 			if tt.out != nil {
 				tt.out.Name = testBridgePortName
+			}
+
+			// TODO: refactor this mocking
+			if strings.Contains(name, "LinkByName") {
+				mockNetlink.EXPECT().LinkByName(tenantbridgeName).Return(nil, errors.New(tt.errMsg)).Once()
 			}
 
 			request := &pb.CreateBridgePortRequest{BridgePort: tt.in, BridgePortId: tt.id}
