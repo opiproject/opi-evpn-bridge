@@ -156,9 +156,8 @@ func Test_CreateVrf(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			// start GRPC mockup server
 			ctx := context.Background()
-			opi := NewServer()
 			mockNetlink := mocks.NewNetlink(t)
-			opi.nLink = mockNetlink
+			opi := NewServerWithArgs(mockNetlink)
 			conn, err := grpc.DialContext(ctx,
 				"",
 				grpc.WithTransportCredentials(insecure.NewCredentials()),
@@ -279,9 +278,8 @@ func Test_DeleteVrf(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			// start GRPC mockup server
 			ctx := context.Background()
-			opi := NewServer()
 			mockNetlink := mocks.NewNetlink(t)
-			opi.nLink = mockNetlink
+			opi := NewServerWithArgs(mockNetlink)
 			conn, err := grpc.DialContext(ctx,
 				"",
 				grpc.WithTransportCredentials(insecure.NewCredentials()),
@@ -371,9 +369,8 @@ func Test_UpdateVrf(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			// start GRPC mockup server
 			ctx := context.Background()
-			opi := NewServer()
 			mockNetlink := mocks.NewNetlink(t)
-			opi.nLink = mockNetlink
+			opi := NewServerWithArgs(mockNetlink)
 			conn, err := grpc.DialContext(ctx,
 				"",
 				grpc.WithTransportCredentials(insecure.NewCredentials()),
@@ -451,9 +448,8 @@ func Test_GetVrf(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			// start GRPC mockup server
 			ctx := context.Background()
-			opi := NewServer()
 			mockNetlink := mocks.NewNetlink(t)
-			opi.nLink = mockNetlink
+			opi := NewServerWithArgs(mockNetlink)
 			conn, err := grpc.DialContext(ctx,
 				"",
 				grpc.WithTransportCredentials(insecure.NewCredentials()),
