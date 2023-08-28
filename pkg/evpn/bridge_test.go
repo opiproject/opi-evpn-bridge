@@ -7,9 +7,11 @@ package evpn
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"reflect"
+	"strings"
 	"testing"
 
 	"google.golang.org/grpc"
@@ -111,6 +113,14 @@ func Test_CreateLogicalBridge(t *testing.T) {
 			"",
 			true,
 		},
+		"failed LinkByName call": {
+			testLogicalBridgeID,
+			&testLogicalBridge,
+			nil,
+			codes.NotFound,
+			"unable to find key br-tenant",
+			false,
+		},
 	}
 
 	// run tests
@@ -141,6 +151,11 @@ func Test_CreateLogicalBridge(t *testing.T) {
 			}
 			if tt.out != nil {
 				tt.out.Name = testLogicalBridgeName
+			}
+
+			// TODO: refactor this mocking
+			if strings.Contains(name, "LinkByName") {
+				mockNetlink.EXPECT().LinkByName(tenantbridgeName).Return(nil, errors.New(tt.errMsg)).Once()
 			}
 
 			request := &pb.CreateLogicalBridgeRequest{LogicalBridge: tt.in, LogicalBridgeId: tt.id}
