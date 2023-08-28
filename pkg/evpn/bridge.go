@@ -69,8 +69,8 @@ func (s *Server) CreateLogicalBridge(_ context.Context, in *pb.CreateLogicalBrid
 		}
 		// Example: ip link add vxlan-<LB-vlan-id> type vxlan id <LB-vni> local <vtep-ip> dstport 4789 nolearning proxy
 		myip := make(net.IP, 4)
-		// TODO: remove hard-coded 167772260 == "10.0.0.100"
-		binary.BigEndian.PutUint32(myip, 167772260)
+		// TODO: remove hard-coded 167772162 == "10.0.0.2"
+		binary.BigEndian.PutUint32(myip, 167772162)
 		vxlan := &netlink.Vxlan{LinkAttrs: netlink.LinkAttrs{Name: resourceID}, VxlanId: int(*in.LogicalBridge.Spec.Vni), Port: 4789, Learning: false, SrcAddr: myip}
 		log.Printf("Creating Vxlan %v", vxlan)
 		// TODO: take Port from proto instead of hard-coded

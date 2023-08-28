@@ -125,6 +125,14 @@ func Test_CreateVrf(t *testing.T) {
 			"Failed to call LinkAdd",
 			false,
 		},
+		"failed LinkSetUp call": {
+			testVrfID,
+			&testVrf,
+			nil,
+			codes.Unknown,
+			"Failed to call LinkSetUp",
+			false,
+		},
 	}
 
 	// run tests
@@ -161,6 +169,11 @@ func Test_CreateVrf(t *testing.T) {
 			if strings.Contains(tt.errMsg, "LinkAdd") {
 				vrf := &netlink.Vrf{LinkAttrs: netlink.LinkAttrs{Name: testVrfID}, Table: 1001}
 				mockNetlink.EXPECT().LinkAdd(vrf).Return(errors.New(tt.errMsg)).Once()
+			}
+			if strings.Contains(tt.errMsg, "LinkSetUp") {
+				vrf := &netlink.Vrf{LinkAttrs: netlink.LinkAttrs{Name: testVrfID}, Table: 1001}
+				mockNetlink.EXPECT().LinkAdd(vrf).Return(nil).Once()
+				mockNetlink.EXPECT().LinkSetUp(vrf).Return(errors.New(tt.errMsg)).Once()
 			}
 			if tt.out != nil && !tt.exist {
 				vrf := &netlink.Vrf{LinkAttrs: netlink.LinkAttrs{Name: testVrfID}, Table: 1000}

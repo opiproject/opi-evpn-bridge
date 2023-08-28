@@ -7,12 +7,16 @@ package evpn
 
 import (
 	"context"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"log"
+	"net"
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/vishvananda/netlink"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -121,6 +125,14 @@ func Test_CreateLogicalBridge(t *testing.T) {
 			"unable to find key br-tenant",
 			false,
 		},
+		"failed LinkAdd call": {
+			testLogicalBridgeID,
+			&testLogicalBridge,
+			nil,
+			codes.Unknown,
+			"Failed to call LinkAdd",
+			false,
+		},
 	}
 
 	// run tests
@@ -156,6 +168,15 @@ func Test_CreateLogicalBridge(t *testing.T) {
 			// TODO: refactor this mocking
 			if strings.Contains(name, "LinkByName") {
 				mockNetlink.EXPECT().LinkByName(tenantbridgeName).Return(nil, errors.New(tt.errMsg)).Once()
+			}
+			if strings.Contains(name, "LinkAdd") {
+				// myip := net.ParseIP("10.0.0.2")
+				myip := make(net.IP, 4)
+				binary.BigEndian.PutUint32(myip, 167772162)
+				vxlan := &netlink.Vxlan{LinkAttrs: netlink.LinkAttrs{Name: testLogicalBridgeID}, VxlanId: int(*testLogicalBridge.Spec.Vni), Port: 4789, Learning: false, SrcAddr: myip}
+				bridge := &netlink.Bridge{LinkAttrs: netlink.LinkAttrs{Name: tenantbridgeName}}
+				mockNetlink.EXPECT().LinkByName(tenantbridgeName).Return(bridge, nil).Once()
+				mockNetlink.EXPECT().LinkAdd(vxlan).Return(errors.New(tt.errMsg)).Once()
 			}
 
 			request := &pb.CreateLogicalBridgeRequest{LogicalBridge: tt.in, LogicalBridgeId: tt.id}
