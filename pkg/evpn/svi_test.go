@@ -140,9 +140,8 @@ func Test_CreateSvi(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			// start GRPC mockup server
 			ctx := context.Background()
-			opi := NewServer()
 			mockNetlink := mocks.NewNetlink(t)
-			opi.nLink = mockNetlink
+			opi := NewServerWithArgs(mockNetlink)
 			conn, err := grpc.DialContext(ctx,
 				"",
 				grpc.WithTransportCredentials(insecure.NewCredentials()),
@@ -237,9 +236,8 @@ func Test_DeleteSvi(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			// start GRPC mockup server
 			ctx := context.Background()
-			opi := NewServer()
 			mockNetlink := mocks.NewNetlink(t)
-			opi.nLink = mockNetlink
+			opi := NewServerWithArgs(mockNetlink)
 			conn, err := grpc.DialContext(ctx,
 				"",
 				grpc.WithTransportCredentials(insecure.NewCredentials()),
@@ -329,9 +327,8 @@ func Test_UpdateSvi(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			// start GRPC mockup server
 			ctx := context.Background()
-			opi := NewServer()
 			mockNetlink := mocks.NewNetlink(t)
-			opi.nLink = mockNetlink
+			opi := NewServerWithArgs(mockNetlink)
 			conn, err := grpc.DialContext(ctx,
 				"",
 				grpc.WithTransportCredentials(insecure.NewCredentials()),
@@ -409,9 +406,8 @@ func Test_GetSvi(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			// start GRPC mockup server
 			ctx := context.Background()
-			opi := NewServer()
 			mockNetlink := mocks.NewNetlink(t)
-			opi.nLink = mockNetlink
+			opi := NewServerWithArgs(mockNetlink)
 			conn, err := grpc.DialContext(ctx,
 				"",
 				grpc.WithTransportCredentials(insecure.NewCredentials()),

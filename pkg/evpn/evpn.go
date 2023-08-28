@@ -8,6 +8,7 @@ package evpn
 import (
 	"crypto/rand"
 	"fmt"
+	"log"
 
 	pe "github.com/opiproject/opi-api/network/evpn-gw/v1alpha1/gen/go"
 
@@ -33,12 +34,22 @@ type Server struct {
 
 // NewServer creates initialized instance of EVPN server
 func NewServer() *Server {
+	nLink := utils.NetlinkWrapper{}
+	return NewServerWithArgs(&nLink)
+}
+
+// NewServerWithArgs creates initialized instance of EVPN server
+// with externally created Netlink
+func NewServerWithArgs(nLink utils.Netlink) *Server {
+	if nLink == nil {
+		log.Panic("nil for Netlink is not allowed")
+	}
 	return &Server{
 		Bridges: make(map[string]*pe.LogicalBridge),
 		Ports:   make(map[string]*pe.BridgePort),
 		Svis:    make(map[string]*pe.Svi),
 		Vrfs:    make(map[string]*pe.Vrf),
-		nLink:   &utils.NetlinkWrapper{},
+		nLink:   nLink,
 	}
 }
 

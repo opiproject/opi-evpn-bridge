@@ -123,9 +123,8 @@ func Test_CreateBridgePort(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			// start GRPC mockup server
 			ctx := context.Background()
-			opi := NewServer()
 			mockNetlink := mocks.NewNetlink(t)
-			opi.nLink = mockNetlink
+			opi := NewServerWithArgs(mockNetlink)
 			conn, err := grpc.DialContext(ctx,
 				"",
 				grpc.WithTransportCredentials(insecure.NewCredentials()),
@@ -216,9 +215,8 @@ func Test_DeleteBridgePort(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			// start GRPC mockup server
 			ctx := context.Background()
-			opi := NewServer()
 			mockNetlink := mocks.NewNetlink(t)
-			opi.nLink = mockNetlink
+			opi := NewServerWithArgs(mockNetlink)
 			conn, err := grpc.DialContext(ctx,
 				"",
 				grpc.WithTransportCredentials(insecure.NewCredentials()),
@@ -307,9 +305,8 @@ func Test_UpdateBridgePort(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			// start GRPC mockup server
 			ctx := context.Background()
-			opi := NewServer()
 			mockNetlink := mocks.NewNetlink(t)
-			opi.nLink = mockNetlink
+			opi := NewServerWithArgs(mockNetlink)
 			conn, err := grpc.DialContext(ctx,
 				"",
 				grpc.WithTransportCredentials(insecure.NewCredentials()),
@@ -387,9 +384,8 @@ func Test_GetBridgePort(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			// start GRPC mockup server
 			ctx := context.Background()
-			opi := NewServer()
 			mockNetlink := mocks.NewNetlink(t)
-			opi.nLink = mockNetlink
+			opi := NewServerWithArgs(mockNetlink)
 			conn, err := grpc.DialContext(ctx,
 				"",
 				grpc.WithTransportCredentials(insecure.NewCredentials()),
