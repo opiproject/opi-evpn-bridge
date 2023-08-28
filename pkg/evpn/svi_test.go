@@ -7,10 +7,14 @@ package evpn
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"reflect"
+	"strings"
 	"testing"
+
+	"github.com/vishvananda/netlink"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -121,6 +125,14 @@ func Test_CreateSvi(t *testing.T) {
 			"missing required field: svi.spec.gw_ip_prefix",
 			false,
 		},
+		"failed LinkByName call": {
+			testSviID,
+			&testSvi,
+			nil,
+			codes.NotFound,
+			"unable to find key br-tenant",
+			false,
+		},
 	}
 
 	// run tests
@@ -151,6 +163,15 @@ func Test_CreateSvi(t *testing.T) {
 			}
 			if tt.out != nil {
 				tt.out.Name = testSviName
+			}
+
+			// TODO: refactor this mocking
+			if strings.Contains(name, "LinkByName") {
+				mockNetlink.EXPECT().LinkByName(tenantbridgeName).Return(nil, errors.New(tt.errMsg)).Once()
+			}
+			if tt.out != nil && !tt.exist {
+				bridge := &netlink.Bridge{LinkAttrs: netlink.LinkAttrs{Name: tenantbridgeName}}
+				mockNetlink.EXPECT().LinkByName(tenantbridgeName).Return(bridge, nil).Once()
 			}
 
 			request := &pb.CreateSviRequest{Svi: tt.in, SviId: tt.id}
