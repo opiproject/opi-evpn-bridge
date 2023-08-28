@@ -7,9 +7,11 @@ package evpn
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/vishvananda/netlink"
@@ -115,6 +117,14 @@ func Test_CreateVrf(t *testing.T) {
 			"",
 			false,
 		},
+		"failed LinkAdd call": {
+			testVrfID,
+			&testVrf,
+			nil,
+			codes.Unknown,
+			"Failed to call LinkAdd",
+			false,
+		},
 	}
 
 	// run tests
@@ -148,6 +158,10 @@ func Test_CreateVrf(t *testing.T) {
 			}
 
 			// TODO: refactor this mocking
+			if strings.Contains(tt.errMsg, "LinkAdd") {
+				vrf := &netlink.Vrf{LinkAttrs: netlink.LinkAttrs{Name: testVrfID}, Table: 1001}
+				mockNetlink.EXPECT().LinkAdd(vrf).Return(errors.New(tt.errMsg)).Once()
+			}
 			if tt.out != nil && !tt.exist {
 				vrf := &netlink.Vrf{LinkAttrs: netlink.LinkAttrs{Name: testVrfID}, Table: 1000}
 				mockNetlink.EXPECT().LinkAdd(vrf).Return(nil).Once()
