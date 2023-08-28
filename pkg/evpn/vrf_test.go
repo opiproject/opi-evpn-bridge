@@ -37,12 +37,12 @@ var (
 		Spec: &pb.VrfSpec{
 			Vni: proto.Uint32(1000),
 			LoopbackIpPrefix: &pc.IPPrefix{
-				Addr: &pc.IPAddress{
-					Af: pc.IpAf_IP_AF_INET,
-					V4OrV6: &pc.IPAddress_V4Addr{
-						V4Addr: 167772162,
-					},
-				},
+				// Addr: &pc.IPAddress{
+				// 	Af: pc.IpAf_IP_AF_INET,
+				// 	V4OrV6: &pc.IPAddress_V4Addr{
+				// 		V4Addr: 167772162,
+				// 	},
+				// },
 				Len: 24,
 			},
 		},
@@ -133,6 +133,22 @@ func Test_CreateVrf(t *testing.T) {
 			"Failed to call LinkSetUp",
 			false,
 		},
+		"failed bridge LinkAdd call": {
+			testVrfID,
+			&testVrf,
+			nil,
+			codes.Unknown,
+			"Failed to call LinkAdd",
+			false,
+		},
+		"failed bridge LinkSetMaster call": {
+			testVrfID,
+			&testVrf,
+			nil,
+			codes.Unknown,
+			"Failed to call LinkSetMaster",
+			false,
+		},
 	}
 
 	// run tests
@@ -166,15 +182,30 @@ func Test_CreateVrf(t *testing.T) {
 			}
 
 			// TODO: refactor this mocking
-			if strings.Contains(tt.errMsg, "LinkAdd") {
+			if strings.Contains(name, "failed LinkAdd") {
 				vrf := &netlink.Vrf{LinkAttrs: netlink.LinkAttrs{Name: testVrfID}, Table: 1001}
 				mockNetlink.EXPECT().LinkAdd(vrf).Return(errors.New(tt.errMsg)).Once()
-			}
-			if strings.Contains(tt.errMsg, "LinkSetUp") {
+			} else if strings.Contains(name, "failed LinkSetUp") {
 				vrf := &netlink.Vrf{LinkAttrs: netlink.LinkAttrs{Name: testVrfID}, Table: 1001}
 				mockNetlink.EXPECT().LinkAdd(vrf).Return(nil).Once()
 				mockNetlink.EXPECT().LinkSetUp(vrf).Return(errors.New(tt.errMsg)).Once()
+			} else if strings.Contains(name, "failed bridge LinkAdd") {
+				bridgeName := fmt.Sprintf("br%d", *testVrf.Spec.Vni)
+				vrf := &netlink.Vrf{LinkAttrs: netlink.LinkAttrs{Name: testVrfID}, Table: 1001}
+				bridge := &netlink.Bridge{LinkAttrs: netlink.LinkAttrs{Name: bridgeName}}
+				mockNetlink.EXPECT().LinkAdd(vrf).Return(nil).Once()
+				mockNetlink.EXPECT().LinkSetUp(vrf).Return(nil).Once()
+				mockNetlink.EXPECT().LinkAdd(bridge).Return(errors.New(tt.errMsg)).Once()
+			} else if strings.Contains(name, "failed bridge LinkSetMaster") {
+				bridgeName := fmt.Sprintf("br%d", *testVrf.Spec.Vni)
+				vrf := &netlink.Vrf{LinkAttrs: netlink.LinkAttrs{Name: testVrfID}, Table: 1001}
+				bridge := &netlink.Bridge{LinkAttrs: netlink.LinkAttrs{Name: bridgeName}}
+				mockNetlink.EXPECT().LinkAdd(vrf).Return(nil).Once()
+				mockNetlink.EXPECT().LinkSetUp(vrf).Return(nil).Once()
+				mockNetlink.EXPECT().LinkAdd(bridge).Return(nil).Once()
+				mockNetlink.EXPECT().LinkSetMaster(bridge, vrf).Return(errors.New(tt.errMsg)).Once()
 			}
+
 			if tt.out != nil && !tt.exist {
 				vrf := &netlink.Vrf{LinkAttrs: netlink.LinkAttrs{Name: testVrfID}, Table: 1000}
 				mockNetlink.EXPECT().LinkAdd(vrf).Return(nil).Once()
