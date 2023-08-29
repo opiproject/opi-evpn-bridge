@@ -48,6 +48,24 @@ docker-compose exec opi-evpn-bridge grpcurl -plaintext -d '{"name" : "//network.
 
 ![OPI EVPN Bridge Architcture Diagram](./docs/OPI-EVPN-GW-FRR-bridge.png)
 
+## Tests
+
+Test your APIs even if unmerged using your private fork like this:
+
+```bash
+chmod a+w go.*
+docker run --rm -it -v `pwd`:/app -w /app golang:alpine go mod edit -replace github.com/opiproject/opi-api@main=github.com/YOURUSERNAME/opi-api@main
+docker run --rm -it -v `pwd`:/app -w /app golang:alpine go get -u github.com/YOURUSERNAME/opi-api/network/evpn-gw/v1alpha1/gen/go@0e2810d
+docker run --rm -it -v `pwd`:/app -w /app golang:alpine go mod tidy
+```
+
+Generate mocks like this:
+
+```bash
+go install github.com/vektra/mockery/v2@latest
+make mock-generate
+```
+
 ## POC diagrams
 
 ![OPI EVPN Bridge POC Diagram for CI/CD](./docs/OPI-EVPN-PoC.png)
