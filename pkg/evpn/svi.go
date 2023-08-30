@@ -79,9 +79,10 @@ func (s *Server) CreateSvi(_ context.Context, in *pb.CreateSviRequest) (*pb.Svi,
 		return nil, err
 	}
 	// Example: ip link add link br-tenant name <link_svi> type vlan id <vlan-id>
+	vlanName := fmt.Sprintf("vlan%d", vid)
 	vlandev := &netlink.Vlan{
 		LinkAttrs: netlink.LinkAttrs{
-			Name:        resourceID,
+			Name:        vlanName,
 			ParentIndex: bridge.Attrs().Index,
 		},
 		VlanId: int(bridgeObject.Spec.VlanId),
@@ -168,11 +169,18 @@ func (s *Server) DeleteSvi(_ context.Context, in *pb.DeleteSviRequest) (*emptypb
 		log.Printf("error: %v", err)
 		return nil, err
 	}
-	resourceID := path.Base(obj.Name)
-	// use netlink to find vlan
-	vlandev, err := s.nLink.LinkByName(resourceID)
+	// use netlink to find VlanId from LogicalBridge object
+	bridgeObject, ok := s.Bridges[obj.Spec.LogicalBridge]
+	if !ok {
+		err := status.Errorf(codes.NotFound, "unable to find key %s", obj.Spec.LogicalBridge)
+		log.Printf("error: %v", err)
+		return nil, err
+	}
+	vid := uint16(bridgeObject.Spec.VlanId)
+	vlanName := fmt.Sprintf("vlan%d", vid)
+	vlandev, err := s.nLink.LinkByName(vlanName)
 	if err != nil {
-		err := status.Errorf(codes.NotFound, "unable to find key %s", resourceID)
+		err := status.Errorf(codes.NotFound, "unable to find key %s", vlanName)
 		log.Printf("error: %v", err)
 		return nil, err
 	}
