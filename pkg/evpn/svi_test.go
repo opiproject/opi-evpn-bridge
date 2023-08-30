@@ -156,6 +156,36 @@ func Test_CreateSvi(t *testing.T) {
 			fmt.Sprintf("segment '%s': not a valid DNS name", "-ABC-DEF"),
 			false,
 		},
+		"missing LogicalBridge name": {
+			testSviID,
+			&pb.Svi{
+				Spec: &pb.SviSpec{
+					Vrf:           testVrfName,
+					LogicalBridge: "unknown-bridge-id",
+					MacAddress:    []byte{0xCB, 0xB8, 0x33, 0x4C, 0x88, 0x4F},
+					GwIpPrefix:    []*pc.IPPrefix{{Len: 24}},
+				},
+			},
+			nil,
+			codes.NotFound,
+			fmt.Sprintf("unable to find key %v", "unknown-bridge-id"),
+			false,
+		},
+		"missing Vrf name": {
+			testSviID,
+			&pb.Svi{
+				Spec: &pb.SviSpec{
+					Vrf:           "unknown-vrf-id",
+					LogicalBridge: testLogicalBridgeName,
+					MacAddress:    []byte{0xCB, 0xB8, 0x33, 0x4C, 0x88, 0x4F},
+					GwIpPrefix:    []*pc.IPPrefix{{Len: 24}},
+				},
+			},
+			nil,
+			codes.NotFound,
+			fmt.Sprintf("unable to find key %v", "unknown-vrf-id"),
+			false,
+		},
 		"failed LinkByName call": {
 			testSviID,
 			&testSvi,
@@ -218,6 +248,7 @@ func Test_CreateSvi(t *testing.T) {
 			if tt.out != nil {
 				tt.out.Name = testSviName
 			}
+			opi.Vrfs[testVrfName] = &testVrf
 			opi.Bridges[testLogicalBridgeName] = &testLogicalBridge
 
 			// TODO: refactor this mocking
