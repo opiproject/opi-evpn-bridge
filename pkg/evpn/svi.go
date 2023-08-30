@@ -63,17 +63,24 @@ func (s *Server) CreateSvi(_ context.Context, in *pb.CreateSviRequest) (*pb.Svi,
 		log.Printf("error: %v", err)
 		return nil, err
 	}
-	// not found, so create a new one
-	bridge, err := s.nLink.LinkByName(tenantbridgeName)
-	if err != nil {
-		err := status.Errorf(codes.NotFound, "unable to find key %s", tenantbridgeName)
-		log.Printf("error: %v", err)
-		return nil, err
-	}
 	// now get LogicalBridge object to fetch VID field
 	bridgeObject, ok := s.Bridges[in.Svi.Spec.LogicalBridge]
 	if !ok {
 		err := status.Errorf(codes.NotFound, "unable to find key %s", in.Svi.Spec.LogicalBridge)
+		log.Printf("error: %v", err)
+		return nil, err
+	}
+	// now get Vrf to plug this vlandev into
+	vrf, ok := s.Vrfs[in.Svi.Spec.Vrf]
+	if !ok {
+		err := status.Errorf(codes.NotFound, "unable to find key %s", in.Svi.Spec.Vrf)
+		log.Printf("error: %v", err)
+		return nil, err
+	}
+	// not found, so create a new one
+	bridge, err := s.nLink.LinkByName(tenantbridgeName)
+	if err != nil {
+		err := status.Errorf(codes.NotFound, "unable to find key %s", tenantbridgeName)
 		log.Printf("error: %v", err)
 		return nil, err
 	}
@@ -85,13 +92,7 @@ func (s *Server) CreateSvi(_ context.Context, in *pb.CreateSviRequest) (*pb.Svi,
 	}
 	// Example: ip link add link br-tenant name <link_svi> type vlan id <vlan-id>
 	vlanName := fmt.Sprintf("vlan%d", vid)
-	vlandev := &netlink.Vlan{
-		LinkAttrs: netlink.LinkAttrs{
-			Name:        vlanName,
-			ParentIndex: bridge.Attrs().Index,
-		},
-		VlanId: int(bridgeObject.Spec.VlanId),
-	}
+	vlandev := &netlink.Vlan{LinkAttrs: netlink.LinkAttrs{Name: vlanName, ParentIndex: bridge.Attrs().Index}, VlanId: int(vid)}
 	log.Printf("Creating VLAN %v", vlandev)
 	if err := s.nLink.LinkAdd(vlandev); err != nil {
 		fmt.Printf("Failed to create vlan link: %v", err)
@@ -114,13 +115,6 @@ func (s *Server) CreateSvi(_ context.Context, in *pb.CreateSviRequest) (*pb.Svi,
 			fmt.Printf("Failed to set IP on link: %v", err)
 			return nil, err
 		}
-	}
-	// now get Vrf to plug this vlandev into
-	vrf, ok := s.Vrfs[in.Svi.Spec.Vrf]
-	if !ok {
-		err := status.Errorf(codes.NotFound, "unable to find key %s", in.Svi.Spec.Vrf)
-		log.Printf("error: %v", err)
-		return nil, err
 	}
 	// get net device by name
 	vrfdev, err := s.nLink.LinkByName(path.Base(vrf.Name))
