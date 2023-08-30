@@ -71,7 +71,8 @@ func (s *Server) CreateLogicalBridge(_ context.Context, in *pb.CreateLogicalBrid
 		myip := make(net.IP, 4)
 		// TODO: remove hard-coded 167772162 == "10.0.0.2"
 		binary.BigEndian.PutUint32(myip, 167772162)
-		vxlan := &netlink.Vxlan{LinkAttrs: netlink.LinkAttrs{Name: resourceID}, VxlanId: int(*in.LogicalBridge.Spec.Vni), Port: 4789, Learning: false, SrcAddr: myip}
+		vxlanName := fmt.Sprintf("vni%d", *in.LogicalBridge.Spec.Vni)
+		vxlan := &netlink.Vxlan{LinkAttrs: netlink.LinkAttrs{Name: vxlanName}, VxlanId: int(*in.LogicalBridge.Spec.Vni), Port: 4789, Learning: false, SrcAddr: myip}
 		log.Printf("Creating Vxlan %v", vxlan)
 		// TODO: take Port from proto instead of hard-coded
 		if err := s.nLink.LinkAdd(vxlan); err != nil {
@@ -125,13 +126,13 @@ func (s *Server) DeleteLogicalBridge(_ context.Context, in *pb.DeleteLogicalBrid
 		log.Printf("error: %v", err)
 		return nil, err
 	}
-	resourceID := path.Base(obj.Name)
 	// only if VNI is not empty
 	if obj.Spec.Vni != nil {
 		// use netlink to find vxlan device
-		vxlan, err := s.nLink.LinkByName(resourceID)
+		vxlanName := fmt.Sprintf("vni%d", *obj.Spec.Vni)
+		vxlan, err := s.nLink.LinkByName(vxlanName)
 		if err != nil {
-			err := status.Errorf(codes.NotFound, "unable to find key %s", resourceID)
+			err := status.Errorf(codes.NotFound, "unable to find key %s", vxlanName)
 			log.Printf("error: %v", err)
 			return nil, err
 		}
