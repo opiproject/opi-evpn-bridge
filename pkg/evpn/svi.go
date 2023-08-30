@@ -169,6 +169,13 @@ func (s *Server) DeleteSvi(_ context.Context, in *pb.DeleteSviRequest) (*emptypb
 		log.Printf("error: %v", err)
 		return nil, err
 	}
+	// use netlink to find br-tenant
+	bridge, err := s.nLink.LinkByName(tenantbridgeName)
+	if err != nil {
+		err := status.Errorf(codes.NotFound, "unable to find key %s", tenantbridgeName)
+		log.Printf("error: %v", err)
+		return nil, err
+	}
 	// use netlink to find VlanId from LogicalBridge object
 	bridgeObject, ok := s.Bridges[obj.Spec.LogicalBridge]
 	if !ok {
@@ -177,6 +184,11 @@ func (s *Server) DeleteSvi(_ context.Context, in *pb.DeleteSviRequest) (*emptypb
 		return nil, err
 	}
 	vid := uint16(bridgeObject.Spec.VlanId)
+	// Example: bridge vlan del dev br-tenant vid <vlan-id> self
+	if err := s.nLink.BridgeVlanDel(bridge, vid, false, false, true, false); err != nil {
+		fmt.Printf("Failed to del vlan to bridge: %v", err)
+		return nil, err
+	}
 	vlanName := fmt.Sprintf("vlan%d", vid)
 	vlandev, err := s.nLink.LinkByName(vlanName)
 	if err != nil {
