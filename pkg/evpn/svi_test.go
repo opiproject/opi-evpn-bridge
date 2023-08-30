@@ -126,6 +126,36 @@ func Test_CreateSvi(t *testing.T) {
 			"missing required field: svi.spec.gw_ip_prefix",
 			false,
 		},
+		"malformed LogicalBridge name": {
+			testSviID,
+			&pb.Svi{
+				Spec: &pb.SviSpec{
+					Vrf:           testVrfName,
+					LogicalBridge: "-ABC-DEF",
+					MacAddress:    []byte{0xCB, 0xB8, 0x33, 0x4C, 0x88, 0x4F},
+					GwIpPrefix:    []*pc.IPPrefix{{Len: 24}},
+				},
+			},
+			nil,
+			codes.Unknown,
+			fmt.Sprintf("segment '%s': not a valid DNS name", "-ABC-DEF"),
+			false,
+		},
+		"malformed Vrf name": {
+			testSviID,
+			&pb.Svi{
+				Spec: &pb.SviSpec{
+					Vrf:           "-ABC-DEF",
+					LogicalBridge: testLogicalBridgeName,
+					MacAddress:    []byte{0xCB, 0xB8, 0x33, 0x4C, 0x88, 0x4F},
+					GwIpPrefix:    []*pc.IPPrefix{{Len: 24}},
+				},
+			},
+			nil,
+			codes.Unknown,
+			fmt.Sprintf("segment '%s': not a valid DNS name", "-ABC-DEF"),
+			false,
+		},
 		"failed LinkByName call": {
 			testSviID,
 			&testSvi,

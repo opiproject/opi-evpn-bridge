@@ -53,15 +53,20 @@ func (s *Server) CreateSvi(_ context.Context, in *pb.CreateSviRequest) (*pb.Svi,
 		log.Printf("Already existing Svi with id %v", in.Svi.Name)
 		return obj, nil
 	}
+	// Validate that a LogicalBridge resource name conforms to the restrictions outlined in AIP-122.
+	if err := resourcename.Validate(in.Svi.Spec.LogicalBridge); err != nil {
+		log.Printf("error: %v", err)
+		return nil, err
+	}
+	// Validate that a Vrf resource name conforms to the restrictions outlined in AIP-122.
+	if err := resourcename.Validate(in.Svi.Spec.Vrf); err != nil {
+		log.Printf("error: %v", err)
+		return nil, err
+	}
 	// not found, so create a new one
 	bridge, err := s.nLink.LinkByName(tenantbridgeName)
 	if err != nil {
 		err := status.Errorf(codes.NotFound, "unable to find key %s", tenantbridgeName)
-		log.Printf("error: %v", err)
-		return nil, err
-	}
-	// Validate that a LogicalBridge resource name conforms to the restrictions outlined in AIP-122.
-	if err := resourcename.Validate(in.Svi.Spec.LogicalBridge); err != nil {
 		log.Printf("error: %v", err)
 		return nil, err
 	}
@@ -109,11 +114,6 @@ func (s *Server) CreateSvi(_ context.Context, in *pb.CreateSviRequest) (*pb.Svi,
 			fmt.Printf("Failed to set IP on link: %v", err)
 			return nil, err
 		}
-	}
-	// Validate that a Vrf resource name conforms to the restrictions outlined in AIP-122.
-	if err := resourcename.Validate(in.Svi.Spec.Vrf); err != nil {
-		log.Printf("error: %v", err)
-		return nil, err
 	}
 	// now get Vrf to plug this vlandev into
 	vrf, ok := s.Vrfs[in.Svi.Spec.Vrf]
