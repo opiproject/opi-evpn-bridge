@@ -133,6 +133,22 @@ func Test_CreateSvi(t *testing.T) {
 			"unable to find key br-tenant",
 			false,
 		},
+		"failed BridgeVlanAdd call": {
+			testSviID,
+			&testSvi,
+			nil,
+			codes.Unknown,
+			"Failed to call BridgeVlanAdd",
+			false,
+		},
+		"failed LinkAdd call": {
+			testSviID,
+			&testSvi,
+			nil,
+			codes.Unknown,
+			"Failed to call LinkAdd",
+			false,
+		},
 	}
 
 	// run tests
@@ -163,11 +179,26 @@ func Test_CreateSvi(t *testing.T) {
 			if tt.out != nil {
 				tt.out.Name = testSviName
 			}
+			opi.Bridges[testLogicalBridgeName] = &testLogicalBridge
 
 			// TODO: refactor this mocking
-			if strings.Contains(name, "LinkByName") {
+			if strings.Contains(name, "failed LinkByName") {
 				mockNetlink.EXPECT().LinkByName(tenantbridgeName).Return(nil, errors.New(tt.errMsg)).Once()
+			} else if strings.Contains(name, "failed BridgeVlanAdd") {
+				vid := uint16(testLogicalBridge.Spec.VlanId)
+				bridge := &netlink.Bridge{LinkAttrs: netlink.LinkAttrs{Name: tenantbridgeName}}
+				mockNetlink.EXPECT().LinkByName(tenantbridgeName).Return(bridge, nil).Once()
+				mockNetlink.EXPECT().BridgeVlanAdd(bridge, vid, false, false, true, false).Return(errors.New(tt.errMsg)).Once()
+			} else if strings.Contains(name, "failed LinkAdd") {
+				vid := uint16(testLogicalBridge.Spec.VlanId)
+				bridge := &netlink.Bridge{LinkAttrs: netlink.LinkAttrs{Name: tenantbridgeName}}
+				mockNetlink.EXPECT().LinkByName(tenantbridgeName).Return(bridge, nil).Once()
+				mockNetlink.EXPECT().BridgeVlanAdd(bridge, vid, false, false, true, false).Return(nil).Once()
+				vlanName := fmt.Sprintf("vlan%d", vid)
+				vlandev := &netlink.Vlan{LinkAttrs: netlink.LinkAttrs{Name: vlanName, ParentIndex: bridge.Attrs().Index}, VlanId: int(vid)}
+				mockNetlink.EXPECT().LinkAdd(vlandev).Return(errors.New(tt.errMsg)).Once()
 			}
+
 			if tt.out != nil && !tt.exist {
 				bridge := &netlink.Bridge{LinkAttrs: netlink.LinkAttrs{Name: tenantbridgeName}}
 				mockNetlink.EXPECT().LinkByName(tenantbridgeName).Return(bridge, nil).Once()
