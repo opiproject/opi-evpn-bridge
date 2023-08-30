@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net"
 	"reflect"
 	"strings"
 	"testing"
@@ -149,6 +150,14 @@ func Test_CreateSvi(t *testing.T) {
 			"Failed to call LinkAdd",
 			false,
 		},
+		"failed LinkSetHardwareAddr call": {
+			testSviID,
+			&testSvi,
+			nil,
+			codes.Unknown,
+			"Failed to call LinkSetHardwareAddr",
+			false,
+		},
 	}
 
 	// run tests
@@ -197,6 +206,16 @@ func Test_CreateSvi(t *testing.T) {
 				vlanName := fmt.Sprintf("vlan%d", vid)
 				vlandev := &netlink.Vlan{LinkAttrs: netlink.LinkAttrs{Name: vlanName, ParentIndex: bridge.Attrs().Index}, VlanId: int(vid)}
 				mockNetlink.EXPECT().LinkAdd(vlandev).Return(errors.New(tt.errMsg)).Once()
+			} else if strings.Contains(name, "failed LinkSetHardwareAddr") {
+				vid := uint16(testLogicalBridge.Spec.VlanId)
+				bridge := &netlink.Bridge{LinkAttrs: netlink.LinkAttrs{Name: tenantbridgeName}}
+				mockNetlink.EXPECT().LinkByName(tenantbridgeName).Return(bridge, nil).Once()
+				mockNetlink.EXPECT().BridgeVlanAdd(bridge, vid, false, false, true, false).Return(nil).Once()
+				vlanName := fmt.Sprintf("vlan%d", vid)
+				vlandev := &netlink.Vlan{LinkAttrs: netlink.LinkAttrs{Name: vlanName, ParentIndex: bridge.Attrs().Index}, VlanId: int(vid)}
+				mockNetlink.EXPECT().LinkAdd(vlandev).Return(nil).Once()
+				mac := net.HardwareAddr(testSvi.Spec.MacAddress[:])
+				mockNetlink.EXPECT().LinkSetHardwareAddr(vlandev, mac).Return(errors.New(tt.errMsg)).Once()
 			}
 
 			if tt.out != nil && !tt.exist {
