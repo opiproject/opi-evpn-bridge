@@ -232,10 +232,17 @@ func (s *Server) UpdateSvi(_ context.Context, in *pb.UpdateSviRequest) (*pb.Svi,
 		log.Printf("error: %v", err)
 		return nil, err
 	}
-	resourceID := path.Base(svi.Name)
-	iface, err := s.nLink.LinkByName(resourceID)
+	// use netlink to find VlanId from LogicalBridge object
+	bridgeObject, ok := s.Bridges[svi.Spec.LogicalBridge]
+	if !ok {
+		err := status.Errorf(codes.NotFound, "unable to find key %s", svi.Spec.LogicalBridge)
+		log.Printf("error: %v", err)
+		return nil, err
+	}
+	vlanName := fmt.Sprintf("vlan%d", bridgeObject.Spec.VlanId)
+	iface, err := s.nLink.LinkByName(vlanName)
 	if err != nil {
-		err := status.Errorf(codes.NotFound, "unable to find key %s", resourceID)
+		err := status.Errorf(codes.NotFound, "unable to find key %s", vlanName)
 		log.Printf("error: %v", err)
 		return nil, err
 	}
@@ -272,10 +279,17 @@ func (s *Server) GetSvi(_ context.Context, in *pb.GetSviRequest) (*pb.Svi, error
 		log.Printf("error: %v", err)
 		return nil, err
 	}
-	resourceID := path.Base(obj.Name)
-	_, err := s.nLink.LinkByName(resourceID)
+	// use netlink to find VlanId from LogicalBridge object
+	bridgeObject, ok := s.Bridges[obj.Spec.LogicalBridge]
+	if !ok {
+		err := status.Errorf(codes.NotFound, "unable to find key %s", obj.Spec.LogicalBridge)
+		log.Printf("error: %v", err)
+		return nil, err
+	}
+	vlanName := fmt.Sprintf("vlan%d", bridgeObject.Spec.VlanId)
+	_, err := s.nLink.LinkByName(vlanName)
 	if err != nil {
-		err := status.Errorf(codes.NotFound, "unable to find key %s", resourceID)
+		err := status.Errorf(codes.NotFound, "unable to find key %s", vlanName)
 		log.Printf("error: %v", err)
 		return nil, err
 	}

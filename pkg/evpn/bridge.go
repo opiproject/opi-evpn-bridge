@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"log"
 	"net"
-	"path"
 
 	"github.com/vishvananda/netlink"
 
@@ -184,18 +183,21 @@ func (s *Server) UpdateLogicalBridge(_ context.Context, in *pb.UpdateLogicalBrid
 		log.Printf("error: %v", err)
 		return nil, err
 	}
-	resourceID := path.Base(bridge.Name)
-	iface, err := s.nLink.LinkByName(resourceID)
-	if err != nil {
-		err := status.Errorf(codes.NotFound, "unable to find key %s", resourceID)
-		log.Printf("error: %v", err)
-		return nil, err
-	}
-	// base := iface.Attrs()
-	// iface.MTU = 1500 // TODO: remove this, just an example
-	if err := s.nLink.LinkModify(iface); err != nil {
-		fmt.Printf("Failed to update link: %v", err)
-		return nil, err
+	// only if VNI is not empty
+	if bridge.Spec.Vni != nil {
+		vxlanName := fmt.Sprintf("vni%d", *bridge.Spec.Vni)
+		iface, err := s.nLink.LinkByName(vxlanName)
+		if err != nil {
+			err := status.Errorf(codes.NotFound, "unable to find key %s", vxlanName)
+			log.Printf("error: %v", err)
+			return nil, err
+		}
+		// base := iface.Attrs()
+		// iface.MTU = 1500 // TODO: remove this, just an example
+		if err := s.nLink.LinkModify(iface); err != nil {
+			fmt.Printf("Failed to update link: %v", err)
+			return nil, err
+		}
 	}
 	response := proto.Clone(in.LogicalBridge).(*pb.LogicalBridge)
 	response.Status = &pb.LogicalBridgeStatus{OperStatus: pb.LBOperStatus_LB_OPER_STATUS_UP}
@@ -224,12 +226,12 @@ func (s *Server) GetLogicalBridge(_ context.Context, in *pb.GetLogicalBridgeRequ
 		log.Printf("error: %v", err)
 		return nil, err
 	}
-	resourceID := path.Base(bridge.Name)
 	// only if VNI is not empty
 	if bridge.Spec.Vni != nil {
-		_, err := s.nLink.LinkByName(resourceID)
+		vxlanName := fmt.Sprintf("vni%d", *bridge.Spec.Vni)
+		_, err := s.nLink.LinkByName(vxlanName)
 		if err != nil {
-			err := status.Errorf(codes.NotFound, "unable to find key %s", resourceID)
+			err := status.Errorf(codes.NotFound, "unable to find key %s", vxlanName)
 			log.Printf("error: %v", err)
 			return nil, err
 		}
