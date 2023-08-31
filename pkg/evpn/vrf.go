@@ -200,13 +200,8 @@ func (s *Server) DeleteVrf(_ context.Context, in *pb.DeleteVrfRequest) (*emptypb
 		}
 		// use netlink to find BRIDGE device
 		bridgeName := fmt.Sprintf("br%d", *obj.Spec.Vni)
-		bridgedev, err := s.nLink.LinkByName(bridgeName)
+		bridgedev := &netlink.Bridge{LinkAttrs: netlink.LinkAttrs{Name: bridgeName}}
 		log.Printf("Deleting BRIDGE %v", bridgedev)
-		if err != nil {
-			err := status.Errorf(codes.NotFound, "unable to find key %s", bridgeName)
-			log.Printf("error: %v", err)
-			return nil, err
-		}
 		// bring link down
 		if err := s.nLink.LinkSetDown(bridgedev); err != nil {
 			fmt.Printf("Failed to up link: %v", err)

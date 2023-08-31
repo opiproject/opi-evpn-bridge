@@ -85,12 +85,7 @@ func (s *Server) CreateSvi(_ context.Context, in *pb.CreateSviRequest) (*pb.Svi,
 		return nil, err
 	}
 	// not found, so create a new one
-	bridge, err := s.nLink.LinkByName(tenantbridgeName)
-	if err != nil {
-		err := status.Errorf(codes.NotFound, "unable to find key %s", tenantbridgeName)
-		log.Printf("error: %v", err)
-		return nil, err
-	}
+	bridge := &netlink.Bridge{LinkAttrs: netlink.LinkAttrs{Name: tenantbridgeName}}
 	vid := uint16(bridgeObject.Spec.VlanId)
 	// Example: bridge vlan add dev br-tenant vid <vlan-id> self
 	if err := s.nLink.BridgeVlanAdd(bridge, vid, false, false, true, false); err != nil {

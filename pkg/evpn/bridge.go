@@ -67,12 +67,6 @@ func (s *Server) CreateLogicalBridge(_ context.Context, in *pb.CreateLogicalBrid
 	}
 	// create vxlan only if VNI is not empty
 	if in.LogicalBridge.Spec.Vni != nil {
-		bridge, err := s.nLink.LinkByName(tenantbridgeName)
-		if err != nil {
-			err := status.Errorf(codes.NotFound, "unable to find key %s", tenantbridgeName)
-			log.Printf("error: %v", err)
-			return nil, err
-		}
 		// Example: ip link add vxlan-<LB-vlan-id> type vxlan id <LB-vni> local <vtep-ip> dstport 4789 nolearning proxy
 		myip := make(net.IP, 4)
 		binary.BigEndian.PutUint32(myip, in.LogicalBridge.Spec.VtepIpPrefix.Addr.GetV4Addr())
@@ -85,6 +79,7 @@ func (s *Server) CreateLogicalBridge(_ context.Context, in *pb.CreateLogicalBrid
 			return nil, err
 		}
 		// Example: ip link set vxlan-<LB-vlan-id> master br-tenant addrgenmode none
+		bridge := &netlink.Bridge{LinkAttrs: netlink.LinkAttrs{Name: tenantbridgeName}}
 		if err := s.nLink.LinkSetMaster(vxlan, bridge); err != nil {
 			fmt.Printf("Failed to add Vxlan to bridge: %v", err)
 			return nil, err

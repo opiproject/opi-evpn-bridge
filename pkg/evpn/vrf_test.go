@@ -450,24 +450,6 @@ func Test_DeleteVrf(t *testing.T) {
 				mockNetlink.EXPECT().LinkDel(vxlan).Return(errors.New(errMsg)).Once()
 			},
 		},
-		"failed bridge LinkByName call": {
-			in:      testVrfID,
-			out:     &emptypb.Empty{},
-			errCode: codes.NotFound,
-			errMsg:  fmt.Sprintf("unable to find key %v", "br1000"),
-			missing: false,
-			on: func(mockNetlink *mocks.Netlink, errMsg string) {
-				myip := make(net.IP, 4)
-				binary.BigEndian.PutUint32(myip, 167772162)
-				vxlanName := fmt.Sprintf("vni%d", *testVrf.Spec.Vni)
-				vxlan := &netlink.Vxlan{LinkAttrs: netlink.LinkAttrs{Name: vxlanName}, VxlanId: int(*testVrf.Spec.Vni), Port: 4789, Learning: false, SrcAddr: myip}
-				mockNetlink.EXPECT().LinkByName(vxlanName).Return(vxlan, nil).Once()
-				mockNetlink.EXPECT().LinkSetDown(vxlan).Return(nil).Once()
-				mockNetlink.EXPECT().LinkDel(vxlan).Return(nil).Once()
-				bridgeName := fmt.Sprintf("br%d", *testVrf.Spec.Vni)
-				mockNetlink.EXPECT().LinkByName(bridgeName).Return(nil, errors.New(errMsg)).Once()
-			},
-		},
 		"failed bridge LinkSetDown call": {
 			in:      testVrfID,
 			out:     &emptypb.Empty{},
@@ -484,7 +466,6 @@ func Test_DeleteVrf(t *testing.T) {
 				mockNetlink.EXPECT().LinkDel(vxlan).Return(nil).Once()
 				bridgeName := fmt.Sprintf("br%d", *testVrf.Spec.Vni)
 				bridge := &netlink.Bridge{LinkAttrs: netlink.LinkAttrs{Name: bridgeName}}
-				mockNetlink.EXPECT().LinkByName(bridgeName).Return(bridge, nil).Once()
 				mockNetlink.EXPECT().LinkSetDown(bridge).Return(errors.New(errMsg)).Once()
 			},
 		},
@@ -504,7 +485,6 @@ func Test_DeleteVrf(t *testing.T) {
 				mockNetlink.EXPECT().LinkDel(vxlan).Return(nil).Once()
 				bridgeName := fmt.Sprintf("br%d", *testVrf.Spec.Vni)
 				bridge := &netlink.Bridge{LinkAttrs: netlink.LinkAttrs{Name: bridgeName}}
-				mockNetlink.EXPECT().LinkByName(bridgeName).Return(bridge, nil).Once()
 				mockNetlink.EXPECT().LinkSetDown(bridge).Return(nil).Once()
 				mockNetlink.EXPECT().LinkDel(bridge).Return(errors.New(errMsg)).Once()
 			},
@@ -525,7 +505,6 @@ func Test_DeleteVrf(t *testing.T) {
 				mockNetlink.EXPECT().LinkDel(vxlan).Return(nil).Once()
 				bridgeName := fmt.Sprintf("br%d", *testVrf.Spec.Vni)
 				bridge := &netlink.Bridge{LinkAttrs: netlink.LinkAttrs{Name: bridgeName}}
-				mockNetlink.EXPECT().LinkByName(bridgeName).Return(bridge, nil).Once()
 				mockNetlink.EXPECT().LinkSetDown(bridge).Return(nil).Once()
 				mockNetlink.EXPECT().LinkDel(bridge).Return(nil).Once()
 				mockNetlink.EXPECT().LinkByName(testVrfID).Return(nil, errors.New(errMsg)).Once()
@@ -547,7 +526,6 @@ func Test_DeleteVrf(t *testing.T) {
 				mockNetlink.EXPECT().LinkDel(vxlan).Return(nil).Once()
 				bridgeName := fmt.Sprintf("br%d", *testVrf.Spec.Vni)
 				bridge := &netlink.Bridge{LinkAttrs: netlink.LinkAttrs{Name: bridgeName}}
-				mockNetlink.EXPECT().LinkByName(bridgeName).Return(bridge, nil).Once()
 				mockNetlink.EXPECT().LinkSetDown(bridge).Return(nil).Once()
 				mockNetlink.EXPECT().LinkDel(bridge).Return(nil).Once()
 				vrf := &netlink.Vrf{LinkAttrs: netlink.LinkAttrs{Name: testVrfID}, Table: 1001}
@@ -571,7 +549,6 @@ func Test_DeleteVrf(t *testing.T) {
 				mockNetlink.EXPECT().LinkDel(vxlan).Return(nil).Once()
 				bridgeName := fmt.Sprintf("br%d", *testVrf.Spec.Vni)
 				bridge := &netlink.Bridge{LinkAttrs: netlink.LinkAttrs{Name: bridgeName}}
-				mockNetlink.EXPECT().LinkByName(bridgeName).Return(bridge, nil).Once()
 				mockNetlink.EXPECT().LinkSetDown(bridge).Return(nil).Once()
 				mockNetlink.EXPECT().LinkDel(bridge).Return(nil).Once()
 				vrf := &netlink.Vrf{LinkAttrs: netlink.LinkAttrs{Name: testVrfID}, Table: 1001}
@@ -596,7 +573,6 @@ func Test_DeleteVrf(t *testing.T) {
 				mockNetlink.EXPECT().LinkDel(vxlan).Return(nil).Once()
 				bridgeName := fmt.Sprintf("br%d", *testVrf.Spec.Vni)
 				bridge := &netlink.Bridge{LinkAttrs: netlink.LinkAttrs{Name: bridgeName}}
-				mockNetlink.EXPECT().LinkByName(bridgeName).Return(bridge, nil).Once()
 				mockNetlink.EXPECT().LinkSetDown(bridge).Return(nil).Once()
 				mockNetlink.EXPECT().LinkDel(bridge).Return(nil).Once()
 				vrf := &netlink.Vrf{LinkAttrs: netlink.LinkAttrs{Name: testVrfID}, Table: 1001}
