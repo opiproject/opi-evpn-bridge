@@ -27,6 +27,7 @@ import (
 	"google.golang.org/protobuf/types/known/fieldmaskpb"
 
 	pb "github.com/opiproject/opi-api/network/evpn-gw/v1alpha1/gen/go"
+	pc "github.com/opiproject/opi-api/network/opinetcommon/v1alpha1/gen/go"
 
 	"github.com/opiproject/opi-evpn-bridge/pkg/utils/mocks"
 )
@@ -38,6 +39,15 @@ var (
 		Spec: &pb.LogicalBridgeSpec{
 			Vni:    proto.Uint32(11),
 			VlanId: 22,
+			VtepIpPrefix: &pc.IPPrefix{
+				Addr: &pc.IPAddress{
+					Af: pc.IpAf_IP_AF_INET,
+					V4OrV6: &pc.IPAddress_V4Addr{
+						V4Addr: 167772162,
+					},
+				},
+				Len: 24,
+			},
 		},
 	}
 )
