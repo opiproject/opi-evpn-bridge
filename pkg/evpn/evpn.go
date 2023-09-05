@@ -10,6 +10,8 @@ import (
 	"fmt"
 	"log"
 
+	"google.golang.org/protobuf/proto"
+
 	pe "github.com/opiproject/opi-api/network/evpn-gw/v1alpha1/gen/go"
 
 	"github.com/opiproject/opi-evpn-bridge/pkg/utils"
@@ -55,6 +57,10 @@ func NewServerWithArgs(nLink utils.Netlink) *Server {
 
 func resourceIDToFullName(container string, resourceID string) string {
 	return fmt.Sprintf("//network.opiproject.org/%s/%s", container, resourceID)
+}
+
+func protoClone[T proto.Message](protoStruct T) T {
+	return proto.Clone(protoStruct).(T)
 }
 
 func generateRandMAC() ([]byte, error) {

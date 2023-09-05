@@ -22,7 +22,6 @@ import (
 	"go.einride.tech/aip/resourcename"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -94,7 +93,7 @@ func (s *Server) CreateLogicalBridge(_ context.Context, in *pb.CreateLogicalBrid
 		}
 		// TODO: bridge link set dev vxlan-<LB-vlan-id> neigh_suppress on
 	}
-	response := proto.Clone(in.LogicalBridge).(*pb.LogicalBridge)
+	response := protoClone(in.LogicalBridge)
 	response.Status = &pb.LogicalBridgeStatus{OperStatus: pb.LBOperStatus_LB_OPER_STATUS_UP}
 	s.Bridges[in.LogicalBridge.Name] = response
 	log.Printf("CreateLogicalBridge: Sending to client: %v", response)
@@ -198,7 +197,7 @@ func (s *Server) UpdateLogicalBridge(_ context.Context, in *pb.UpdateLogicalBrid
 			return nil, err
 		}
 	}
-	response := proto.Clone(in.LogicalBridge).(*pb.LogicalBridge)
+	response := protoClone(in.LogicalBridge)
 	response.Status = &pb.LogicalBridgeStatus{OperStatus: pb.LBOperStatus_LB_OPER_STATUS_UP}
 	s.Bridges[in.LogicalBridge.Name] = response
 	log.Printf("UpdateLogicalBridge: Sending to client: %v", response)

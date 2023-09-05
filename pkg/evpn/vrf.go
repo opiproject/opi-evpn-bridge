@@ -24,7 +24,6 @@ import (
 	"go.einride.tech/aip/resourcename"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -140,7 +139,7 @@ func (s *Server) CreateVrf(_ context.Context, in *pb.CreateVrfRequest) (*pb.Vrf,
 			return nil, err
 		}
 	}
-	response := proto.Clone(in.Vrf).(*pb.Vrf)
+	response := protoClone(in.Vrf)
 	response.Status = &pb.VrfStatus{LocalAs: 4, RoutingTable: tableID, Rmac: mac}
 	s.Vrfs[in.Vrf.Name] = response
 	log.Printf("CreateVrf: Sending to client: %v", response)
@@ -274,7 +273,7 @@ func (s *Server) UpdateVrf(_ context.Context, in *pb.UpdateVrfRequest) (*pb.Vrf,
 		fmt.Printf("Failed to update link: %v", err)
 		return nil, err
 	}
-	response := proto.Clone(in.Vrf).(*pb.Vrf)
+	response := protoClone(in.Vrf)
 	response.Status = &pb.VrfStatus{LocalAs: 4}
 	s.Vrfs[in.Vrf.Name] = response
 	log.Printf("UpdateVrf: Sending to client: %v", response)

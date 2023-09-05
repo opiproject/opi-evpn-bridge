@@ -21,7 +21,6 @@ import (
 	"go.einride.tech/aip/resourcename"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -119,7 +118,7 @@ func (s *Server) CreateBridgePort(_ context.Context, in *pb.CreateBridgePortRequ
 		fmt.Printf("Failed to up iface link: %v", err)
 		return nil, err
 	}
-	response := proto.Clone(in.BridgePort).(*pb.BridgePort)
+	response := protoClone(in.BridgePort)
 	response.Status = &pb.BridgePortStatus{OperStatus: pb.BPOperStatus_BP_OPER_STATUS_UP}
 	s.Ports[in.BridgePort.Name] = response
 	log.Printf("CreateBridgePort: Sending to client: %v", response)
@@ -226,7 +225,7 @@ func (s *Server) UpdateBridgePort(_ context.Context, in *pb.UpdateBridgePortRequ
 		fmt.Printf("Failed to update link: %v", err)
 		return nil, err
 	}
-	response := proto.Clone(in.BridgePort).(*pb.BridgePort)
+	response := protoClone(in.BridgePort)
 	response.Status = &pb.BridgePortStatus{OperStatus: pb.BPOperStatus_BP_OPER_STATUS_UP}
 	s.Ports[in.BridgePort.Name] = response
 	log.Printf("UpdateBridgePort: Sending to client: %v", response)
