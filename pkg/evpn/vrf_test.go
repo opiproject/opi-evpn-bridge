@@ -174,11 +174,11 @@ func Test_CreateVrf(t *testing.T) {
 			client := pb.NewVrfServiceClient(conn)
 
 			if tt.exist {
-				opi.Vrfs[testVrfName] = proto.Clone(&testVrf).(*pb.Vrf)
+				opi.Vrfs[testVrfName] = protoClone(&testVrf)
 				opi.Vrfs[testVrfName].Name = testVrfName
 			}
 			if tt.out != nil {
-				tt.out = proto.Clone(tt.out).(*pb.Vrf)
+				tt.out = protoClone(tt.out)
 				tt.out.Name = testVrfName
 			}
 
@@ -298,7 +298,7 @@ func Test_DeleteVrf(t *testing.T) {
 			client := pb.NewVrfServiceClient(conn)
 
 			fname1 := resourceIDToFullName("vrfs", tt.in)
-			opi.Vrfs[testVrfName] = proto.Clone(&testVrf).(*pb.Vrf)
+			opi.Vrfs[testVrfName] = protoClone(&testVrf)
 
 			request := &pb.DeleteVrfRequest{Name: fname1, AllowMissing: tt.missing}
 			response, err := client.DeleteVrf(ctx, request)
@@ -389,11 +389,11 @@ func Test_UpdateVrf(t *testing.T) {
 			client := pb.NewVrfServiceClient(conn)
 
 			if tt.exist {
-				opi.Vrfs[testVrfName] = proto.Clone(&testVrf).(*pb.Vrf)
+				opi.Vrfs[testVrfName] = protoClone(&testVrf)
 				opi.Vrfs[testVrfName].Name = testVrfName
 			}
 			if tt.out != nil {
-				tt.out = proto.Clone(tt.out).(*pb.Vrf)
+				tt.out = protoClone(tt.out)
 				tt.out.Name = testVrfName
 			}
 
@@ -469,7 +469,7 @@ func Test_GetVrf(t *testing.T) {
 			}(conn)
 			client := pb.NewVrfServiceClient(conn)
 
-			opi.Vrfs[testVrfName] = proto.Clone(&testVrf).(*pb.Vrf)
+			opi.Vrfs[testVrfName] = protoClone(&testVrf)
 
 			request := &pb.GetVrfRequest{Name: tt.in}
 			response, err := client.GetVrf(ctx, request)

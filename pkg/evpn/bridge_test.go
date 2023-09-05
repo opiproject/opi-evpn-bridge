@@ -192,11 +192,11 @@ func Test_CreateLogicalBridge(t *testing.T) {
 			client := pb.NewLogicalBridgeServiceClient(conn)
 
 			if tt.exist {
-				opi.Bridges[testLogicalBridgeName] = proto.Clone(&testLogicalBridge).(*pb.LogicalBridge)
+				opi.Bridges[testLogicalBridgeName] = protoClone(&testLogicalBridge)
 				opi.Bridges[testLogicalBridgeName].Name = testLogicalBridgeName
 			}
 			if tt.out != nil {
-				tt.out = proto.Clone(tt.out).(*pb.LogicalBridge)
+				tt.out = protoClone(tt.out)
 				tt.out.Name = testLogicalBridgeName
 			}
 
@@ -325,7 +325,7 @@ func Test_DeleteLogicalBridge(t *testing.T) {
 			client := pb.NewLogicalBridgeServiceClient(conn)
 
 			fname1 := resourceIDToFullName("bridges", tt.in)
-			opi.Bridges[testLogicalBridgeName] = proto.Clone(&testLogicalBridge).(*pb.LogicalBridge)
+			opi.Bridges[testLogicalBridgeName] = protoClone(&testLogicalBridge)
 
 			request := &pb.DeleteLogicalBridgeRequest{Name: fname1, AllowMissing: tt.missing}
 			response, err := client.DeleteLogicalBridge(ctx, request)
@@ -414,11 +414,11 @@ func Test_UpdateLogicalBridge(t *testing.T) {
 			client := pb.NewLogicalBridgeServiceClient(conn)
 
 			if tt.exist {
-				opi.Bridges[testLogicalBridgeName] = proto.Clone(&testLogicalBridge).(*pb.LogicalBridge)
+				opi.Bridges[testLogicalBridgeName] = protoClone(&testLogicalBridge)
 				opi.Bridges[testLogicalBridgeName].Name = testLogicalBridgeName
 			}
 			if tt.out != nil {
-				tt.out = proto.Clone(tt.out).(*pb.LogicalBridge)
+				tt.out = protoClone(tt.out)
 				tt.out.Name = testLogicalBridgeName
 			}
 
@@ -494,7 +494,7 @@ func Test_GetLogicalBridge(t *testing.T) {
 			}(conn)
 			client := pb.NewLogicalBridgeServiceClient(conn)
 
-			opi.Bridges[testLogicalBridgeID] = proto.Clone(&testLogicalBridge).(*pb.LogicalBridge)
+			opi.Bridges[testLogicalBridgeID] = protoClone(&testLogicalBridge)
 
 			request := &pb.GetLogicalBridgeRequest{Name: tt.in}
 			response, err := client.GetLogicalBridge(ctx, request)

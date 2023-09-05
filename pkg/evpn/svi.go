@@ -23,7 +23,6 @@ import (
 	"go.einride.tech/aip/resourcename"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -133,7 +132,7 @@ func (s *Server) CreateSvi(_ context.Context, in *pb.CreateSviRequest) (*pb.Svi,
 		fmt.Printf("Failed to up link: %v", err)
 		return nil, err
 	}
-	response := proto.Clone(in.Svi).(*pb.Svi)
+	response := protoClone(in.Svi)
 	response.Status = &pb.SviStatus{OperStatus: pb.SVIOperStatus_SVI_OPER_STATUS_UP}
 	s.Svis[in.Svi.Name] = response
 	log.Printf("CreateSvi: Sending to client: %v", response)
@@ -252,7 +251,7 @@ func (s *Server) UpdateSvi(_ context.Context, in *pb.UpdateSviRequest) (*pb.Svi,
 		fmt.Printf("Failed to update link: %v", err)
 		return nil, err
 	}
-	response := proto.Clone(in.Svi).(*pb.Svi)
+	response := protoClone(in.Svi)
 	response.Status = &pb.SviStatus{OperStatus: pb.SVIOperStatus_SVI_OPER_STATUS_UP}
 	s.Svis[in.Svi.Name] = response
 	log.Printf("UpdateSvi: Sending to client: %v", response)
