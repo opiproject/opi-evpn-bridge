@@ -243,13 +243,15 @@ func Test_CreateSvi(t *testing.T) {
 			client := pb.NewSviServiceClient(conn)
 
 			if tt.exist {
-				opi.Svis[testSviName] = &testSvi
+				opi.Svis[testSviName] = proto.Clone(&testSvi).(*pb.Svi)
+				opi.Svis[testSviName].Name = testSviName
 			}
 			if tt.out != nil {
+				tt.out = proto.Clone(tt.out).(*pb.Svi)
 				tt.out.Name = testSviName
 			}
-			opi.Vrfs[testVrfName] = &testVrf
-			opi.Bridges[testLogicalBridgeName] = &testLogicalBridge
+			opi.Vrfs[testVrfName] = proto.Clone(&testVrf).(*pb.Vrf)
+			opi.Bridges[testLogicalBridgeName] = proto.Clone(&testLogicalBridge).(*pb.LogicalBridge)
 
 			// TODO: refactor this mocking
 			if strings.Contains(name, "failed LinkByName") {
@@ -365,7 +367,7 @@ func Test_DeleteSvi(t *testing.T) {
 			client := pb.NewSviServiceClient(conn)
 
 			fname1 := resourceIDToFullName("svis", tt.in)
-			opi.Svis[testSviName] = &testSvi
+			opi.Svis[testSviName] = proto.Clone(&testSvi).(*pb.Svi)
 
 			request := &pb.DeleteSviRequest{Name: fname1, AllowMissing: tt.missing}
 			response, err := client.DeleteSvi(ctx, request)
@@ -456,9 +458,11 @@ func Test_UpdateSvi(t *testing.T) {
 			client := pb.NewSviServiceClient(conn)
 
 			if tt.exist {
-				opi.Svis[testSviName] = &testSvi
+				opi.Svis[testSviName] = proto.Clone(&testSvi).(*pb.Svi)
+				opi.Svis[testSviName].Name = testSviName
 			}
 			if tt.out != nil {
+				tt.out = proto.Clone(tt.out).(*pb.Svi)
 				tt.out.Name = testSviName
 			}
 
@@ -534,7 +538,7 @@ func Test_GetSvi(t *testing.T) {
 			}(conn)
 			client := pb.NewSviServiceClient(conn)
 
-			opi.Svis[testSviID] = &testSvi
+			opi.Svis[testSviName] = proto.Clone(&testSvi).(*pb.Svi)
 
 			request := &pb.GetSviRequest{Name: tt.in}
 			response, err := client.GetSvi(ctx, request)
