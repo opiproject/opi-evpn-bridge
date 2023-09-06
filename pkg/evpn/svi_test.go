@@ -54,81 +54,81 @@ func Test_CreateSvi(t *testing.T) {
 		exist   bool
 	}{
 		"illegal resource_id": {
-			"CapitalLettersNotAllowed",
-			&testSvi,
-			nil,
-			codes.Unknown,
-			fmt.Sprintf("user-settable ID must only contain lowercase, numbers and hyphens (%v)", "got: 'C' in position 0"),
-			false,
+			id:      "CapitalLettersNotAllowed",
+			in:      &testSvi,
+			out:     nil,
+			errCode: codes.Unknown,
+			errMsg:  fmt.Sprintf("user-settable ID must only contain lowercase, numbers and hyphens (%v)", "got: 'C' in position 0"),
+			exist:   false,
 		},
 		"already exists": {
-			testSviID,
-			&testSvi,
-			&testSvi,
-			codes.OK,
-			"",
-			true,
+			id:      testSviID,
+			in:      &testSvi,
+			out:     &testSvi,
+			errCode: codes.OK,
+			errMsg:  "",
+			exist:   true,
 		},
 		"no required svi field": {
-			testSviID,
-			nil,
-			nil,
-			codes.Unknown,
-			"missing required field: svi",
-			false,
+			id:      testSviID,
+			in:      nil,
+			out:     nil,
+			errCode: codes.Unknown,
+			errMsg:  "missing required field: svi",
+			exist:   false,
 		},
 		"no required vrf field": {
-			testSviID,
-			&pb.Svi{
+			id: testSviID,
+			in: &pb.Svi{
 				Spec: &pb.SviSpec{},
 			},
-			nil,
-			codes.Unknown,
-			"missing required field: svi.spec.vrf",
-			false,
+			out:     nil,
+			errCode: codes.Unknown,
+			errMsg:  "missing required field: svi.spec.vrf",
+			exist:   false,
 		},
 		"no required bridge field": {
-			testSviID,
-			&pb.Svi{
+			id: testSviID,
+			in: &pb.Svi{
 				Spec: &pb.SviSpec{
 					Vrf: testVrfName,
 				},
 			},
-			nil,
-			codes.Unknown,
-			"missing required field: svi.spec.logical_bridge",
-			false,
+			out:     nil,
+			errCode: codes.Unknown,
+			errMsg:  "missing required field: svi.spec.logical_bridge",
+			exist:   false,
 		},
 		"no required mac field": {
-			testSviID,
-			&pb.Svi{
+			id: testSviID,
+			in: &pb.Svi{
 				Spec: &pb.SviSpec{
 					Vrf:           testVrfName,
 					LogicalBridge: testLogicalBridgeName,
 				},
 			},
-			nil,
-			codes.Unknown,
-			"missing required field: svi.spec.mac_address",
-			false,
+			out:     nil,
+			errCode: codes.Unknown,
+			errMsg:  "missing required field: svi.spec.mac_address",
+			exist:   false,
 		},
 		"no required gw ip field": {
-			testSviID,
-			&pb.Svi{
+			id: testSviID,
+			in: &pb.Svi{
 				Spec: &pb.SviSpec{
 					Vrf:           testVrfName,
 					LogicalBridge: testLogicalBridgeName,
 					MacAddress:    []byte{0xCB, 0xB8, 0x33, 0x4C, 0x88, 0x4F},
 				},
 			},
-			nil,
-			codes.Unknown,
-			"missing required field: svi.spec.gw_ip_prefix",
-			false,
+			out:     nil,
+			errCode: codes.Unknown,
+			errMsg:  "missing required field: svi.spec.gw_ip_prefix",
+			exist:   false,
 		},
 		"malformed LogicalBridge name": {
-			testSviID,
-			&pb.Svi{
+			id: testSviID,
+			in: &pb.Svi{
 				Spec: &pb.SviSpec{
 					Vrf:           testVrfName,
 					LogicalBridge: "-ABC-DEF",
@@ -136,14 +136,14 @@ func Test_CreateSvi(t *testing.T) {
 					GwIpPrefix:    []*pc.IPPrefix{{Len: 24}},
 				},
 			},
-			nil,
-			codes.Unknown,
-			fmt.Sprintf("segment '%s': not a valid DNS name", "-ABC-DEF"),
-			false,
+			out:     nil,
+			errCode: codes.Unknown,
+			errMsg:  fmt.Sprintf("segment '%s': not a valid DNS name", "-ABC-DEF"),
+			exist:   false,
 		},
 		"malformed Vrf name": {
-			testSviID,
-			&pb.Svi{
+			id: testSviID,
+			in: &pb.Svi{
 				Spec: &pb.SviSpec{
 					Vrf:           "-ABC-DEF",
 					LogicalBridge: testLogicalBridgeName,
@@ -151,14 +151,14 @@ func Test_CreateSvi(t *testing.T) {
 					GwIpPrefix:    []*pc.IPPrefix{{Len: 24}},
 				},
 			},
-			nil,
-			codes.Unknown,
-			fmt.Sprintf("segment '%s': not a valid DNS name", "-ABC-DEF"),
-			false,
+			out:     nil,
+			errCode: codes.Unknown,
+			errMsg:  fmt.Sprintf("segment '%s': not a valid DNS name", "-ABC-DEF"),
+			exist:   false,
 		},
 		"missing LogicalBridge name": {
-			testSviID,
-			&pb.Svi{
+			id: testSviID,
+			in: &pb.Svi{
 				Spec: &pb.SviSpec{
 					Vrf:           testVrfName,
 					LogicalBridge: "unknown-bridge-id",
@@ -166,14 +166,14 @@ func Test_CreateSvi(t *testing.T) {
 					GwIpPrefix:    []*pc.IPPrefix{{Len: 24}},
 				},
 			},
-			nil,
-			codes.NotFound,
-			fmt.Sprintf("unable to find key %v", "unknown-bridge-id"),
-			false,
+			out:     nil,
+			errCode: codes.NotFound,
+			errMsg:  fmt.Sprintf("unable to find key %v", "unknown-bridge-id"),
+			exist:   false,
 		},
 		"missing Vrf name": {
-			testSviID,
-			&pb.Svi{
+			id: testSviID,
+			in: &pb.Svi{
 				Spec: &pb.SviSpec{
 					Vrf:           "unknown-vrf-id",
 					LogicalBridge: testLogicalBridgeName,
@@ -181,42 +181,42 @@ func Test_CreateSvi(t *testing.T) {
 					GwIpPrefix:    []*pc.IPPrefix{{Len: 24}},
 				},
 			},
-			nil,
-			codes.NotFound,
-			fmt.Sprintf("unable to find key %v", "unknown-vrf-id"),
-			false,
+			out:     nil,
+			errCode: codes.NotFound,
+			errMsg:  fmt.Sprintf("unable to find key %v", "unknown-vrf-id"),
+			exist:   false,
 		},
 		"failed LinkByName call": {
-			testSviID,
-			&testSvi,
-			nil,
-			codes.NotFound,
-			"unable to find key br-tenant",
-			false,
+			id:      testSviID,
+			in:      &testSvi,
+			out:     nil,
+			errCode: codes.NotFound,
+			errMsg:  "unable to find key br-tenant",
+			exist:   false,
 		},
 		"failed BridgeVlanAdd call": {
-			testSviID,
-			&testSvi,
-			nil,
-			codes.Unknown,
-			"Failed to call BridgeVlanAdd",
-			false,
+			id:      testSviID,
+			in:      &testSvi,
+			out:     nil,
+			errCode: codes.Unknown,
+			errMsg:  "Failed to call BridgeVlanAdd",
+			exist:   false,
 		},
 		"failed LinkAdd call": {
-			testSviID,
-			&testSvi,
-			nil,
-			codes.Unknown,
-			"Failed to call LinkAdd",
-			false,
+			id:      testSviID,
+			in:      &testSvi,
+			out:     nil,
+			errCode: codes.Unknown,
+			errMsg:  "Failed to call LinkAdd",
+			exist:   false,
 		},
 		"failed LinkSetHardwareAddr call": {
-			testSviID,
-			&testSvi,
-			nil,
-			codes.Unknown,
-			"Failed to call LinkSetHardwareAddr",
-			false,
+			id:      testSviID,
+			in:      &testSvi,
+			out:     nil,
+			errCode: codes.Unknown,
+			errMsg:  "Failed to call LinkSetHardwareAddr",
+			exist:   false,
 		},
 	}
 
@@ -315,32 +315,32 @@ func Test_DeleteSvi(t *testing.T) {
 		missing bool
 	}{
 		// "valid request": {
-		// 	testSviID,
-		// 	&emptypb.Empty{},
-		// 	codes.OK,
-		// 	"",
-		// 	false,
+		// 	in: testSviID,
+		// 	out: &emptypb.Empty{},
+		// 	errCode: codes.OK,
+		// 	errMsg: "",
+		// 	missing: false,
 		// },
 		"valid request with unknown key": {
-			"unknown-id",
-			nil,
-			codes.NotFound,
-			fmt.Sprintf("unable to find key %v", resourceIDToFullName("svis", "unknown-id")),
-			false,
+			in:      "unknown-id",
+			out:     nil,
+			errCode: codes.NotFound,
+			errMsg:  fmt.Sprintf("unable to find key %v", resourceIDToFullName("svis", "unknown-id")),
+			missing: false,
 		},
 		"unknown key with missing allowed": {
-			"unknown-id",
-			&emptypb.Empty{},
-			codes.OK,
-			"",
-			true,
+			in:      "unknown-id",
+			out:     &emptypb.Empty{},
+			errCode: codes.OK,
+			errMsg:  "",
+			missing: true,
 		},
 		"malformed name": {
-			"-ABC-DEF",
-			&emptypb.Empty{},
-			codes.Unknown,
-			fmt.Sprintf("segment '%s': not a valid DNS name", "-ABC-DEF"),
-			false,
+			in:      "-ABC-DEF",
+			out:     &emptypb.Empty{},
+			errCode: codes.Unknown,
+			errMsg:  fmt.Sprintf("segment '%s': not a valid DNS name", "-ABC-DEF"),
+			missing: false,
 		},
 	}
 
@@ -401,37 +401,34 @@ func Test_UpdateSvi(t *testing.T) {
 		mask    *fieldmaskpb.FieldMask
 		in      *pb.Svi
 		out     *pb.Svi
-		spdk    []string
 		errCode codes.Code
 		errMsg  string
 		start   bool
 		exist   bool
 	}{
 		"invalid fieldmask": {
-			&fieldmaskpb.FieldMask{Paths: []string{"*", "author"}},
-			&pb.Svi{
+			mask: &fieldmaskpb.FieldMask{Paths: []string{"*", "author"}},
+			in: &pb.Svi{
 				Name: testSviName,
 				Spec: spec,
 			},
-			nil,
-			[]string{""},
-			codes.Unknown,
-			fmt.Sprintf("invalid field path: %s", "'*' must not be used with other paths"),
-			false,
-			true,
+			out:     nil,
+			errCode: codes.Unknown,
+			errMsg:  fmt.Sprintf("invalid field path: %s", "'*' must not be used with other paths"),
+			start:   false,
+			exist:   true,
 		},
 		"valid request with unknown key": {
-			nil,
-			&pb.Svi{
+			mask: nil,
+			in: &pb.Svi{
 				Name: resourceIDToFullName("svis", "unknown-id"),
 				Spec: spec,
 			},
-			nil,
-			[]string{""},
-			codes.NotFound,
-			fmt.Sprintf("unable to find key %v", resourceIDToFullName("svis", "unknown-id")),
-			false,
-			true,
+			out:     nil,
+			errCode: codes.NotFound,
+			errMsg:  fmt.Sprintf("unable to find key %v", resourceIDToFullName("svis", "unknown-id")),
+			start:   false,
+			exist:   true,
 		},
 	}
 
@@ -494,25 +491,25 @@ func Test_GetSvi(t *testing.T) {
 		errMsg  string
 	}{
 		// "valid request": {
-		// 	testSviID,
-		// 	&pb.Svi{
+		// 	in: testSviID,
+		// 	out: &pb.Svi{
 		// 		Name: testSviName,
 		// 		Spec: testSvi.Spec,
 		// 	},
-		// 	codes.OK,
-		// 	"",
+		// 	errCode: codes.OK,
+		// 	errMsg: "",
 		// },
 		"valid request with unknown key": {
-			"unknown-id",
-			nil,
-			codes.NotFound,
-			fmt.Sprintf("unable to find key %v", "unknown-id"),
+			in:      "unknown-id",
+			out:     nil,
+			errCode: codes.NotFound,
+			errMsg:  fmt.Sprintf("unable to find key %v", "unknown-id"),
 		},
 		"malformed name": {
-			"-ABC-DEF",
-			nil,
-			codes.Unknown,
-			fmt.Sprintf("segment '%s': not a valid DNS name", "-ABC-DEF"),
+			in:      "-ABC-DEF",
+			out:     nil,
+			errCode: codes.Unknown,
+			errMsg:  fmt.Sprintf("segment '%s': not a valid DNS name", "-ABC-DEF"),
 		},
 	}
 
