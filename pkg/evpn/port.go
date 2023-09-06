@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"log"
 	"path"
+	"sort"
 
 	// "github.com/vishvananda/netlink"
 
@@ -23,6 +24,12 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
+
+func sortBridgePorts(ports []*pb.BridgePort) {
+	sort.Slice(ports, func(i int, j int) bool {
+		return ports[i].Name < ports[j].Name
+	})
+}
 
 // CreateBridgePort executes the creation of the port
 func (s *Server) CreateBridgePort(_ context.Context, in *pb.CreateBridgePortRequest) (*pb.BridgePort, error) {
@@ -261,4 +268,24 @@ func (s *Server) GetBridgePort(_ context.Context, in *pb.GetBridgePortRequest) (
 	}
 	// TODO
 	return &pb.BridgePort{Name: in.Name, Spec: &pb.BridgePortSpec{MacAddress: port.Spec.MacAddress}, Status: &pb.BridgePortStatus{OperStatus: pb.BPOperStatus_BP_OPER_STATUS_UP}}, nil
+}
+
+// ListBridgePorts lists logical bridges
+func (s *Server) ListBridgePorts(_ context.Context, in *pb.ListBridgePortsRequest) (*pb.ListBridgePortsResponse, error) {
+	log.Printf("ListBridgePorts: Received from client: %v", in)
+	// check required fields
+	if err := fieldbehavior.ValidateRequiredFields(in); err != nil {
+		log.Printf("error: %v", err)
+		return nil, err
+	}
+	token := ""
+	Blobarray := []*pb.BridgePort{}
+	for _, port := range s.Ports {
+		r := protoClone(port)
+		r.Status = &pb.BridgePortStatus{OperStatus: pb.BPOperStatus_BP_OPER_STATUS_UP}
+		Blobarray = append(Blobarray, r)
+	}
+	// TODO: Limit results to offset and size and rememeber pagination
+	sortBridgePorts(Blobarray)
+	return &pb.ListBridgePortsResponse{BridgePorts: Blobarray, NextPageToken: token}, nil
 }

@@ -13,6 +13,7 @@ import (
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/test/bufconn"
+	"google.golang.org/protobuf/proto"
 
 	pe "github.com/opiproject/opi-api/network/evpn-gw/v1alpha1/gen/go"
 
@@ -37,6 +38,20 @@ func dialer(opi *Server) func(context.Context, string) (net.Conn, error) {
 	return func(context.Context, string) (net.Conn, error) {
 		return listener.Dial()
 	}
+}
+
+func equalProtoSlices[T proto.Message](x, y []T) bool {
+	if len(x) != len(y) {
+		return false
+	}
+
+	for i := 0; i < len(x); i++ {
+		if !proto.Equal(x[i], y[i]) {
+			return false
+		}
+	}
+
+	return true
 }
 
 func TestFrontEnd_NewServerWithArgs(t *testing.T) {

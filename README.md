@@ -40,6 +40,11 @@ docker-compose exec opi-evpn-bridge grpcurl -plaintext -d '{"name": "//network.o
 docker-compose exec opi-evpn-bridge grpcurl -plaintext -d '{"name": "//network.opiproject.org/bridges/testbridge"}' localhost:50151 opi_api.network.evpn-gw.v1alpha1.LogicalBridgeService.GetLogicalBridge
 docker-compose exec opi-evpn-bridge grpcurl -plaintext -d '{"name": "//network.opiproject.org/svis/testsvi"}' localhost:50151 opi_api.network.evpn-gw.v1alpha1.SviService.GetSvi
 docker-compose exec opi-evpn-bridge grpcurl -plaintext -d '{"name": "//network.opiproject.org/vrfs/testvrf"}' localhost:50151 opi_api.network.evpn-gw.v1alpha1.VrfService.GetVrf
+#list
+docker-compose exec opi-evpn-bridge grpcurl -plaintext localhost:50151 opi_api.network.evpn-gw.v1alpha1.BridgePortService.ListBridgePorts
+docker-compose exec opi-evpn-bridge grpcurl -plaintext localhost:50151 opi_api.network.evpn-gw.v1alpha1.BridgePortService.ListLogicalBridges
+docker-compose exec opi-evpn-bridge grpcurl -plaintext localhost:50151 opi_api.network.evpn-gw.v1alpha1.BridgePortService.ListSvis
+docker-compose exec opi-evpn-bridge grpcurl -plaintext localhost:50151 opi_api.network.evpn-gw.v1alpha1.BridgePortService.ListVrfs
 # delete
 docker-compose exec opi-evpn-bridge grpcurl -plaintext -d '{"name": "//network.opiproject.org/ports/testinterface"}' localhost:50151 opi_api.network.evpn-gw.v1alpha1.BridgePortService.DeleteBridgePort
 docker-compose exec opi-evpn-bridge grpcurl -plaintext -d '{"name": "//network.opiproject.org/bridges/testbridge"}' localhost:50151 opi_api.network.evpn-gw.v1alpha1.LogicalBridgeService.DeleteLogicalBridge

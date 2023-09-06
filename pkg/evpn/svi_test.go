@@ -41,6 +41,13 @@ var (
 			GwIpPrefix:    []*pc.IPPrefix{{Len: 24}},
 		},
 	}
+	testSviWithStatus = pb.Svi{
+		Name: testSviName,
+		Spec: testSvi.Spec,
+		Status: &pb.SviStatus{
+			OperStatus: pb.SVIOperStatus_SVI_OPER_STATUS_UP,
+		},
+	}
 )
 
 func Test_CreateSvi(t *testing.T) {
@@ -355,14 +362,9 @@ func Test_CreateSvi(t *testing.T) {
 			},
 		},
 		"successful call": {
-			id: testSviID,
-			in: &testSvi,
-			out: &pb.Svi{
-				Spec: testSvi.Spec,
-				Status: &pb.SviStatus{
-					OperStatus: pb.SVIOperStatus_SVI_OPER_STATUS_UP,
-				},
-			},
+			id:      testSviID,
+			in:      &testSvi,
+			out:     &testSviWithStatus,
 			errCode: codes.OK,
 			errMsg:  "",
 			exist:   false,
@@ -775,6 +777,75 @@ func Test_GetSvi(t *testing.T) {
 			response, err := client.GetSvi(ctx, request)
 			if !proto.Equal(tt.out, response) {
 				t.Error("response: expected", tt.out, "received", response)
+			}
+
+			if er, ok := status.FromError(err); ok {
+				if er.Code() != tt.errCode {
+					t.Error("error code: expected", tt.errCode, "received", er.Code())
+				}
+				if er.Message() != tt.errMsg {
+					t.Error("error message: expected", tt.errMsg, "received", er.Message())
+				}
+			} else {
+				t.Error("expected grpc error status")
+			}
+		})
+	}
+}
+
+func Test_ListSvis(t *testing.T) {
+	tests := map[string]struct {
+		in      string
+		out     []*pb.Svi
+		errCode codes.Code
+		errMsg  string
+		size    int32
+		token   string
+	}{
+		"example test": {
+			in:      "",
+			out:     []*pb.Svi{&testSviWithStatus},
+			errCode: codes.OK,
+			errMsg:  "",
+			size:    0,
+			token:   "",
+		},
+	}
+
+	// run tests
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			// start GRPC mockup server
+			ctx := context.Background()
+			mockNetlink := mocks.NewNetlink(t)
+			opi := NewServerWithArgs(mockNetlink)
+			conn, err := grpc.DialContext(ctx,
+				"",
+				grpc.WithTransportCredentials(insecure.NewCredentials()),
+				grpc.WithContextDialer(dialer(opi)))
+			if err != nil {
+				log.Fatal(err)
+			}
+			defer func(conn *grpc.ClientConn) {
+				err := conn.Close()
+				if err != nil {
+					log.Fatal(err)
+				}
+			}(conn)
+			client := pb.NewSviServiceClient(conn)
+
+			opi.Svis[testSviName] = protoClone(&testSvi)
+			opi.Svis[testSviName].Name = testSviName
+
+			request := &pb.ListSvisRequest{PageSize: tt.size, PageToken: tt.token}
+			response, err := client.ListSvis(ctx, request)
+			if !equalProtoSlices(response.GetSvis(), tt.out) {
+				t.Error("response: expected", tt.out, "received", response.GetSvis())
+			}
+
+			// Empty NextPageToken indicates end of results list
+			if tt.size != 1 && response.GetNextPageToken() != "" {
+				t.Error("Expected end of results, received non-empty next page token", response.GetNextPageToken())
 			}
 
 			if er, ok := status.FromError(err); ok {

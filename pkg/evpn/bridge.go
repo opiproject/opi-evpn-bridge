@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"sort"
 
 	"github.com/vishvananda/netlink"
 
@@ -24,6 +25,12 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
+
+func sortLogicalBridges(bridges []*pb.LogicalBridge) {
+	sort.Slice(bridges, func(i int, j int) bool {
+		return bridges[i].Name < bridges[j].Name
+	})
+}
 
 // CreateLogicalBridge executes the creation of the LogicalBridge
 func (s *Server) CreateLogicalBridge(_ context.Context, in *pb.CreateLogicalBridgeRequest) (*pb.LogicalBridge, error) {
@@ -236,4 +243,24 @@ func (s *Server) GetLogicalBridge(_ context.Context, in *pb.GetLogicalBridgeRequ
 	}
 	// TODO
 	return &pb.LogicalBridge{Name: in.Name, Spec: &pb.LogicalBridgeSpec{Vni: bridge.Spec.Vni, VlanId: bridge.Spec.VlanId}, Status: &pb.LogicalBridgeStatus{OperStatus: pb.LBOperStatus_LB_OPER_STATUS_UP}}, nil
+}
+
+// ListLogicalBridges lists logical bridges
+func (s *Server) ListLogicalBridges(_ context.Context, in *pb.ListLogicalBridgesRequest) (*pb.ListLogicalBridgesResponse, error) {
+	log.Printf("ListLogicalBridges: Received from client: %v", in)
+	// check required fields
+	if err := fieldbehavior.ValidateRequiredFields(in); err != nil {
+		log.Printf("error: %v", err)
+		return nil, err
+	}
+	token := ""
+	Blobarray := []*pb.LogicalBridge{}
+	for _, bridge := range s.Bridges {
+		r := protoClone(bridge)
+		r.Status = &pb.LogicalBridgeStatus{OperStatus: pb.LBOperStatus_LB_OPER_STATUS_UP}
+		Blobarray = append(Blobarray, r)
+	}
+	// TODO: Limit results to offset and size and rememeber pagination
+	sortLogicalBridges(Blobarray)
+	return &pb.ListLogicalBridgesResponse{LogicalBridges: Blobarray, NextPageToken: token}, nil
 }

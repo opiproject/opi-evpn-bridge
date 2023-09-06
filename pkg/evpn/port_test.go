@@ -40,6 +40,13 @@ var (
 			LogicalBridges: []string{testLogicalBridgeName},
 		},
 	}
+	testBridgePortWithStatus = pb.BridgePort{
+		Name: testBridgePortName,
+		Spec: testBridgePort.Spec,
+		Status: &pb.BridgePortStatus{
+			OperStatus: pb.BPOperStatus_BP_OPER_STATUS_UP,
+		},
+	}
 )
 
 func Test_CreateBridgePort(t *testing.T) {
@@ -263,14 +270,9 @@ func Test_CreateBridgePort(t *testing.T) {
 			},
 		},
 		"successful call": {
-			id: testBridgePortID,
-			in: &testBridgePort,
-			out: &pb.BridgePort{
-				Spec: testBridgePort.Spec,
-				Status: &pb.BridgePortStatus{
-					OperStatus: pb.BPOperStatus_BP_OPER_STATUS_UP,
-				},
-			},
+			id:      testBridgePortID,
+			in:      &testBridgePort,
+			out:     &testBridgePortWithStatus,
 			errCode: codes.OK,
 			errMsg:  "",
 			exist:   false,
@@ -649,6 +651,75 @@ func Test_GetBridgePort(t *testing.T) {
 			response, err := client.GetBridgePort(ctx, request)
 			if !proto.Equal(tt.out, response) {
 				t.Error("response: expected", tt.out, "received", response)
+			}
+
+			if er, ok := status.FromError(err); ok {
+				if er.Code() != tt.errCode {
+					t.Error("error code: expected", tt.errCode, "received", er.Code())
+				}
+				if er.Message() != tt.errMsg {
+					t.Error("error message: expected", tt.errMsg, "received", er.Message())
+				}
+			} else {
+				t.Error("expected grpc error status")
+			}
+		})
+	}
+}
+
+func Test_ListBridgePorts(t *testing.T) {
+	tests := map[string]struct {
+		in      string
+		out     []*pb.BridgePort
+		errCode codes.Code
+		errMsg  string
+		size    int32
+		token   string
+	}{
+		"example test": {
+			in:      "",
+			out:     []*pb.BridgePort{&testBridgePortWithStatus},
+			errCode: codes.OK,
+			errMsg:  "",
+			size:    0,
+			token:   "",
+		},
+	}
+
+	// run tests
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			// start GRPC mockup server
+			ctx := context.Background()
+			mockNetlink := mocks.NewNetlink(t)
+			opi := NewServerWithArgs(mockNetlink)
+			conn, err := grpc.DialContext(ctx,
+				"",
+				grpc.WithTransportCredentials(insecure.NewCredentials()),
+				grpc.WithContextDialer(dialer(opi)))
+			if err != nil {
+				log.Fatal(err)
+			}
+			defer func(conn *grpc.ClientConn) {
+				err := conn.Close()
+				if err != nil {
+					log.Fatal(err)
+				}
+			}(conn)
+			client := pb.NewBridgePortServiceClient(conn)
+
+			opi.Ports[testBridgePortName] = protoClone(&testBridgePort)
+			opi.Ports[testBridgePortName].Name = testBridgePortName
+
+			request := &pb.ListBridgePortsRequest{PageSize: tt.size, PageToken: tt.token}
+			response, err := client.ListBridgePorts(ctx, request)
+			if !equalProtoSlices(response.GetBridgePorts(), tt.out) {
+				t.Error("response: expected", tt.out, "received", response.GetBridgePorts())
+			}
+
+			// Empty NextPageToken indicates end of results list
+			if tt.size != 1 && response.GetNextPageToken() != "" {
+				t.Error("Expected end of results, received non-empty next page token", response.GetNextPageToken())
 			}
 
 			if er, ok := status.FromError(err); ok {
