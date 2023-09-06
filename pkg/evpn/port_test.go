@@ -262,6 +262,31 @@ func Test_CreateBridgePort(t *testing.T) {
 				mockNetlink.EXPECT().LinkSetUp(iface).Return(errors.New(errMsg)).Once()
 			},
 		},
+		"successful call": {
+			id: testBridgePortID,
+			in: &testBridgePort,
+			out: &pb.BridgePort{
+				Spec: testBridgePort.Spec,
+				Status: &pb.BridgePortStatus{
+					OperStatus: pb.BPOperStatus_BP_OPER_STATUS_UP,
+				},
+			},
+			errCode: codes.OK,
+			errMsg:  "",
+			exist:   false,
+			on: func(mockNetlink *mocks.Netlink, errMsg string) {
+				bridge := &netlink.Bridge{LinkAttrs: netlink.LinkAttrs{Name: tenantbridgeName}}
+				mockNetlink.EXPECT().LinkByName(tenantbridgeName).Return(bridge, nil).Once()
+				iface := &netlink.Dummy{LinkAttrs: netlink.LinkAttrs{Name: testBridgePortID}}
+				mockNetlink.EXPECT().LinkByName(testBridgePortID).Return(iface, nil).Once()
+				mac := net.HardwareAddr(testBridgePort.Spec.MacAddress[:])
+				mockNetlink.EXPECT().LinkSetHardwareAddr(iface, mac).Return(nil).Once()
+				mockNetlink.EXPECT().LinkSetMaster(iface, bridge).Return(nil).Once()
+				vid := uint16(testLogicalBridge.Spec.VlanId)
+				mockNetlink.EXPECT().BridgeVlanAdd(iface, vid, false, false, false, false).Return(nil).Once()
+				mockNetlink.EXPECT().LinkSetUp(iface).Return(nil).Once()
+			},
+		},
 	}
 
 	// run tests
@@ -327,20 +352,15 @@ func Test_DeleteBridgePort(t *testing.T) {
 		errCode codes.Code
 		errMsg  string
 		missing bool
+		on      func(mockNetlink *mocks.Netlink, errMsg string)
 	}{
-		// "valid request": {
-		// 	in: testBridgePortID,
-		// 	out: &emptypb.Empty{},
-		// 	errCode: codes.OK,
-		// 	errMsg: "",
-		// 	missing: false,
-		// },
 		"valid request with unknown key": {
 			in:      "unknown-id",
 			out:     nil,
 			errCode: codes.NotFound,
 			errMsg:  fmt.Sprintf("unable to find key %v", resourceIDToFullName("ports", "unknown-id")),
 			missing: false,
+			on:      nil,
 		},
 		"unknown key with missing allowed": {
 			in:      "unknown-id",
@@ -348,6 +368,7 @@ func Test_DeleteBridgePort(t *testing.T) {
 			errCode: codes.OK,
 			errMsg:  "",
 			missing: true,
+			on:      nil,
 		},
 		"malformed name": {
 			in:      "-ABC-DEF",
@@ -355,6 +376,73 @@ func Test_DeleteBridgePort(t *testing.T) {
 			errCode: codes.Unknown,
 			errMsg:  fmt.Sprintf("segment '%s': not a valid DNS name", "-ABC-DEF"),
 			missing: false,
+			on:      nil,
+		},
+		"failed LinkByName call": {
+			in:      testBridgePortID,
+			out:     &emptypb.Empty{},
+			errCode: codes.NotFound,
+			errMsg:  fmt.Sprintf("unable to find key %v", testBridgePortID),
+			missing: false,
+			on: func(mockNetlink *mocks.Netlink, errMsg string) {
+				mockNetlink.EXPECT().LinkByName(testBridgePortID).Return(nil, errors.New(errMsg)).Once()
+			},
+		},
+		"failed LinkSetDown call": {
+			in:      testBridgePortID,
+			out:     &emptypb.Empty{},
+			errCode: codes.Unknown,
+			errMsg:  "Failed to call LinkSetDown",
+			missing: false,
+			on: func(mockNetlink *mocks.Netlink, errMsg string) {
+				iface := &netlink.Dummy{LinkAttrs: netlink.LinkAttrs{Name: testBridgePortID}}
+				mockNetlink.EXPECT().LinkByName(testBridgePortID).Return(iface, nil).Once()
+				mockNetlink.EXPECT().LinkSetDown(iface).Return(errors.New(errMsg)).Once()
+			},
+		},
+		"failed BridgeVlanDel call": {
+			in:      testBridgePortID,
+			out:     &emptypb.Empty{},
+			errCode: codes.Unknown,
+			errMsg:  "Failed to call BridgeVlanDel",
+			missing: false,
+			on: func(mockNetlink *mocks.Netlink, errMsg string) {
+				iface := &netlink.Dummy{LinkAttrs: netlink.LinkAttrs{Name: testBridgePortID}}
+				mockNetlink.EXPECT().LinkByName(testBridgePortID).Return(iface, nil).Once()
+				mockNetlink.EXPECT().LinkSetDown(iface).Return(nil).Once()
+				vid := uint16(testLogicalBridge.Spec.VlanId)
+				mockNetlink.EXPECT().BridgeVlanDel(iface, vid, true, true, false, false).Return(errors.New(errMsg)).Once()
+			},
+		},
+		"failed LinkDel call": {
+			in:      testBridgePortID,
+			out:     &emptypb.Empty{},
+			errCode: codes.Unknown,
+			errMsg:  "Failed to call LinkDel",
+			missing: false,
+			on: func(mockNetlink *mocks.Netlink, errMsg string) {
+				iface := &netlink.Dummy{LinkAttrs: netlink.LinkAttrs{Name: testBridgePortID}}
+				mockNetlink.EXPECT().LinkByName(testBridgePortID).Return(iface, nil).Once()
+				mockNetlink.EXPECT().LinkSetDown(iface).Return(nil).Once()
+				vid := uint16(testLogicalBridge.Spec.VlanId)
+				mockNetlink.EXPECT().BridgeVlanDel(iface, vid, true, true, false, false).Return(nil).Once()
+				mockNetlink.EXPECT().LinkDel(iface).Return(errors.New(errMsg)).Once()
+			},
+		},
+		"successful call": {
+			in:      testBridgePortID,
+			out:     &emptypb.Empty{},
+			errCode: codes.OK,
+			errMsg:  "",
+			missing: false,
+			on: func(mockNetlink *mocks.Netlink, errMsg string) {
+				iface := &netlink.Dummy{LinkAttrs: netlink.LinkAttrs{Name: testBridgePortID}}
+				mockNetlink.EXPECT().LinkByName(testBridgePortID).Return(iface, nil).Once()
+				mockNetlink.EXPECT().LinkSetDown(iface).Return(nil).Once()
+				vid := uint16(testLogicalBridge.Spec.VlanId)
+				mockNetlink.EXPECT().BridgeVlanDel(iface, vid, true, true, false, false).Return(nil).Once()
+				mockNetlink.EXPECT().LinkDel(iface).Return(nil).Once()
+			},
 		},
 	}
 
@@ -383,6 +471,11 @@ func Test_DeleteBridgePort(t *testing.T) {
 			fname1 := resourceIDToFullName("ports", tt.in)
 			opi.Ports[testBridgePortName] = protoClone(&testBridgePort)
 			opi.Ports[testBridgePortName].Name = testBridgePortName
+			opi.Bridges[testLogicalBridgeName] = protoClone(&testLogicalBridge)
+			opi.Bridges[testLogicalBridgeName].Name = testLogicalBridgeName
+			if tt.on != nil {
+				tt.on(mockNetlink, tt.errMsg)
+			}
 
 			request := &pb.DeleteBridgePortRequest{Name: fname1, AllowMissing: tt.missing}
 			response, err := client.DeleteBridgePort(ctx, request)
