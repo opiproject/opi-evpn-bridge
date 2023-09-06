@@ -223,19 +223,7 @@ func Test_CreateLogicalBridge(t *testing.T) {
 			id: testLogicalBridgeID,
 			in: &testLogicalBridge,
 			out: &pb.LogicalBridge{
-				Spec: &pb.LogicalBridgeSpec{
-					Vni:    proto.Uint32(11),
-					VlanId: 22,
-					VtepIpPrefix: &pc.IPPrefix{
-						Addr: &pc.IPAddress{
-							Af: pc.IpAf_IP_AF_INET,
-							V4OrV6: &pc.IPAddress_V4Addr{
-								V4Addr: 167772162,
-							},
-						},
-						Len: 24,
-					},
-				},
+				Spec: testLogicalBridge.Spec,
 				Status: &pb.LogicalBridgeStatus{
 					OperStatus: pb.LBOperStatus_LB_OPER_STATUS_UP,
 				},
