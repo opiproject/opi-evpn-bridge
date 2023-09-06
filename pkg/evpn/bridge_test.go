@@ -215,7 +215,8 @@ func Test_CreateLogicalBridge(t *testing.T) {
 				mockNetlink.EXPECT().LinkAdd(vxlan).Return(nil).Once()
 				mockNetlink.EXPECT().LinkSetMaster(vxlan, bridge).Return(nil).Once()
 				mockNetlink.EXPECT().LinkSetUp(vxlan).Return(nil).Once()
-				mockNetlink.EXPECT().BridgeVlanAdd(vxlan, uint16(testLogicalBridge.Spec.VlanId), true, true, false, false).Return(errors.New(errMsg)).Once()
+				vid := uint16(testLogicalBridge.Spec.VlanId)
+				mockNetlink.EXPECT().BridgeVlanAdd(vxlan, vid, true, true, false, false).Return(errors.New(errMsg)).Once()
 			},
 		},
 		"successful call": {
@@ -252,7 +253,8 @@ func Test_CreateLogicalBridge(t *testing.T) {
 				mockNetlink.EXPECT().LinkAdd(vxlan).Return(nil).Once()
 				mockNetlink.EXPECT().LinkSetMaster(vxlan, bridge).Return(nil).Once()
 				mockNetlink.EXPECT().LinkSetUp(vxlan).Return(nil).Once()
-				mockNetlink.EXPECT().BridgeVlanAdd(vxlan, uint16(testLogicalBridge.Spec.VlanId), true, true, false, false).Return(nil).Once()
+				vid := uint16(testLogicalBridge.Spec.VlanId)
+				mockNetlink.EXPECT().BridgeVlanAdd(vxlan, vid, true, true, false, false).Return(nil).Once()
 			},
 		},
 	}
@@ -318,20 +320,15 @@ func Test_DeleteLogicalBridge(t *testing.T) {
 		errCode codes.Code
 		errMsg  string
 		missing bool
+		on      func(mockNetlink *mocks.Netlink, errMsg string)
 	}{
-		// "valid request": {
-		// 	in: testLogicalBridgeID,
-		// 	out: &emptypb.Empty{},
-		// 	codes.OK,
-		// 	"",
-		// 	false,
-		// },
 		"valid request with unknown key": {
 			in:      "unknown-id",
 			out:     nil,
 			errCode: codes.NotFound,
 			errMsg:  fmt.Sprintf("unable to find key %v", resourceIDToFullName("bridges", "unknown-id")),
 			missing: false,
+			on:      nil,
 		},
 		"unknown key with missing allowed": {
 			in:      "unknown-id",
@@ -339,6 +336,7 @@ func Test_DeleteLogicalBridge(t *testing.T) {
 			errCode: codes.OK,
 			errMsg:  "",
 			missing: true,
+			on:      nil,
 		},
 		"malformed name": {
 			in:      "-ABC-DEF",
@@ -346,6 +344,86 @@ func Test_DeleteLogicalBridge(t *testing.T) {
 			errCode: codes.Unknown,
 			errMsg:  fmt.Sprintf("segment '%s': not a valid DNS name", "-ABC-DEF"),
 			missing: false,
+			on:      nil,
+		},
+		"failed LinkByName call": {
+			in:      testLogicalBridgeID,
+			out:     &emptypb.Empty{},
+			errCode: codes.NotFound,
+			errMsg:  fmt.Sprintf("unable to find key %v", "vni11"),
+			missing: false,
+			on: func(mockNetlink *mocks.Netlink, errMsg string) {
+				vxlanName := fmt.Sprintf("vni%d", *testLogicalBridge.Spec.Vni)
+				mockNetlink.EXPECT().LinkByName(vxlanName).Return(nil, errors.New(errMsg)).Once()
+			},
+		},
+		"failed LinkSetDown call": {
+			in:      testLogicalBridgeID,
+			out:     &emptypb.Empty{},
+			errCode: codes.Unknown,
+			errMsg:  "Failed to call LinkSetDown",
+			missing: false,
+			on: func(mockNetlink *mocks.Netlink, errMsg string) {
+				myip := make(net.IP, 4)
+				binary.BigEndian.PutUint32(myip, 167772162)
+				vxlanName := fmt.Sprintf("vni%d", *testLogicalBridge.Spec.Vni)
+				vxlan := &netlink.Vxlan{LinkAttrs: netlink.LinkAttrs{Name: vxlanName}, VxlanId: int(*testLogicalBridge.Spec.Vni), Port: 4789, Learning: false, SrcAddr: myip}
+				mockNetlink.EXPECT().LinkByName(vxlanName).Return(vxlan, nil).Once()
+				mockNetlink.EXPECT().LinkSetDown(vxlan).Return(errors.New(errMsg)).Once()
+			},
+		},
+		"failed BridgeVlanDel call": {
+			in:      testLogicalBridgeID,
+			out:     &emptypb.Empty{},
+			errCode: codes.Unknown,
+			errMsg:  "Failed to call BridgeVlanDel",
+			missing: false,
+			on: func(mockNetlink *mocks.Netlink, errMsg string) {
+				myip := make(net.IP, 4)
+				binary.BigEndian.PutUint32(myip, 167772162)
+				vxlanName := fmt.Sprintf("vni%d", *testLogicalBridge.Spec.Vni)
+				vxlan := &netlink.Vxlan{LinkAttrs: netlink.LinkAttrs{Name: vxlanName}, VxlanId: int(*testLogicalBridge.Spec.Vni), Port: 4789, Learning: false, SrcAddr: myip}
+				mockNetlink.EXPECT().LinkByName(vxlanName).Return(vxlan, nil).Once()
+				mockNetlink.EXPECT().LinkSetDown(vxlan).Return(nil).Once()
+				vid := uint16(testLogicalBridge.Spec.VlanId)
+				mockNetlink.EXPECT().BridgeVlanDel(vxlan, vid, true, true, false, false).Return(errors.New(errMsg)).Once()
+			},
+		},
+		"failed LinkDel call": {
+			in:      testLogicalBridgeID,
+			out:     &emptypb.Empty{},
+			errCode: codes.Unknown,
+			errMsg:  "Failed to call LinkDel",
+			missing: false,
+			on: func(mockNetlink *mocks.Netlink, errMsg string) {
+				myip := make(net.IP, 4)
+				binary.BigEndian.PutUint32(myip, 167772162)
+				vxlanName := fmt.Sprintf("vni%d", *testLogicalBridge.Spec.Vni)
+				vxlan := &netlink.Vxlan{LinkAttrs: netlink.LinkAttrs{Name: vxlanName}, VxlanId: int(*testLogicalBridge.Spec.Vni), Port: 4789, Learning: false, SrcAddr: myip}
+				mockNetlink.EXPECT().LinkByName(vxlanName).Return(vxlan, nil).Once()
+				mockNetlink.EXPECT().LinkSetDown(vxlan).Return(nil).Once()
+				vid := uint16(testLogicalBridge.Spec.VlanId)
+				mockNetlink.EXPECT().BridgeVlanDel(vxlan, vid, true, true, false, false).Return(nil).Once()
+				mockNetlink.EXPECT().LinkDel(vxlan).Return(errors.New(errMsg)).Once()
+			},
+		},
+		"successful call": {
+			in:      testLogicalBridgeID,
+			out:     &emptypb.Empty{},
+			errCode: codes.OK,
+			errMsg:  "",
+			missing: false,
+			on: func(mockNetlink *mocks.Netlink, errMsg string) {
+				myip := make(net.IP, 4)
+				binary.BigEndian.PutUint32(myip, 167772162)
+				vxlanName := fmt.Sprintf("vni%d", *testLogicalBridge.Spec.Vni)
+				vxlan := &netlink.Vxlan{LinkAttrs: netlink.LinkAttrs{Name: vxlanName}, VxlanId: int(*testLogicalBridge.Spec.Vni), Port: 4789, Learning: false, SrcAddr: myip}
+				mockNetlink.EXPECT().LinkByName(vxlanName).Return(vxlan, nil).Once()
+				mockNetlink.EXPECT().LinkSetDown(vxlan).Return(nil).Once()
+				vid := uint16(testLogicalBridge.Spec.VlanId)
+				mockNetlink.EXPECT().BridgeVlanDel(vxlan, vid, true, true, false, false).Return(nil).Once()
+				mockNetlink.EXPECT().LinkDel(vxlan).Return(nil).Once()
+			},
 		},
 	}
 
@@ -373,6 +451,10 @@ func Test_DeleteLogicalBridge(t *testing.T) {
 
 			fname1 := resourceIDToFullName("bridges", tt.in)
 			opi.Bridges[testLogicalBridgeName] = protoClone(&testLogicalBridge)
+
+			if tt.on != nil {
+				tt.on(mockNetlink, tt.errMsg)
+			}
 
 			request := &pb.DeleteLogicalBridgeRequest{Name: fname1, AllowMissing: tt.missing}
 			response, err := client.DeleteLogicalBridge(ctx, request)
