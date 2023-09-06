@@ -12,6 +12,7 @@ import (
 	"log"
 	"net"
 	"path"
+	"sort"
 
 	"github.com/vishvananda/netlink"
 
@@ -25,6 +26,12 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
+
+func sortSvis(svis []*pb.Svi) {
+	sort.Slice(svis, func(i int, j int) bool {
+		return svis[i].Name < svis[j].Name
+	})
+}
 
 // CreateSvi executes the creation of the VLAN
 func (s *Server) CreateSvi(_ context.Context, in *pb.CreateSviRequest) (*pb.Svi, error) {
@@ -294,4 +301,24 @@ func (s *Server) GetSvi(_ context.Context, in *pb.GetSviRequest) (*pb.Svi, error
 	}
 	// TODO
 	return &pb.Svi{Name: in.Name, Spec: &pb.SviSpec{MacAddress: obj.Spec.MacAddress, EnableBgp: obj.Spec.EnableBgp, RemoteAs: obj.Spec.RemoteAs}, Status: &pb.SviStatus{OperStatus: pb.SVIOperStatus_SVI_OPER_STATUS_UP}}, nil
+}
+
+// ListSvis lists logical bridges
+func (s *Server) ListSvis(_ context.Context, in *pb.ListSvisRequest) (*pb.ListSvisResponse, error) {
+	log.Printf("ListSvis: Received from client: %v", in)
+	// check required fields
+	if err := fieldbehavior.ValidateRequiredFields(in); err != nil {
+		log.Printf("error: %v", err)
+		return nil, err
+	}
+	token := ""
+	Blobarray := []*pb.Svi{}
+	for _, svi := range s.Svis {
+		r := protoClone(svi)
+		r.Status = &pb.SviStatus{OperStatus: pb.SVIOperStatus_SVI_OPER_STATUS_UP}
+		Blobarray = append(Blobarray, r)
+	}
+	// TODO: Limit results to offset and size and rememeber pagination
+	sortSvis(Blobarray)
+	return &pb.ListSvisResponse{Svis: Blobarray, NextPageToken: token}, nil
 }

@@ -276,6 +276,11 @@ services:
       /entrypoint.sh call --json_input --json_output localhost:50151 GetSvi               "{\"name\" : \"//network.opiproject.org/svis/yellow-vlan50\" }" && \
       /entrypoint.sh call --json_input --json_output localhost:50151 GetBridgePort        "{\"name\" : \"//network.opiproject.org/ports/eth1\" }" && \
       /entrypoint.sh call --json_input --json_output localhost:50151 GetBridgePort        "{\"name\" : \"//network.opiproject.org/ports/eth2\" }" && \
+      echo list && \
+      /entrypoint.sh call --json_input --json_output localhost:50151 ListVrfs             "{}" && \
+      /entrypoint.sh call --json_input --json_output localhost:50151 ListLogicalBridges   "{}" && \
+      /entrypoint.sh call --json_input --json_output localhost:50151 ListSvis             "{}" && \
+      /entrypoint.sh call --json_input --json_output localhost:50151 ListBridgePorts      "{}" && \
       echo done'
 
   host2-leaf2:

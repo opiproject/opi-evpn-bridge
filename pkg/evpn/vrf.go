@@ -13,6 +13,7 @@ import (
 	"math"
 	"net"
 	"path"
+	"sort"
 
 	"github.com/vishvananda/netlink"
 
@@ -26,6 +27,12 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
+
+func sortVrfs(vrfs []*pb.Vrf) {
+	sort.Slice(vrfs, func(i int, j int) bool {
+		return vrfs[i].Name < vrfs[j].Name
+	})
+}
 
 // CreateVrf executes the creation of the VRF
 func (s *Server) CreateVrf(_ context.Context, in *pb.CreateVrfRequest) (*pb.Vrf, error) {
@@ -309,4 +316,24 @@ func (s *Server) GetVrf(_ context.Context, in *pb.GetVrfRequest) (*pb.Vrf, error
 	}
 	// TODO
 	return &pb.Vrf{Name: in.Name, Spec: &pb.VrfSpec{Vni: obj.Spec.Vni}, Status: &pb.VrfStatus{LocalAs: 77}}, nil
+}
+
+// ListVrfs lists logical bridges
+func (s *Server) ListVrfs(_ context.Context, in *pb.ListVrfsRequest) (*pb.ListVrfsResponse, error) {
+	log.Printf("ListVrfs: Received from client: %v", in)
+	// check required fields
+	if err := fieldbehavior.ValidateRequiredFields(in); err != nil {
+		log.Printf("error: %v", err)
+		return nil, err
+	}
+	token := ""
+	Blobarray := []*pb.Vrf{}
+	for _, vrf := range s.Vrfs {
+		r := protoClone(vrf)
+		r.Status = &pb.VrfStatus{LocalAs: 4}
+		Blobarray = append(Blobarray, r)
+	}
+	// TODO: fetch object from the database
+	sortVrfs(Blobarray)
+	return &pb.ListVrfsResponse{Vrfs: Blobarray, NextPageToken: token}, nil
 }
