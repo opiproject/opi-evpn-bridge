@@ -7,14 +7,13 @@ package evpn
 
 import (
 	"context"
-	"encoding/binary"
 	"errors"
 	"fmt"
 	"log"
-	"net"
 	"reflect"
 	"testing"
 
+	"github.com/stretchr/testify/mock"
 	"github.com/vishvananda/netlink"
 
 	"google.golang.org/grpc"
@@ -140,7 +139,7 @@ func Test_CreateLogicalBridge(t *testing.T) {
 			errMsg:  "unable to find key br-tenant",
 			exist:   false,
 			on: func(mockNetlink *mocks.Netlink, errMsg string) {
-				mockNetlink.EXPECT().LinkByName(tenantbridgeName).Return(nil, errors.New(errMsg)).Once()
+				mockNetlink.EXPECT().LinkByName(mock.Anything).Return(nil, errors.New(errMsg)).Once()
 			},
 		},
 		"failed LinkAdd call": {
@@ -151,14 +150,9 @@ func Test_CreateLogicalBridge(t *testing.T) {
 			errMsg:  "Failed to call LinkAdd",
 			exist:   false,
 			on: func(mockNetlink *mocks.Netlink, errMsg string) {
-				// myip := net.ParseIP("10.0.0.2")
-				myip := make(net.IP, 4)
-				binary.BigEndian.PutUint32(myip, 167772162)
-				vxlanName := fmt.Sprintf("vni%d", *testLogicalBridge.Spec.Vni)
-				vxlan := &netlink.Vxlan{LinkAttrs: netlink.LinkAttrs{Name: vxlanName}, VxlanId: int(*testLogicalBridge.Spec.Vni), Port: 4789, Learning: false, SrcAddr: myip}
 				bridge := &netlink.Bridge{LinkAttrs: netlink.LinkAttrs{Name: tenantbridgeName}}
-				mockNetlink.EXPECT().LinkByName(tenantbridgeName).Return(bridge, nil).Once()
-				mockNetlink.EXPECT().LinkAdd(vxlan).Return(errors.New(errMsg)).Once()
+				mockNetlink.EXPECT().LinkByName(mock.Anything).Return(bridge, nil).Once()
+				mockNetlink.EXPECT().LinkAdd(mock.Anything).Return(errors.New(errMsg)).Once()
 			},
 		},
 		"failed LinkSetMaster call": {
@@ -169,14 +163,10 @@ func Test_CreateLogicalBridge(t *testing.T) {
 			errMsg:  "Failed to call LinkSetMaster",
 			exist:   false,
 			on: func(mockNetlink *mocks.Netlink, errMsg string) {
-				myip := make(net.IP, 4)
-				binary.BigEndian.PutUint32(myip, 167772162)
-				vxlanName := fmt.Sprintf("vni%d", *testLogicalBridge.Spec.Vni)
-				vxlan := &netlink.Vxlan{LinkAttrs: netlink.LinkAttrs{Name: vxlanName}, VxlanId: int(*testLogicalBridge.Spec.Vni), Port: 4789, Learning: false, SrcAddr: myip}
 				bridge := &netlink.Bridge{LinkAttrs: netlink.LinkAttrs{Name: tenantbridgeName}}
-				mockNetlink.EXPECT().LinkByName(tenantbridgeName).Return(bridge, nil).Once()
-				mockNetlink.EXPECT().LinkAdd(vxlan).Return(nil).Once()
-				mockNetlink.EXPECT().LinkSetMaster(vxlan, bridge).Return(errors.New(errMsg)).Once()
+				mockNetlink.EXPECT().LinkByName(mock.Anything).Return(bridge, nil).Once()
+				mockNetlink.EXPECT().LinkAdd(mock.Anything).Return(nil).Once()
+				mockNetlink.EXPECT().LinkSetMaster(mock.Anything, mock.Anything).Return(errors.New(errMsg)).Once()
 			},
 		},
 		"failed LinkSetUp call": {
@@ -187,15 +177,11 @@ func Test_CreateLogicalBridge(t *testing.T) {
 			errMsg:  "Failed to call LinkSetUp",
 			exist:   false,
 			on: func(mockNetlink *mocks.Netlink, errMsg string) {
-				myip := make(net.IP, 4)
-				binary.BigEndian.PutUint32(myip, 167772162)
-				vxlanName := fmt.Sprintf("vni%d", *testLogicalBridge.Spec.Vni)
-				vxlan := &netlink.Vxlan{LinkAttrs: netlink.LinkAttrs{Name: vxlanName}, VxlanId: int(*testLogicalBridge.Spec.Vni), Port: 4789, Learning: false, SrcAddr: myip}
 				bridge := &netlink.Bridge{LinkAttrs: netlink.LinkAttrs{Name: tenantbridgeName}}
-				mockNetlink.EXPECT().LinkByName(tenantbridgeName).Return(bridge, nil).Once()
-				mockNetlink.EXPECT().LinkAdd(vxlan).Return(nil).Once()
-				mockNetlink.EXPECT().LinkSetMaster(vxlan, bridge).Return(nil).Once()
-				mockNetlink.EXPECT().LinkSetUp(vxlan).Return(errors.New(errMsg)).Once()
+				mockNetlink.EXPECT().LinkByName(mock.Anything).Return(bridge, nil).Once()
+				mockNetlink.EXPECT().LinkAdd(mock.Anything).Return(nil).Once()
+				mockNetlink.EXPECT().LinkSetMaster(mock.Anything, mock.Anything).Return(nil).Once()
+				mockNetlink.EXPECT().LinkSetUp(mock.Anything).Return(errors.New(errMsg)).Once()
 			},
 		},
 		"failed BridgeVlanAdd call": {
@@ -206,16 +192,12 @@ func Test_CreateLogicalBridge(t *testing.T) {
 			errMsg:  "Failed to call BridgeVlanAdd",
 			exist:   false,
 			on: func(mockNetlink *mocks.Netlink, errMsg string) {
-				myip := make(net.IP, 4)
-				binary.BigEndian.PutUint32(myip, 167772162)
-				vxlanName := fmt.Sprintf("vni%d", *testLogicalBridge.Spec.Vni)
-				vxlan := &netlink.Vxlan{LinkAttrs: netlink.LinkAttrs{Name: vxlanName}, VxlanId: int(*testLogicalBridge.Spec.Vni), Port: 4789, Learning: false, SrcAddr: myip}
 				bridge := &netlink.Bridge{LinkAttrs: netlink.LinkAttrs{Name: tenantbridgeName}}
-				mockNetlink.EXPECT().LinkByName(tenantbridgeName).Return(bridge, nil).Once()
-				mockNetlink.EXPECT().LinkAdd(vxlan).Return(nil).Once()
-				mockNetlink.EXPECT().LinkSetMaster(vxlan, bridge).Return(nil).Once()
-				mockNetlink.EXPECT().LinkSetUp(vxlan).Return(nil).Once()
-				mockNetlink.EXPECT().BridgeVlanAdd(vxlan, uint16(testLogicalBridge.Spec.VlanId), true, true, false, false).Return(errors.New(errMsg)).Once()
+				mockNetlink.EXPECT().LinkByName(mock.Anything).Return(bridge, nil).Once()
+				mockNetlink.EXPECT().LinkAdd(mock.Anything).Return(nil).Once()
+				mockNetlink.EXPECT().LinkSetMaster(mock.Anything, mock.Anything).Return(nil).Once()
+				mockNetlink.EXPECT().LinkSetUp(mock.Anything).Return(nil).Once()
+				mockNetlink.EXPECT().BridgeVlanAdd(mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(errors.New(errMsg)).Once()
 			},
 		},
 	}

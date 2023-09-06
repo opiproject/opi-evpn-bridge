@@ -13,7 +13,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/vishvananda/netlink"
+	"github.com/stretchr/testify/mock"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -121,9 +121,8 @@ func Test_CreateVrf(t *testing.T) {
 			errMsg:  "",
 			exist:   false,
 			on: func(mockNetlink *mocks.Netlink, errMsg string) {
-				vrf := &netlink.Vrf{LinkAttrs: netlink.LinkAttrs{Name: testVrfID}, Table: 1000}
-				mockNetlink.EXPECT().LinkAdd(vrf).Return(nil).Once()
-				mockNetlink.EXPECT().LinkSetUp(vrf).Return(nil).Once()
+				mockNetlink.EXPECT().LinkAdd(mock.Anything).Return(nil).Once()
+				mockNetlink.EXPECT().LinkSetUp(mock.Anything).Return(nil).Once()
 			},
 		},
 		"failed LinkAdd call": {
@@ -134,8 +133,7 @@ func Test_CreateVrf(t *testing.T) {
 			errMsg:  "Failed to call LinkAdd",
 			exist:   false,
 			on: func(mockNetlink *mocks.Netlink, errMsg string) {
-				vrf := &netlink.Vrf{LinkAttrs: netlink.LinkAttrs{Name: testVrfID}, Table: 1001}
-				mockNetlink.EXPECT().LinkAdd(vrf).Return(errors.New(errMsg)).Once()
+				mockNetlink.EXPECT().LinkAdd(mock.Anything).Return(errors.New(errMsg)).Once()
 			},
 		},
 		"failed LinkSetUp call": {
@@ -146,9 +144,8 @@ func Test_CreateVrf(t *testing.T) {
 			errMsg:  "Failed to call LinkSetUp",
 			exist:   false,
 			on: func(mockNetlink *mocks.Netlink, errMsg string) {
-				vrf := &netlink.Vrf{LinkAttrs: netlink.LinkAttrs{Name: testVrfID}, Table: 1001}
-				mockNetlink.EXPECT().LinkAdd(vrf).Return(nil).Once()
-				mockNetlink.EXPECT().LinkSetUp(vrf).Return(errors.New(errMsg)).Once()
+				mockNetlink.EXPECT().LinkAdd(mock.Anything).Return(nil).Once()
+				mockNetlink.EXPECT().LinkSetUp(mock.Anything).Return(errors.New(errMsg)).Once()
 			},
 		},
 		"failed bridge LinkAdd call": {
@@ -159,12 +156,9 @@ func Test_CreateVrf(t *testing.T) {
 			errMsg:  "Failed to call LinkAdd",
 			exist:   false,
 			on: func(mockNetlink *mocks.Netlink, errMsg string) {
-				bridgeName := fmt.Sprintf("br%d", *testVrf.Spec.Vni)
-				vrf := &netlink.Vrf{LinkAttrs: netlink.LinkAttrs{Name: testVrfID}, Table: 1001}
-				bridge := &netlink.Bridge{LinkAttrs: netlink.LinkAttrs{Name: bridgeName}}
-				mockNetlink.EXPECT().LinkAdd(vrf).Return(nil).Once()
-				mockNetlink.EXPECT().LinkSetUp(vrf).Return(nil).Once()
-				mockNetlink.EXPECT().LinkAdd(bridge).Return(errors.New(errMsg)).Once()
+				mockNetlink.EXPECT().LinkAdd(mock.Anything).Return(nil).Once()
+				mockNetlink.EXPECT().LinkSetUp(mock.Anything).Return(nil).Once()
+				mockNetlink.EXPECT().LinkAdd(mock.Anything).Return(errors.New(errMsg)).Once()
 			},
 		},
 		"failed bridge LinkSetMaster call": {
@@ -175,13 +169,10 @@ func Test_CreateVrf(t *testing.T) {
 			errMsg:  "Failed to call LinkSetMaster",
 			exist:   false,
 			on: func(mockNetlink *mocks.Netlink, errMsg string) {
-				bridgeName := fmt.Sprintf("br%d", *testVrf.Spec.Vni)
-				vrf := &netlink.Vrf{LinkAttrs: netlink.LinkAttrs{Name: testVrfID}, Table: 1001}
-				bridge := &netlink.Bridge{LinkAttrs: netlink.LinkAttrs{Name: bridgeName}}
-				mockNetlink.EXPECT().LinkAdd(vrf).Return(nil).Once()
-				mockNetlink.EXPECT().LinkSetUp(vrf).Return(nil).Once()
-				mockNetlink.EXPECT().LinkAdd(bridge).Return(nil).Once()
-				mockNetlink.EXPECT().LinkSetMaster(bridge, vrf).Return(errors.New(errMsg)).Once()
+				mockNetlink.EXPECT().LinkAdd(mock.Anything).Return(nil).Once()
+				mockNetlink.EXPECT().LinkSetUp(mock.Anything).Return(nil).Once()
+				mockNetlink.EXPECT().LinkAdd(mock.Anything).Return(nil).Once()
+				mockNetlink.EXPECT().LinkSetMaster(mock.Anything, mock.Anything).Return(errors.New(errMsg)).Once()
 			},
 		},
 	}

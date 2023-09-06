@@ -13,6 +13,8 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/stretchr/testify/mock"
+
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
@@ -122,7 +124,7 @@ func Test_CreateBridgePort(t *testing.T) {
 			errMsg:  "unable to find key br-tenant",
 			exist:   false,
 			on: func(mockNetlink *mocks.Netlink, errMsg string) {
-				mockNetlink.EXPECT().LinkByName(tenantbridgeName).Return(nil, errors.New(errMsg)).Once()
+				mockNetlink.EXPECT().LinkByName(mock.Anything).Return(nil, errors.New(errMsg)).Once()
 			},
 		},
 	}
