@@ -10,8 +10,12 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net"
 	"reflect"
 	"testing"
+
+	"github.com/stretchr/testify/mock"
+	"github.com/vishvananda/netlink"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -33,7 +37,7 @@ var (
 		Spec: &pb.BridgePortSpec{
 			MacAddress:     []byte{0xCB, 0xB8, 0x33, 0x4C, 0x88, 0x4F},
 			Ptype:          pb.BridgePortType_TRUNK,
-			LogicalBridges: []string{"Japan", "Australia", "Germany"},
+			LogicalBridges: []string{testLogicalBridgeName},
 		},
 	}
 )
@@ -110,19 +114,152 @@ func Test_CreateBridgePort(t *testing.T) {
 			},
 			out:     nil,
 			errCode: codes.InvalidArgument,
-			errMsg:  fmt.Sprintf("ACCESS type must have single LogicalBridge and not (%d)", len(testBridgePort.Spec.LogicalBridges)),
+			errMsg:  fmt.Sprintf("ACCESS type must have single LogicalBridge and not (%d)", 3),
 			exist:   false,
 			on:      nil,
 		},
-		"failed LinkByName call": {
+		"failed LinkByName bridge call": {
 			id:      testBridgePortID,
 			in:      &testBridgePort,
 			out:     nil,
 			errCode: codes.NotFound,
-			errMsg:  "unable to find key br-tenant",
+			errMsg:  fmt.Sprintf("unable to find key %v", tenantbridgeName),
 			exist:   false,
 			on: func(mockNetlink *mocks.Netlink, errMsg string) {
 				mockNetlink.EXPECT().LinkByName(tenantbridgeName).Return(nil, errors.New(errMsg)).Once()
+			},
+		},
+		"failed LinkByName port call": {
+			id:      testBridgePortID,
+			in:      &testBridgePort,
+			out:     nil,
+			errCode: codes.NotFound,
+			errMsg:  fmt.Sprintf("unable to find key %v", testBridgePortID),
+			exist:   false,
+			on: func(mockNetlink *mocks.Netlink, errMsg string) {
+				bridge := &netlink.Bridge{LinkAttrs: netlink.LinkAttrs{Name: tenantbridgeName}}
+				mockNetlink.EXPECT().LinkByName(tenantbridgeName).Return(bridge, nil).Once()
+				mockNetlink.EXPECT().LinkByName(testBridgePortID).Return(nil, errors.New(errMsg)).Once()
+			},
+		},
+		"failed LinkSetHardwareAddr call": {
+			id:      testBridgePortID,
+			in:      &testBridgePort,
+			out:     nil,
+			errCode: codes.Unknown,
+			errMsg:  "Failed to call LinkSetHardwareAddr",
+			exist:   false,
+			on: func(mockNetlink *mocks.Netlink, errMsg string) {
+				bridge := &netlink.Bridge{LinkAttrs: netlink.LinkAttrs{Name: tenantbridgeName}}
+				mockNetlink.EXPECT().LinkByName(tenantbridgeName).Return(bridge, nil).Once()
+				iface := &netlink.Dummy{LinkAttrs: netlink.LinkAttrs{Name: testBridgePortID}}
+				mockNetlink.EXPECT().LinkByName(testBridgePortID).Return(iface, nil).Once()
+				mac := net.HardwareAddr(testBridgePort.Spec.MacAddress[:])
+				mockNetlink.EXPECT().LinkSetHardwareAddr(iface, mac).Return(errors.New(errMsg)).Once()
+			},
+		},
+		"failed bridge LinkSetMaster call": {
+			id:      testBridgePortID,
+			in:      &testBridgePort,
+			out:     nil,
+			errCode: codes.Unknown,
+			errMsg:  "Failed to call LinkSetMaster",
+			exist:   false,
+			on: func(mockNetlink *mocks.Netlink, errMsg string) {
+				bridge := &netlink.Bridge{LinkAttrs: netlink.LinkAttrs{Name: tenantbridgeName}}
+				mockNetlink.EXPECT().LinkByName(tenantbridgeName).Return(bridge, nil).Once()
+				iface := &netlink.Dummy{LinkAttrs: netlink.LinkAttrs{Name: testBridgePortID}}
+				mockNetlink.EXPECT().LinkByName(testBridgePortID).Return(iface, nil).Once()
+				mac := net.HardwareAddr(testBridgePort.Spec.MacAddress[:])
+				mockNetlink.EXPECT().LinkSetHardwareAddr(iface, mac).Return(nil).Once()
+				mockNetlink.EXPECT().LinkSetMaster(mock.Anything, mock.Anything).Return(errors.New(errMsg)).Once()
+			},
+		},
+		"missing bridges": {
+			id: testBridgePortID,
+			in: &pb.BridgePort{
+				Spec: &pb.BridgePortSpec{
+					MacAddress:     []byte{0xCB, 0xB8, 0x33, 0x4C, 0x88, 0x4F},
+					Ptype:          pb.BridgePortType_TRUNK,
+					LogicalBridges: []string{"Japan", "Australia", "Germany"},
+				},
+			},
+			out:     nil,
+			errCode: codes.NotFound,
+			errMsg:  fmt.Sprintf("unable to find key %v", "Japan"),
+			exist:   false,
+			on: func(mockNetlink *mocks.Netlink, errMsg string) {
+				bridge := &netlink.Bridge{LinkAttrs: netlink.LinkAttrs{Name: tenantbridgeName}}
+				mockNetlink.EXPECT().LinkByName(tenantbridgeName).Return(bridge, nil).Once()
+				iface := &netlink.Dummy{LinkAttrs: netlink.LinkAttrs{Name: testBridgePortID}}
+				mockNetlink.EXPECT().LinkByName(testBridgePortID).Return(iface, nil).Once()
+				mac := net.HardwareAddr(testBridgePort.Spec.MacAddress[:])
+				mockNetlink.EXPECT().LinkSetHardwareAddr(iface, mac).Return(nil).Once()
+				mockNetlink.EXPECT().LinkSetMaster(iface, bridge).Return(nil).Once()
+			},
+		},
+		"failed BridgeVlanAdd TRUNK call": {
+			id:      testBridgePortID,
+			in:      &testBridgePort,
+			out:     nil,
+			errCode: codes.Unknown,
+			errMsg:  "Failed to call BridgeVlanAdd",
+			exist:   false,
+			on: func(mockNetlink *mocks.Netlink, errMsg string) {
+				bridge := &netlink.Bridge{LinkAttrs: netlink.LinkAttrs{Name: tenantbridgeName}}
+				mockNetlink.EXPECT().LinkByName(tenantbridgeName).Return(bridge, nil).Once()
+				iface := &netlink.Dummy{LinkAttrs: netlink.LinkAttrs{Name: testBridgePortID}}
+				mockNetlink.EXPECT().LinkByName(testBridgePortID).Return(iface, nil).Once()
+				mac := net.HardwareAddr(testBridgePort.Spec.MacAddress[:])
+				mockNetlink.EXPECT().LinkSetHardwareAddr(iface, mac).Return(nil).Once()
+				mockNetlink.EXPECT().LinkSetMaster(iface, bridge).Return(nil).Once()
+				vid := uint16(testLogicalBridge.Spec.VlanId)
+				mockNetlink.EXPECT().BridgeVlanAdd(iface, vid, false, false, false, false).Return(errors.New(errMsg)).Once()
+			},
+		},
+		"failed BridgeVlanAdd ACCESS call": {
+			id: testBridgePortID,
+			in: &pb.BridgePort{
+				Spec: &pb.BridgePortSpec{
+					MacAddress:     []byte{0xCB, 0xB8, 0x33, 0x4C, 0x88, 0x4F},
+					Ptype:          pb.BridgePortType_ACCESS,
+					LogicalBridges: []string{testLogicalBridgeName},
+				},
+			},
+			out:     nil,
+			errCode: codes.Unknown,
+			errMsg:  "Failed to call BridgeVlanAdd",
+			exist:   false,
+			on: func(mockNetlink *mocks.Netlink, errMsg string) {
+				bridge := &netlink.Bridge{LinkAttrs: netlink.LinkAttrs{Name: tenantbridgeName}}
+				mockNetlink.EXPECT().LinkByName(tenantbridgeName).Return(bridge, nil).Once()
+				iface := &netlink.Dummy{LinkAttrs: netlink.LinkAttrs{Name: testBridgePortID}}
+				mockNetlink.EXPECT().LinkByName(testBridgePortID).Return(iface, nil).Once()
+				mac := net.HardwareAddr(testBridgePort.Spec.MacAddress[:])
+				mockNetlink.EXPECT().LinkSetHardwareAddr(iface, mac).Return(nil).Once()
+				mockNetlink.EXPECT().LinkSetMaster(iface, bridge).Return(nil).Once()
+				vid := uint16(testLogicalBridge.Spec.VlanId)
+				mockNetlink.EXPECT().BridgeVlanAdd(iface, vid, true, true, false, false).Return(errors.New(errMsg)).Once()
+			},
+		},
+		"failed LinkSetUp call": {
+			id:      testBridgePortID,
+			in:      &testBridgePort,
+			out:     nil,
+			errCode: codes.Unknown,
+			errMsg:  "Failed to call LinkSetUp",
+			exist:   false,
+			on: func(mockNetlink *mocks.Netlink, errMsg string) {
+				bridge := &netlink.Bridge{LinkAttrs: netlink.LinkAttrs{Name: tenantbridgeName}}
+				mockNetlink.EXPECT().LinkByName(tenantbridgeName).Return(bridge, nil).Once()
+				iface := &netlink.Dummy{LinkAttrs: netlink.LinkAttrs{Name: testBridgePortID}}
+				mockNetlink.EXPECT().LinkByName(testBridgePortID).Return(iface, nil).Once()
+				mac := net.HardwareAddr(testBridgePort.Spec.MacAddress[:])
+				mockNetlink.EXPECT().LinkSetHardwareAddr(iface, mac).Return(nil).Once()
+				mockNetlink.EXPECT().LinkSetMaster(iface, bridge).Return(nil).Once()
+				vid := uint16(testLogicalBridge.Spec.VlanId)
+				mockNetlink.EXPECT().BridgeVlanAdd(iface, vid, false, false, false, false).Return(nil).Once()
+				mockNetlink.EXPECT().LinkSetUp(iface).Return(errors.New(errMsg)).Once()
 			},
 		},
 	}
@@ -149,6 +286,7 @@ func Test_CreateBridgePort(t *testing.T) {
 			}(conn)
 			client := pb.NewBridgePortServiceClient(conn)
 
+			opi.Bridges[testLogicalBridgeName] = protoClone(&testLogicalBridge)
 			if tt.exist {
 				opi.Ports[testBridgePortName] = protoClone(&testBridgePort)
 				opi.Ports[testBridgePortName].Name = testBridgePortName

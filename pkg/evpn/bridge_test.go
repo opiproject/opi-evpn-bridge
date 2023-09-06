@@ -137,7 +137,7 @@ func Test_CreateLogicalBridge(t *testing.T) {
 			in:      &testLogicalBridge,
 			out:     nil,
 			errCode: codes.NotFound,
-			errMsg:  "unable to find key br-tenant",
+			errMsg:  fmt.Sprintf("unable to find key %v", tenantbridgeName),
 			exist:   false,
 			on: func(mockNetlink *mocks.Netlink, errMsg string) {
 				mockNetlink.EXPECT().LinkByName(tenantbridgeName).Return(nil, errors.New(errMsg)).Once()
