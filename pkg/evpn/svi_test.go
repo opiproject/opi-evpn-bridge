@@ -294,7 +294,9 @@ func Test_CreateSvi(t *testing.T) {
 				tt.on(mockNetlink, tt.errMsg)
 			}
 			opi.Vrfs[testVrfName] = protoClone(&testVrf)
+			opi.Vrfs[testVrfName].Name = testVrfName
 			opi.Bridges[testLogicalBridgeName] = protoClone(&testLogicalBridge)
+			opi.Bridges[testLogicalBridgeName].Name = testLogicalBridgeName
 
 			request := &pb.CreateSviRequest{Svi: tt.in, SviId: tt.id}
 			response, err := client.CreateSvi(ctx, request)
@@ -378,6 +380,7 @@ func Test_DeleteSvi(t *testing.T) {
 
 			fname1 := resourceIDToFullName("svis", tt.in)
 			opi.Svis[testSviName] = protoClone(&testSvi)
+			opi.Svis[testSviName].Name = testSviName
 
 			request := &pb.DeleteSviRequest{Name: fname1, AllowMissing: tt.missing}
 			response, err := client.DeleteSvi(ctx, request)
@@ -546,6 +549,7 @@ func Test_GetSvi(t *testing.T) {
 			client := pb.NewSviServiceClient(conn)
 
 			opi.Svis[testSviName] = protoClone(&testSvi)
+			opi.Svis[testSviName].Name = testSviName
 
 			request := &pb.GetSviRequest{Name: tt.in}
 			response, err := client.GetSvi(ctx, request)

@@ -287,6 +287,7 @@ func Test_CreateBridgePort(t *testing.T) {
 			client := pb.NewBridgePortServiceClient(conn)
 
 			opi.Bridges[testLogicalBridgeName] = protoClone(&testLogicalBridge)
+			opi.Bridges[testLogicalBridgeName].Name = testLogicalBridgeName
 			if tt.exist {
 				opi.Ports[testBridgePortName] = protoClone(&testBridgePort)
 				opi.Ports[testBridgePortName].Name = testBridgePortName
@@ -381,6 +382,7 @@ func Test_DeleteBridgePort(t *testing.T) {
 
 			fname1 := resourceIDToFullName("ports", tt.in)
 			opi.Ports[testBridgePortName] = protoClone(&testBridgePort)
+			opi.Ports[testBridgePortName].Name = testBridgePortName
 
 			request := &pb.DeleteBridgePortRequest{Name: fname1, AllowMissing: tt.missing}
 			response, err := client.DeleteBridgePort(ctx, request)
@@ -547,7 +549,8 @@ func Test_GetBridgePort(t *testing.T) {
 			}(conn)
 			client := pb.NewBridgePortServiceClient(conn)
 
-			opi.Ports[testBridgePortID] = protoClone(&testBridgePort)
+			opi.Ports[testBridgePortName] = protoClone(&testBridgePort)
+			opi.Ports[testBridgePortName].Name = testBridgePortName
 
 			request := &pb.GetBridgePortRequest{Name: tt.in}
 			response, err := client.GetBridgePort(ctx, request)

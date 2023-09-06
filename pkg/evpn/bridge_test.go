@@ -451,6 +451,7 @@ func Test_DeleteLogicalBridge(t *testing.T) {
 
 			fname1 := resourceIDToFullName("bridges", tt.in)
 			opi.Bridges[testLogicalBridgeName] = protoClone(&testLogicalBridge)
+			opi.Bridges[testLogicalBridgeName].Name = testLogicalBridgeName
 
 			if tt.on != nil {
 				tt.on(mockNetlink, tt.errMsg)
@@ -620,7 +621,8 @@ func Test_GetLogicalBridge(t *testing.T) {
 			}(conn)
 			client := pb.NewLogicalBridgeServiceClient(conn)
 
-			opi.Bridges[testLogicalBridgeID] = protoClone(&testLogicalBridge)
+			opi.Bridges[testLogicalBridgeName] = protoClone(&testLogicalBridge)
+			opi.Bridges[testLogicalBridgeName].Name = testLogicalBridgeName
 
 			request := &pb.GetLogicalBridgeRequest{Name: tt.in}
 			response, err := client.GetLogicalBridge(ctx, request)
