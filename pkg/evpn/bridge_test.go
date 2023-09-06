@@ -62,52 +62,52 @@ func Test_CreateLogicalBridge(t *testing.T) {
 		exist   bool
 	}{
 		"illegal resource_id": {
-			"CapitalLettersNotAllowed",
-			&testLogicalBridge,
-			nil,
-			codes.Unknown,
-			fmt.Sprintf("user-settable ID must only contain lowercase, numbers and hyphens (%v)", "got: 'C' in position 0"),
-			false,
+			id:      "CapitalLettersNotAllowed",
+			in:      &testLogicalBridge,
+			out:     nil,
+			errCode: codes.Unknown,
+			errMsg:  fmt.Sprintf("user-settable ID must only contain lowercase, numbers and hyphens (%v)", "got: 'C' in position 0"),
+			exist:   false,
 		},
 		"no required bridge field": {
-			testLogicalBridgeID,
-			nil,
-			nil,
-			codes.Unknown,
-			"missing required field: logical_bridge",
-			false,
+			id:      testLogicalBridgeID,
+			in:      nil,
+			out:     nil,
+			errCode: codes.Unknown,
+			errMsg:  "missing required field: logical_bridge",
+			exist:   false,
 		},
 		"no required vlan_id field": {
-			testLogicalBridgeID,
-			&pb.LogicalBridge{
+			id: testLogicalBridgeID,
+			in: &pb.LogicalBridge{
 				Spec: &pb.LogicalBridgeSpec{},
 			},
-			nil,
-			codes.Unknown,
-			"missing required field: logical_bridge.spec.vlan_id",
-			false,
+			out:     nil,
+			errCode: codes.Unknown,
+			errMsg:  "missing required field: logical_bridge.spec.vlan_id",
+			exist:   false,
 		},
 		"illegal VlanId": {
-			testLogicalBridgeID,
-			&pb.LogicalBridge{
+			id: testLogicalBridgeID,
+			in: &pb.LogicalBridge{
 				Spec: &pb.LogicalBridgeSpec{
 					Vni:    proto.Uint32(11),
 					VlanId: 4096,
 				},
 			},
-			nil,
-			codes.InvalidArgument,
-			fmt.Sprintf("VlanId value (%v) have to be between 1 and 4095", 4096),
-			false,
+			out:     nil,
+			errCode: codes.InvalidArgument,
+			errMsg:  fmt.Sprintf("VlanId value (%v) have to be between 1 and 4095", 4096),
+			exist:   false,
 		},
 		"empty vni": {
-			testLogicalBridgeID,
-			&pb.LogicalBridge{
+			id: testLogicalBridgeID,
+			in: &pb.LogicalBridge{
 				Spec: &pb.LogicalBridgeSpec{
 					VlanId: 11,
 				},
 			},
-			&pb.LogicalBridge{
+			out: &pb.LogicalBridge{
 				Spec: &pb.LogicalBridgeSpec{
 					VlanId: 11,
 				},
@@ -115,57 +115,57 @@ func Test_CreateLogicalBridge(t *testing.T) {
 					OperStatus: pb.LBOperStatus_LB_OPER_STATUS_UP,
 				},
 			},
-			codes.OK,
-			"",
-			false,
+			errCode: codes.OK,
+			errMsg:  "",
+			exist:   false,
 		},
 		"already exists": {
-			testLogicalBridgeID,
-			&testLogicalBridge,
-			&testLogicalBridge,
-			codes.OK,
-			"",
-			true,
+			id:      testLogicalBridgeID,
+			in:      &testLogicalBridge,
+			out:     &testLogicalBridge,
+			errCode: codes.OK,
+			errMsg:  "",
+			exist:   true,
 		},
 		"failed LinkByName call": {
-			testLogicalBridgeID,
-			&testLogicalBridge,
-			nil,
-			codes.NotFound,
-			"unable to find key br-tenant",
-			false,
+			id:      testLogicalBridgeID,
+			in:      &testLogicalBridge,
+			out:     nil,
+			errCode: codes.NotFound,
+			errMsg:  "unable to find key br-tenant",
+			exist:   false,
 		},
 		"failed LinkAdd call": {
-			testLogicalBridgeID,
-			&testLogicalBridge,
-			nil,
-			codes.Unknown,
-			"Failed to call LinkAdd",
-			false,
+			id:      testLogicalBridgeID,
+			in:      &testLogicalBridge,
+			out:     nil,
+			errCode: codes.Unknown,
+			errMsg:  "Failed to call LinkAdd",
+			exist:   false,
 		},
 		"failed LinkSetMaster call": {
-			testLogicalBridgeID,
-			&testLogicalBridge,
-			nil,
-			codes.Unknown,
-			"Failed to call LinkSetMaster",
-			false,
+			id:      testLogicalBridgeID,
+			in:      &testLogicalBridge,
+			out:     nil,
+			errCode: codes.Unknown,
+			errMsg:  "Failed to call LinkSetMaster",
+			exist:   false,
 		},
 		"failed LinkSetUp call": {
-			testLogicalBridgeID,
-			&testLogicalBridge,
-			nil,
-			codes.Unknown,
-			"Failed to call LinkSetUp",
-			false,
+			id:      testLogicalBridgeID,
+			in:      &testLogicalBridge,
+			out:     nil,
+			errCode: codes.Unknown,
+			errMsg:  "Failed to call LinkSetUp",
+			exist:   false,
 		},
 		"failed BridgeVlanAdd call": {
-			testLogicalBridgeID,
-			&testLogicalBridge,
-			nil,
-			codes.Unknown,
-			"Failed to call BridgeVlanAdd",
-			false,
+			id:      testLogicalBridgeID,
+			in:      &testLogicalBridge,
+			out:     nil,
+			errCode: codes.Unknown,
+			errMsg:  "Failed to call BridgeVlanAdd",
+			exist:   false,
 		},
 	}
 
@@ -273,32 +273,32 @@ func Test_DeleteLogicalBridge(t *testing.T) {
 		missing bool
 	}{
 		// "valid request": {
-		// 	testLogicalBridgeID,
-		// 	&emptypb.Empty{},
+		// 	in: testLogicalBridgeID,
+		// 	out: &emptypb.Empty{},
 		// 	codes.OK,
 		// 	"",
 		// 	false,
 		// },
 		"valid request with unknown key": {
-			"unknown-id",
-			nil,
-			codes.NotFound,
-			fmt.Sprintf("unable to find key %v", resourceIDToFullName("bridges", "unknown-id")),
-			false,
+			in:      "unknown-id",
+			out:     nil,
+			errCode: codes.NotFound,
+			errMsg:  fmt.Sprintf("unable to find key %v", resourceIDToFullName("bridges", "unknown-id")),
+			missing: false,
 		},
 		"unknown key with missing allowed": {
-			"unknown-id",
-			&emptypb.Empty{},
-			codes.OK,
-			"",
-			true,
+			in:      "unknown-id",
+			out:     &emptypb.Empty{},
+			errCode: codes.OK,
+			errMsg:  "",
+			missing: true,
 		},
 		"malformed name": {
-			"-ABC-DEF",
-			&emptypb.Empty{},
-			codes.Unknown,
-			fmt.Sprintf("segment '%s': not a valid DNS name", "-ABC-DEF"),
-			false,
+			in:      "-ABC-DEF",
+			out:     &emptypb.Empty{},
+			errCode: codes.Unknown,
+			errMsg:  fmt.Sprintf("segment '%s': not a valid DNS name", "-ABC-DEF"),
+			missing: false,
 		},
 	}
 
@@ -357,37 +357,34 @@ func Test_UpdateLogicalBridge(t *testing.T) {
 		mask    *fieldmaskpb.FieldMask
 		in      *pb.LogicalBridge
 		out     *pb.LogicalBridge
-		spdk    []string
 		errCode codes.Code
 		errMsg  string
 		start   bool
 		exist   bool
 	}{
 		"invalid fieldmask": {
-			&fieldmaskpb.FieldMask{Paths: []string{"*", "author"}},
-			&pb.LogicalBridge{
+			mask: &fieldmaskpb.FieldMask{Paths: []string{"*", "author"}},
+			in: &pb.LogicalBridge{
 				Name: testLogicalBridgeName,
 				Spec: spec,
 			},
-			nil,
-			[]string{""},
-			codes.Unknown,
-			fmt.Sprintf("invalid field path: %s", "'*' must not be used with other paths"),
-			false,
-			true,
+			out:     nil,
+			errCode: codes.Unknown,
+			errMsg:  fmt.Sprintf("invalid field path: %s", "'*' must not be used with other paths"),
+			start:   false,
+			exist:   true,
 		},
 		"valid request with unknown key": {
-			nil,
-			&pb.LogicalBridge{
+			mask: nil,
+			in: &pb.LogicalBridge{
 				Name: resourceIDToFullName("bridges", "unknown-id"),
 				Spec: spec,
 			},
-			nil,
-			[]string{""},
-			codes.NotFound,
-			fmt.Sprintf("unable to find key %v", resourceIDToFullName("bridges", "unknown-id")),
-			false,
-			true,
+			out:     nil,
+			errCode: codes.NotFound,
+			errMsg:  fmt.Sprintf("unable to find key %v", resourceIDToFullName("bridges", "unknown-id")),
+			start:   false,
+			exist:   true,
 		},
 	}
 
@@ -450,25 +447,25 @@ func Test_GetLogicalBridge(t *testing.T) {
 		errMsg  string
 	}{
 		// "valid request": {
-		// 	testLogicalBridgeID,
-		// 	&pb.LogicalBridge{
+		// 	in: testLogicalBridgeID,
+		// 	out: &pb.LogicalBridge{
 		// 		Name:      testLogicalBridgeName,
 		// 		Multipath: testLogicalBridge.Multipath,
 		// 	},
-		// 	codes.OK,
-		// 	"",
+		// 	errCode: codes.OK,
+		// 	errMsg: "",
 		// },
 		"valid request with unknown key": {
-			"unknown-id",
-			nil,
-			codes.NotFound,
-			fmt.Sprintf("unable to find key %v", "unknown-id"),
+			in:      "unknown-id",
+			out:     nil,
+			errCode: codes.NotFound,
+			errMsg:  fmt.Sprintf("unable to find key %v", "unknown-id"),
 		},
 		"malformed name": {
-			"-ABC-DEF",
-			nil,
-			codes.Unknown,
-			fmt.Sprintf("segment '%s': not a valid DNS name", "-ABC-DEF"),
+			in:      "-ABC-DEF",
+			out:     nil,
+			errCode: codes.Unknown,
+			errMsg:  fmt.Sprintf("segment '%s': not a valid DNS name", "-ABC-DEF"),
 		},
 	}
 

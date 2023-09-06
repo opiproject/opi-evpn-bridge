@@ -59,49 +59,49 @@ func Test_CreateVrf(t *testing.T) {
 		exist   bool
 	}{
 		"illegal resource_id": {
-			"CapitalLettersNotAllowed",
-			&testVrf,
-			nil,
-			codes.Unknown,
-			fmt.Sprintf("user-settable ID must only contain lowercase, numbers and hyphens (%v)", "got: 'C' in position 0"),
-			false,
+			id:      "CapitalLettersNotAllowed",
+			in:      &testVrf,
+			out:     nil,
+			errCode: codes.Unknown,
+			errMsg:  fmt.Sprintf("user-settable ID must only contain lowercase, numbers and hyphens (%v)", "got: 'C' in position 0"),
+			exist:   false,
 		},
 		"no required vrf field": {
-			testVrfID,
-			nil,
-			nil,
-			codes.Unknown,
-			"missing required field: vrf",
-			false,
+			id:      testVrfID,
+			in:      nil,
+			out:     nil,
+			errCode: codes.Unknown,
+			errMsg:  "missing required field: vrf",
+			exist:   false,
 		},
 		"no required loopback_ip_prefix field": {
-			testVrfID,
-			&pb.Vrf{
+			id: testVrfID,
+			in: &pb.Vrf{
 				Spec: &pb.VrfSpec{},
 			},
-			nil,
-			codes.Unknown,
-			"missing required field: vrf.spec.loopback_ip_prefix",
-			false,
+			out:     nil,
+			errCode: codes.Unknown,
+			errMsg:  "missing required field: vrf.spec.loopback_ip_prefix",
+			exist:   false,
 		},
 		"already exists": {
-			testVrfID,
-			&testVrf,
-			&testVrf,
-			codes.OK,
-			"",
-			true,
+			id:      testVrfID,
+			in:      &testVrf,
+			out:     &testVrf,
+			errCode: codes.OK,
+			errMsg:  "",
+			exist:   true,
 		},
 		"valid request empty VNI amd empty Loopback": {
-			testVrfID,
-			&pb.Vrf{
+			id: testVrfID,
+			in: &pb.Vrf{
 				Spec: &pb.VrfSpec{
 					LoopbackIpPrefix: &pc.IPPrefix{
 						Len: 24,
 					},
 				},
 			},
-			&pb.Vrf{
+			out: &pb.Vrf{
 				Spec: &pb.VrfSpec{
 					LoopbackIpPrefix: &pc.IPPrefix{
 						Len: 24,
@@ -113,41 +113,41 @@ func Test_CreateVrf(t *testing.T) {
 					Rmac:         []byte{0xCB, 0xB8, 0x33, 0x4C, 0x88, 0x4F},
 				},
 			},
-			codes.OK,
-			"",
-			false,
+			errCode: codes.OK,
+			errMsg:  "",
+			exist:   false,
 		},
 		"failed LinkAdd call": {
-			testVrfID,
-			&testVrf,
-			nil,
-			codes.Unknown,
-			"Failed to call LinkAdd",
-			false,
+			id:      testVrfID,
+			in:      &testVrf,
+			out:     nil,
+			errCode: codes.Unknown,
+			errMsg:  "Failed to call LinkAdd",
+			exist:   false,
 		},
 		"failed LinkSetUp call": {
-			testVrfID,
-			&testVrf,
-			nil,
-			codes.Unknown,
-			"Failed to call LinkSetUp",
-			false,
+			id:      testVrfID,
+			in:      &testVrf,
+			out:     nil,
+			errCode: codes.Unknown,
+			errMsg:  "Failed to call LinkSetUp",
+			exist:   false,
 		},
 		"failed bridge LinkAdd call": {
-			testVrfID,
-			&testVrf,
-			nil,
-			codes.Unknown,
-			"Failed to call LinkAdd",
-			false,
+			id:      testVrfID,
+			in:      &testVrf,
+			out:     nil,
+			errCode: codes.Unknown,
+			errMsg:  "Failed to call LinkAdd",
+			exist:   false,
 		},
 		"failed bridge LinkSetMaster call": {
-			testVrfID,
-			&testVrf,
-			nil,
-			codes.Unknown,
-			"Failed to call LinkSetMaster",
-			false,
+			id:      testVrfID,
+			in:      &testVrf,
+			out:     nil,
+			errCode: codes.Unknown,
+			errMsg:  "Failed to call LinkSetMaster",
+			exist:   false,
 		},
 	}
 
@@ -246,32 +246,32 @@ func Test_DeleteVrf(t *testing.T) {
 		missing bool
 	}{
 		// "valid request": {
-		// 	testVrfID,
-		// 	&emptypb.Empty{},
-		// 	codes.OK,
-		// 	"",
-		// 	false,
+		// 	in: testVrfID,
+		// 	out: &emptypb.Empty{},
+		// 	errCode: codes.OK,
+		// 	errMsg: "",
+		// 	missing: false,
 		// },
 		"valid request with unknown key": {
-			"unknown-id",
-			nil,
-			codes.NotFound,
-			fmt.Sprintf("unable to find key %v", resourceIDToFullName("vrfs", "unknown-id")),
-			false,
+			in:      "unknown-id",
+			out:     nil,
+			errCode: codes.NotFound,
+			errMsg:  fmt.Sprintf("unable to find key %v", resourceIDToFullName("vrfs", "unknown-id")),
+			missing: false,
 		},
 		"unknown key with missing allowed": {
-			"unknown-id",
-			&emptypb.Empty{},
-			codes.OK,
-			"",
-			true,
+			in:      "unknown-id",
+			out:     &emptypb.Empty{},
+			errCode: codes.OK,
+			errMsg:  "",
+			missing: true,
 		},
 		"malformed name": {
-			"-ABC-DEF",
-			&emptypb.Empty{},
-			codes.Unknown,
-			fmt.Sprintf("segment '%s': not a valid DNS name", "-ABC-DEF"),
-			false,
+			in:      "-ABC-DEF",
+			out:     &emptypb.Empty{},
+			errCode: codes.Unknown,
+			errMsg:  fmt.Sprintf("segment '%s': not a valid DNS name", "-ABC-DEF"),
+			missing: false,
 		},
 	}
 
@@ -332,37 +332,34 @@ func Test_UpdateVrf(t *testing.T) {
 		mask    *fieldmaskpb.FieldMask
 		in      *pb.Vrf
 		out     *pb.Vrf
-		spdk    []string
 		errCode codes.Code
 		errMsg  string
 		start   bool
 		exist   bool
 	}{
 		"invalid fieldmask": {
-			&fieldmaskpb.FieldMask{Paths: []string{"*", "author"}},
-			&pb.Vrf{
+			mask: &fieldmaskpb.FieldMask{Paths: []string{"*", "author"}},
+			in: &pb.Vrf{
 				Name: testVrfName,
 				Spec: spec,
 			},
-			nil,
-			[]string{""},
-			codes.Unknown,
-			fmt.Sprintf("invalid field path: %s", "'*' must not be used with other paths"),
-			false,
-			true,
+			out:     nil,
+			errCode: codes.Unknown,
+			errMsg:  fmt.Sprintf("invalid field path: %s", "'*' must not be used with other paths"),
+			start:   false,
+			exist:   true,
 		},
 		"valid request with unknown key": {
-			nil,
-			&pb.Vrf{
+			mask: nil,
+			in: &pb.Vrf{
 				Name: resourceIDToFullName("vrfs", "unknown-id"),
 				Spec: spec,
 			},
-			nil,
-			[]string{""},
-			codes.NotFound,
-			fmt.Sprintf("unable to find key %v", resourceIDToFullName("vrfs", "unknown-id")),
-			false,
-			true,
+			out:     nil,
+			errCode: codes.NotFound,
+			errMsg:  fmt.Sprintf("unable to find key %v", resourceIDToFullName("vrfs", "unknown-id")),
+			start:   false,
+			exist:   true,
 		},
 	}
 
@@ -425,25 +422,25 @@ func Test_GetVrf(t *testing.T) {
 		errMsg  string
 	}{
 		// "valid request": {
-		// 	testVrfID,
-		// 	&pb.Vrf{
+		// 	in: testVrfID,
+		// 	out: &pb.Vrf{
 		// 		Name:      testVrfName,
 		// 		Multipath: testVrf.Multipath,
 		// 	},
-		// 	codes.OK,
-		// 	"",
+		// 	errCode: codes.OK,
+		// 	errMsg: "",
 		// },
 		"valid request with unknown key": {
-			"unknown-id",
-			nil,
-			codes.NotFound,
-			fmt.Sprintf("unable to find key %v", "unknown-id"),
+			in:      "unknown-id",
+			out:     nil,
+			errCode: codes.NotFound,
+			errMsg:  fmt.Sprintf("unable to find key %v", "unknown-id"),
 		},
 		"malformed name": {
-			"-ABC-DEF",
-			nil,
-			codes.Unknown,
-			fmt.Sprintf("segment '%s': not a valid DNS name", "-ABC-DEF"),
+			in:      "-ABC-DEF",
+			out:     nil,
+			errCode: codes.Unknown,
+			errMsg:  fmt.Sprintf("segment '%s': not a valid DNS name", "-ABC-DEF"),
 		},
 	}
 
