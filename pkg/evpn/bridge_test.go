@@ -218,6 +218,43 @@ func Test_CreateLogicalBridge(t *testing.T) {
 				mockNetlink.EXPECT().BridgeVlanAdd(vxlan, uint16(testLogicalBridge.Spec.VlanId), true, true, false, false).Return(errors.New(errMsg)).Once()
 			},
 		},
+		"successful call": {
+			id: testLogicalBridgeID,
+			in: &testLogicalBridge,
+			out: &pb.LogicalBridge{
+				Spec: &pb.LogicalBridgeSpec{
+					Vni:    proto.Uint32(11),
+					VlanId: 22,
+					VtepIpPrefix: &pc.IPPrefix{
+						Addr: &pc.IPAddress{
+							Af: pc.IpAf_IP_AF_INET,
+							V4OrV6: &pc.IPAddress_V4Addr{
+								V4Addr: 167772162,
+							},
+						},
+						Len: 24,
+					},
+				},
+				Status: &pb.LogicalBridgeStatus{
+					OperStatus: pb.LBOperStatus_LB_OPER_STATUS_UP,
+				},
+			},
+			errCode: codes.OK,
+			errMsg:  "",
+			exist:   false,
+			on: func(mockNetlink *mocks.Netlink, errMsg string) {
+				myip := make(net.IP, 4)
+				binary.BigEndian.PutUint32(myip, 167772162)
+				vxlanName := fmt.Sprintf("vni%d", *testLogicalBridge.Spec.Vni)
+				vxlan := &netlink.Vxlan{LinkAttrs: netlink.LinkAttrs{Name: vxlanName}, VxlanId: int(*testLogicalBridge.Spec.Vni), Port: 4789, Learning: false, SrcAddr: myip}
+				bridge := &netlink.Bridge{LinkAttrs: netlink.LinkAttrs{Name: tenantbridgeName}}
+				mockNetlink.EXPECT().LinkByName(tenantbridgeName).Return(bridge, nil).Once()
+				mockNetlink.EXPECT().LinkAdd(vxlan).Return(nil).Once()
+				mockNetlink.EXPECT().LinkSetMaster(vxlan, bridge).Return(nil).Once()
+				mockNetlink.EXPECT().LinkSetUp(vxlan).Return(nil).Once()
+				mockNetlink.EXPECT().BridgeVlanAdd(vxlan, uint16(testLogicalBridge.Spec.VlanId), true, true, false, false).Return(nil).Once()
+			},
+		},
 	}
 
 	// run tests
