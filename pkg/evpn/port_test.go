@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"log"
 	"reflect"
-	"strings"
 	"testing"
 
 	"google.golang.org/grpc"
@@ -47,6 +46,7 @@ func Test_CreateBridgePort(t *testing.T) {
 		errCode codes.Code
 		errMsg  string
 		exist   bool
+		on      func(mockNetlink *mocks.Netlink, errMsg string)
 	}{
 		"illegal resource_id": {
 			id:      "CapitalLettersNotAllowed",
@@ -55,6 +55,7 @@ func Test_CreateBridgePort(t *testing.T) {
 			errCode: codes.Unknown,
 			errMsg:  fmt.Sprintf("user-settable ID must only contain lowercase, numbers and hyphens (%v)", "got: 'C' in position 0"),
 			exist:   false,
+			on:      nil,
 		},
 		"already exists": {
 			id:      testBridgePortID,
@@ -63,6 +64,7 @@ func Test_CreateBridgePort(t *testing.T) {
 			errCode: codes.OK,
 			errMsg:  "",
 			exist:   true,
+			on:      nil,
 		},
 		"no required port field": {
 			id:      testBridgePortID,
@@ -71,6 +73,7 @@ func Test_CreateBridgePort(t *testing.T) {
 			errCode: codes.Unknown,
 			errMsg:  "missing required field: bridge_port",
 			exist:   false,
+			on:      nil,
 		},
 		"no required mac_address field": {
 			id: testBridgePortID,
@@ -81,6 +84,7 @@ func Test_CreateBridgePort(t *testing.T) {
 			errCode: codes.Unknown,
 			errMsg:  "missing required field: bridge_port.spec.mac_address",
 			exist:   false,
+			on:      nil,
 		},
 		"no required ptype field": {
 			id: testBridgePortID,
@@ -93,6 +97,7 @@ func Test_CreateBridgePort(t *testing.T) {
 			errCode: codes.Unknown,
 			errMsg:  "missing required field: bridge_port.spec.ptype",
 			exist:   false,
+			on:      nil,
 		},
 		"access port and list bridge": {
 			id: testBridgePortID,
@@ -107,6 +112,7 @@ func Test_CreateBridgePort(t *testing.T) {
 			errCode: codes.InvalidArgument,
 			errMsg:  fmt.Sprintf("ACCESS type must have single LogicalBridge and not (%d)", len(testBridgePort.Spec.LogicalBridges)),
 			exist:   false,
+			on:      nil,
 		},
 		"failed LinkByName call": {
 			id:      testBridgePortID,
@@ -115,6 +121,9 @@ func Test_CreateBridgePort(t *testing.T) {
 			errCode: codes.NotFound,
 			errMsg:  "unable to find key br-tenant",
 			exist:   false,
+			on: func(mockNetlink *mocks.Netlink, errMsg string) {
+				mockNetlink.EXPECT().LinkByName(tenantbridgeName).Return(nil, errors.New(errMsg)).Once()
+			},
 		},
 	}
 
@@ -148,10 +157,8 @@ func Test_CreateBridgePort(t *testing.T) {
 				tt.out = protoClone(tt.out)
 				tt.out.Name = testBridgePortName
 			}
-
-			// TODO: refactor this mocking
-			if strings.Contains(name, "LinkByName") {
-				mockNetlink.EXPECT().LinkByName(tenantbridgeName).Return(nil, errors.New(tt.errMsg)).Once()
+			if tt.on != nil {
+				tt.on(mockNetlink, tt.errMsg)
 			}
 
 			request := &pb.CreateBridgePortRequest{BridgePort: tt.in, BridgePortId: tt.id}

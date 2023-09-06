@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"log"
 	"reflect"
-	"strings"
 	"testing"
 
 	"github.com/vishvananda/netlink"
@@ -57,6 +56,7 @@ func Test_CreateVrf(t *testing.T) {
 		errCode codes.Code
 		errMsg  string
 		exist   bool
+		on      func(mockNetlink *mocks.Netlink, errMsg string)
 	}{
 		"illegal resource_id": {
 			id:      "CapitalLettersNotAllowed",
@@ -65,6 +65,7 @@ func Test_CreateVrf(t *testing.T) {
 			errCode: codes.Unknown,
 			errMsg:  fmt.Sprintf("user-settable ID must only contain lowercase, numbers and hyphens (%v)", "got: 'C' in position 0"),
 			exist:   false,
+			on:      nil,
 		},
 		"no required vrf field": {
 			id:      testVrfID,
@@ -73,6 +74,7 @@ func Test_CreateVrf(t *testing.T) {
 			errCode: codes.Unknown,
 			errMsg:  "missing required field: vrf",
 			exist:   false,
+			on:      nil,
 		},
 		"no required loopback_ip_prefix field": {
 			id: testVrfID,
@@ -83,6 +85,7 @@ func Test_CreateVrf(t *testing.T) {
 			errCode: codes.Unknown,
 			errMsg:  "missing required field: vrf.spec.loopback_ip_prefix",
 			exist:   false,
+			on:      nil,
 		},
 		"already exists": {
 			id:      testVrfID,
@@ -91,6 +94,7 @@ func Test_CreateVrf(t *testing.T) {
 			errCode: codes.OK,
 			errMsg:  "",
 			exist:   true,
+			on:      nil,
 		},
 		"valid request empty VNI amd empty Loopback": {
 			id: testVrfID,
@@ -116,6 +120,11 @@ func Test_CreateVrf(t *testing.T) {
 			errCode: codes.OK,
 			errMsg:  "",
 			exist:   false,
+			on: func(mockNetlink *mocks.Netlink, errMsg string) {
+				vrf := &netlink.Vrf{LinkAttrs: netlink.LinkAttrs{Name: testVrfID}, Table: 1000}
+				mockNetlink.EXPECT().LinkAdd(vrf).Return(nil).Once()
+				mockNetlink.EXPECT().LinkSetUp(vrf).Return(nil).Once()
+			},
 		},
 		"failed LinkAdd call": {
 			id:      testVrfID,
@@ -124,6 +133,10 @@ func Test_CreateVrf(t *testing.T) {
 			errCode: codes.Unknown,
 			errMsg:  "Failed to call LinkAdd",
 			exist:   false,
+			on: func(mockNetlink *mocks.Netlink, errMsg string) {
+				vrf := &netlink.Vrf{LinkAttrs: netlink.LinkAttrs{Name: testVrfID}, Table: 1001}
+				mockNetlink.EXPECT().LinkAdd(vrf).Return(errors.New(errMsg)).Once()
+			},
 		},
 		"failed LinkSetUp call": {
 			id:      testVrfID,
@@ -132,6 +145,11 @@ func Test_CreateVrf(t *testing.T) {
 			errCode: codes.Unknown,
 			errMsg:  "Failed to call LinkSetUp",
 			exist:   false,
+			on: func(mockNetlink *mocks.Netlink, errMsg string) {
+				vrf := &netlink.Vrf{LinkAttrs: netlink.LinkAttrs{Name: testVrfID}, Table: 1001}
+				mockNetlink.EXPECT().LinkAdd(vrf).Return(nil).Once()
+				mockNetlink.EXPECT().LinkSetUp(vrf).Return(errors.New(errMsg)).Once()
+			},
 		},
 		"failed bridge LinkAdd call": {
 			id:      testVrfID,
@@ -140,6 +158,14 @@ func Test_CreateVrf(t *testing.T) {
 			errCode: codes.Unknown,
 			errMsg:  "Failed to call LinkAdd",
 			exist:   false,
+			on: func(mockNetlink *mocks.Netlink, errMsg string) {
+				bridgeName := fmt.Sprintf("br%d", *testVrf.Spec.Vni)
+				vrf := &netlink.Vrf{LinkAttrs: netlink.LinkAttrs{Name: testVrfID}, Table: 1001}
+				bridge := &netlink.Bridge{LinkAttrs: netlink.LinkAttrs{Name: bridgeName}}
+				mockNetlink.EXPECT().LinkAdd(vrf).Return(nil).Once()
+				mockNetlink.EXPECT().LinkSetUp(vrf).Return(nil).Once()
+				mockNetlink.EXPECT().LinkAdd(bridge).Return(errors.New(errMsg)).Once()
+			},
 		},
 		"failed bridge LinkSetMaster call": {
 			id:      testVrfID,
@@ -148,6 +174,15 @@ func Test_CreateVrf(t *testing.T) {
 			errCode: codes.Unknown,
 			errMsg:  "Failed to call LinkSetMaster",
 			exist:   false,
+			on: func(mockNetlink *mocks.Netlink, errMsg string) {
+				bridgeName := fmt.Sprintf("br%d", *testVrf.Spec.Vni)
+				vrf := &netlink.Vrf{LinkAttrs: netlink.LinkAttrs{Name: testVrfID}, Table: 1001}
+				bridge := &netlink.Bridge{LinkAttrs: netlink.LinkAttrs{Name: bridgeName}}
+				mockNetlink.EXPECT().LinkAdd(vrf).Return(nil).Once()
+				mockNetlink.EXPECT().LinkSetUp(vrf).Return(nil).Once()
+				mockNetlink.EXPECT().LinkAdd(bridge).Return(nil).Once()
+				mockNetlink.EXPECT().LinkSetMaster(bridge, vrf).Return(errors.New(errMsg)).Once()
+			},
 		},
 	}
 
@@ -181,36 +216,8 @@ func Test_CreateVrf(t *testing.T) {
 				tt.out = protoClone(tt.out)
 				tt.out.Name = testVrfName
 			}
-
-			// TODO: refactor this mocking
-			if strings.Contains(name, "failed LinkAdd") {
-				vrf := &netlink.Vrf{LinkAttrs: netlink.LinkAttrs{Name: testVrfID}, Table: 1001}
-				mockNetlink.EXPECT().LinkAdd(vrf).Return(errors.New(tt.errMsg)).Once()
-			} else if strings.Contains(name, "failed LinkSetUp") {
-				vrf := &netlink.Vrf{LinkAttrs: netlink.LinkAttrs{Name: testVrfID}, Table: 1001}
-				mockNetlink.EXPECT().LinkAdd(vrf).Return(nil).Once()
-				mockNetlink.EXPECT().LinkSetUp(vrf).Return(errors.New(tt.errMsg)).Once()
-			} else if strings.Contains(name, "failed bridge LinkAdd") {
-				bridgeName := fmt.Sprintf("br%d", *testVrf.Spec.Vni)
-				vrf := &netlink.Vrf{LinkAttrs: netlink.LinkAttrs{Name: testVrfID}, Table: 1001}
-				bridge := &netlink.Bridge{LinkAttrs: netlink.LinkAttrs{Name: bridgeName}}
-				mockNetlink.EXPECT().LinkAdd(vrf).Return(nil).Once()
-				mockNetlink.EXPECT().LinkSetUp(vrf).Return(nil).Once()
-				mockNetlink.EXPECT().LinkAdd(bridge).Return(errors.New(tt.errMsg)).Once()
-			} else if strings.Contains(name, "failed bridge LinkSetMaster") {
-				bridgeName := fmt.Sprintf("br%d", *testVrf.Spec.Vni)
-				vrf := &netlink.Vrf{LinkAttrs: netlink.LinkAttrs{Name: testVrfID}, Table: 1001}
-				bridge := &netlink.Bridge{LinkAttrs: netlink.LinkAttrs{Name: bridgeName}}
-				mockNetlink.EXPECT().LinkAdd(vrf).Return(nil).Once()
-				mockNetlink.EXPECT().LinkSetUp(vrf).Return(nil).Once()
-				mockNetlink.EXPECT().LinkAdd(bridge).Return(nil).Once()
-				mockNetlink.EXPECT().LinkSetMaster(bridge, vrf).Return(errors.New(tt.errMsg)).Once()
-			}
-
-			if tt.out != nil && !tt.exist {
-				vrf := &netlink.Vrf{LinkAttrs: netlink.LinkAttrs{Name: testVrfID}, Table: 1000}
-				mockNetlink.EXPECT().LinkAdd(vrf).Return(nil).Once()
-				mockNetlink.EXPECT().LinkSetUp(vrf).Return(nil).Once()
+			if tt.on != nil {
+				tt.on(mockNetlink, tt.errMsg)
 			}
 
 			request := &pb.CreateVrfRequest{Vrf: tt.in, VrfId: tt.id}
