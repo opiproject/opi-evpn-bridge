@@ -311,14 +311,25 @@ func (s *Server) ListSvis(_ context.Context, in *pb.ListSvisRequest) (*pb.ListSv
 		log.Printf("error: %v", err)
 		return nil, err
 	}
+	// fetch object from the database
+	size, offset, perr := extractPagination(in.PageSize, in.PageToken, s.Pagination)
+	if perr != nil {
+		log.Printf("error: %v", perr)
+		return nil, perr
+	}
 	token := ""
+	log.Printf("Limiting result len(%d) to [%d:%d]", len(s.Svis), offset, size)
+	// result, hasMoreElements := limitPagination(s.Svis, offset, size)
+	// if hasMoreElements {
+	// 	token = uuid.New().String()
+	// 	s.Pagination[token] = offset + size
+	// }
 	Blobarray := []*pb.Svi{}
 	for _, svi := range s.Svis {
 		r := protoClone(svi)
 		r.Status = &pb.SviStatus{OperStatus: pb.SVIOperStatus_SVI_OPER_STATUS_UP}
 		Blobarray = append(Blobarray, r)
 	}
-	// TODO: Limit results to offset and size and rememeber pagination
 	sortSvis(Blobarray)
 	return &pb.ListSvisResponse{Svis: Blobarray, NextPageToken: token}, nil
 }

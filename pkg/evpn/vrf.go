@@ -326,7 +326,19 @@ func (s *Server) ListVrfs(_ context.Context, in *pb.ListVrfsRequest) (*pb.ListVr
 		log.Printf("error: %v", err)
 		return nil, err
 	}
+	// fetch object from the database
+	size, offset, perr := extractPagination(in.PageSize, in.PageToken, s.Pagination)
+	if perr != nil {
+		log.Printf("error: %v", perr)
+		return nil, perr
+	}
 	token := ""
+	log.Printf("Limiting result len(%d) to [%d:%d]", len(s.Vrfs), offset, size)
+	// result, hasMoreElements := limitPagination(s.Vrfs, offset, size)
+	// if hasMoreElements {
+	// 	token = uuid.New().String()
+	// 	s.Pagination[token] = offset + size
+	// }
 	Blobarray := []*pb.Vrf{}
 	for _, vrf := range s.Vrfs {
 		r := protoClone(vrf)

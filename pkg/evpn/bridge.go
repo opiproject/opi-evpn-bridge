@@ -253,14 +253,25 @@ func (s *Server) ListLogicalBridges(_ context.Context, in *pb.ListLogicalBridges
 		log.Printf("error: %v", err)
 		return nil, err
 	}
+	// fetch object from the database
+	size, offset, perr := extractPagination(in.PageSize, in.PageToken, s.Pagination)
+	if perr != nil {
+		log.Printf("error: %v", perr)
+		return nil, perr
+	}
 	token := ""
+	log.Printf("Limiting result len(%d) to [%d:%d]", len(s.Bridges), offset, size)
+	// result, hasMoreElements := limitPagination(s.Bridges, offset, size)
+	// if hasMoreElements {
+	// 	token = uuid.New().String()
+	// 	s.Pagination[token] = offset + size
+	// }
 	Blobarray := []*pb.LogicalBridge{}
 	for _, bridge := range s.Bridges {
 		r := protoClone(bridge)
 		r.Status = &pb.LogicalBridgeStatus{OperStatus: pb.LBOperStatus_LB_OPER_STATUS_UP}
 		Blobarray = append(Blobarray, r)
 	}
-	// TODO: Limit results to offset and size and rememeber pagination
 	sortLogicalBridges(Blobarray)
 	return &pb.ListLogicalBridgesResponse{LogicalBridges: Blobarray, NextPageToken: token}, nil
 }

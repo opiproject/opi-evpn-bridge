@@ -278,14 +278,25 @@ func (s *Server) ListBridgePorts(_ context.Context, in *pb.ListBridgePortsReques
 		log.Printf("error: %v", err)
 		return nil, err
 	}
+	// fetch object from the database
+	size, offset, perr := extractPagination(in.PageSize, in.PageToken, s.Pagination)
+	if perr != nil {
+		log.Printf("error: %v", perr)
+		return nil, perr
+	}
 	token := ""
+	log.Printf("Limiting result len(%d) to [%d:%d]", len(s.Ports), offset, size)
+	// result, hasMoreElements := limitPagination(s.Ports, offset, size)
+	// if hasMoreElements {
+	// 	token = uuid.New().String()
+	// 	s.Pagination[token] = offset + size
+	// }
 	Blobarray := []*pb.BridgePort{}
 	for _, port := range s.Ports {
 		r := protoClone(port)
 		r.Status = &pb.BridgePortStatus{OperStatus: pb.BPOperStatus_BP_OPER_STATUS_UP}
 		Blobarray = append(Blobarray, r)
 	}
-	// TODO: Limit results to offset and size and rememeber pagination
 	sortBridgePorts(Blobarray)
 	return &pb.ListBridgePortsResponse{BridgePorts: Blobarray, NextPageToken: token}, nil
 }
