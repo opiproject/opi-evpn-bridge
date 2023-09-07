@@ -12,6 +12,7 @@ import (
 	"path"
 	"sort"
 
+	"github.com/google/uuid"
 	// "github.com/vishvananda/netlink"
 
 	pb "github.com/opiproject/opi-api/network/evpn-gw/v1alpha1/gen/go"
@@ -73,6 +74,8 @@ func (s *Server) CreateBridgePort(_ context.Context, in *pb.CreateBridgePortRequ
 	}
 	// get base interface (e.g.: eth2)
 	iface, err := s.nLink.LinkByName(resourceID)
+	// TODO: maybe we need to create a new iface here and not rely on existing one ?
+	//		 iface := &netlink.Dummy{LinkAttrs: netlink.LinkAttrs{Name: resourceID}}
 	if err != nil {
 		err := status.Errorf(codes.NotFound, "unable to find key %s", resourceID)
 		log.Printf("error: %v", err)
@@ -278,25 +281,27 @@ func (s *Server) ListBridgePorts(_ context.Context, in *pb.ListBridgePortsReques
 		log.Printf("error: %v", err)
 		return nil, err
 	}
-	// fetch object from the database
+	// fetch pagination from the database, calculate size and offset
 	size, offset, perr := extractPagination(in.PageSize, in.PageToken, s.Pagination)
 	if perr != nil {
 		log.Printf("error: %v", perr)
 		return nil, perr
 	}
-	token := ""
-	log.Printf("Limiting result len(%d) to [%d:%d]", len(s.Ports), offset, size)
-	// result, hasMoreElements := limitPagination(s.Ports, offset, size)
-	// if hasMoreElements {
-	// 	token = uuid.New().String()
-	// 	s.Pagination[token] = offset + size
-	// }
+	// fetch object from the database
 	Blobarray := []*pb.BridgePort{}
 	for _, port := range s.Ports {
 		r := protoClone(port)
 		r.Status = &pb.BridgePortStatus{OperStatus: pb.BPOperStatus_BP_OPER_STATUS_UP}
 		Blobarray = append(Blobarray, r)
 	}
+	// sort is needed, since MAP is unsorted in golang, and we might get different results
 	sortBridgePorts(Blobarray)
+	log.Printf("Limiting result len(%d) to [%d:%d]", len(Blobarray), offset, size)
+	Blobarray, hasMoreElements := limitPagination(Blobarray, offset, size)
+	token := ""
+	if hasMoreElements {
+		token = uuid.New().String()
+		s.Pagination[token] = offset + size
+	}
 	return &pb.ListBridgePortsResponse{BridgePorts: Blobarray, NextPageToken: token}, nil
 }

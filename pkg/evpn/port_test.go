@@ -700,6 +700,30 @@ func Test_ListBridgePorts(t *testing.T) {
 			size:    0,
 			token:   "unknown-pagination-token",
 		},
+		"pagination overflow": {
+			in:      "",
+			out:     []*pb.BridgePort{&testBridgePortWithStatus},
+			errCode: codes.OK,
+			errMsg:  "",
+			size:    1000,
+			token:   "",
+		},
+		"pagination normal": {
+			in:      "",
+			out:     []*pb.BridgePort{&testBridgePortWithStatus},
+			errCode: codes.OK,
+			errMsg:  "",
+			size:    1,
+			token:   "",
+		},
+		"pagination offset": {
+			in:      "",
+			out:     []*pb.BridgePort{},
+			errCode: codes.OK,
+			errMsg:  "",
+			size:    1,
+			token:   "existing-pagination-token",
+		},
 	}
 
 	// run tests
@@ -726,6 +750,7 @@ func Test_ListBridgePorts(t *testing.T) {
 
 			opi.Ports[testBridgePortName] = protoClone(&testBridgePort)
 			opi.Ports[testBridgePortName].Name = testBridgePortName
+			opi.Pagination["existing-pagination-token"] = 1
 
 			request := &pb.ListBridgePortsRequest{PageSize: tt.size, PageToken: tt.token}
 			response, err := client.ListBridgePorts(ctx, request)

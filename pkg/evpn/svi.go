@@ -14,6 +14,7 @@ import (
 	"path"
 	"sort"
 
+	"github.com/google/uuid"
 	"github.com/vishvananda/netlink"
 
 	pb "github.com/opiproject/opi-api/network/evpn-gw/v1alpha1/gen/go"
@@ -311,25 +312,27 @@ func (s *Server) ListSvis(_ context.Context, in *pb.ListSvisRequest) (*pb.ListSv
 		log.Printf("error: %v", err)
 		return nil, err
 	}
-	// fetch object from the database
+	// fetch pagination from the database, calculate size and offset
 	size, offset, perr := extractPagination(in.PageSize, in.PageToken, s.Pagination)
 	if perr != nil {
 		log.Printf("error: %v", perr)
 		return nil, perr
 	}
-	token := ""
-	log.Printf("Limiting result len(%d) to [%d:%d]", len(s.Svis), offset, size)
-	// result, hasMoreElements := limitPagination(s.Svis, offset, size)
-	// if hasMoreElements {
-	// 	token = uuid.New().String()
-	// 	s.Pagination[token] = offset + size
-	// }
+	// fetch object from the database
 	Blobarray := []*pb.Svi{}
 	for _, svi := range s.Svis {
 		r := protoClone(svi)
 		r.Status = &pb.SviStatus{OperStatus: pb.SVIOperStatus_SVI_OPER_STATUS_UP}
 		Blobarray = append(Blobarray, r)
 	}
+	// sort is needed, since MAP is unsorted in golang, and we might get different results
 	sortSvis(Blobarray)
+	log.Printf("Limiting result len(%d) to [%d:%d]", len(Blobarray), offset, size)
+	Blobarray, hasMoreElements := limitPagination(Blobarray, offset, size)
+	token := ""
+	if hasMoreElements {
+		token = uuid.New().String()
+		s.Pagination[token] = offset + size
+	}
 	return &pb.ListSvisResponse{Svis: Blobarray, NextPageToken: token}, nil
 }

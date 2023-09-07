@@ -858,6 +858,30 @@ func Test_ListVrfs(t *testing.T) {
 			size:    0,
 			token:   "unknown-pagination-token",
 		},
+		"pagination overflow": {
+			in:      "",
+			out:     []*pb.Vrf{&testVrfWithStatus},
+			errCode: codes.OK,
+			errMsg:  "",
+			size:    1000,
+			token:   "",
+		},
+		"pagination normal": {
+			in:      "",
+			out:     []*pb.Vrf{&testVrfWithStatus},
+			errCode: codes.OK,
+			errMsg:  "",
+			size:    1,
+			token:   "",
+		},
+		"pagination offset": {
+			in:      "",
+			out:     []*pb.Vrf{},
+			errCode: codes.OK,
+			errMsg:  "",
+			size:    1,
+			token:   "existing-pagination-token",
+		},
 	}
 
 	// run tests
@@ -884,6 +908,7 @@ func Test_ListVrfs(t *testing.T) {
 
 			opi.Vrfs[testVrfName] = protoClone(&testVrf)
 			opi.Vrfs[testVrfName].Name = testVrfName
+			opi.Pagination["existing-pagination-token"] = 1
 
 			request := &pb.ListVrfsRequest{PageSize: tt.size, PageToken: tt.token}
 			response, err := client.ListVrfs(ctx, request)
