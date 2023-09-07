@@ -25,9 +25,11 @@ See [CONTRIBUTING](https://github.com/opiproject/opi/blob/main/CONTRIBUTING.md) 
 
 ## Getting started
 
-Run `docker-compose up -d`
+Run `docker-compose up -d` or `docker compose up -d`
 
 ## Manual gRPC example
+
+using [grpcurl](https://github.com/fullstorydev/grpcurl)
 
 ```bash
 # create
@@ -45,6 +47,47 @@ docker-compose exec opi-evpn-bridge grpcurl -plaintext -d '{"name": "//network.o
 docker-compose exec opi-evpn-bridge grpcurl -plaintext -d '{"name": "//network.opiproject.org/bridges/testbridge"}' localhost:50151 opi_api.network.evpn-gw.v1alpha1.LogicalBridgeService.DeleteLogicalBridge
 docker-compose exec opi-evpn-bridge grpcurl -plaintext -d '{"name" : "//network.opiproject.org/svis/testsvi"}' localhost:50151 opi_api.network.evpn-gw.v1alpha1.SviService.DeleteSvi
 docker-compose exec opi-evpn-bridge grpcurl -plaintext -d '{"name" : "//network.opiproject.org/vrfs/testvrf"}' localhost:50151 opi_api.network.evpn-gw.v1alpha1.VrfService.DeleteVrf
+```
+
+using [godpu](https://github.com/opiproject/godpu)
+
+```bash
+$ docker run --rm -it --network=host docker.io/opiproject/godpu:main evpn --help
+Tests DPU evpn functionality
+
+Usage:
+  godpu evpn [flags]
+  godpu evpn [command]
+
+Aliases:
+  evpn, g
+
+Available Commands:
+  create-bp   Create a bridge port
+  create-lb   Create a logical bridge
+  create-svi  Create a SVI
+  create-vrf  Create a VRF
+  delete-bp   Delete a bridge port
+  delete-lb   Delete a logical bridge
+  delete-svi  Delete a SVI
+  delete-vrf  Delete a VRF
+  get-bp      Show details of a bridge port
+  get-lb      Show details of a logical bridge
+  get-svi     Show details of a SVI
+  get-vrf     Show details of a VRF
+  list-bps    Show details of all bridge ports
+  list-lbs    Show details of all logical bridges
+  list-svis   Show details of all SVIs
+  list-vrfs   Show details of all Vrfs
+  update-bp   Update the bridge port
+  update-lb   update the logical bridge
+  update-svi  update the SVI
+  update-vrf  update the VRF
+
+Flags:
+  -h, --help   help for evpn
+
+Use "godpu evpn [command] --help" for more information about a command.
 ```
 
 ## Architecture Diagram
