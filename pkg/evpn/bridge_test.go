@@ -651,6 +651,22 @@ func Test_ListLogicalBridges(t *testing.T) {
 			size:    0,
 			token:   "",
 		},
+		"pagination negative": {
+			in:      "",
+			out:     nil,
+			errCode: codes.InvalidArgument,
+			errMsg:  "negative PageSize is not allowed",
+			size:    -10,
+			token:   "",
+		},
+		"pagination error": {
+			in:      "",
+			out:     nil,
+			errCode: codes.NotFound,
+			errMsg:  fmt.Sprintf("unable to find pagination token %s", "unknown-pagination-token"),
+			size:    0,
+			token:   "unknown-pagination-token",
+		},
 	}
 
 	// run tests
