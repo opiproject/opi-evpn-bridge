@@ -33,25 +33,25 @@ using [grpcurl](https://github.com/fullstorydev/grpcurl)
 
 ```bash
 # create
-docker-compose exec opi-evpn-bridge grpcurl -plaintext -d '{"vrf" : {"spec" : {"vni" : 1234, "loopback_ip_prefix" : {"addr": {"af": "IP_AF_INET", "v4_addr": 167772162} }, "len": 24}, "vtep_ip_prefix": {"addr": {"af": "IP_AF_INET", "v4_addr": 167772162} }, "len": 24} }}, "vrf_id" : "testvrf" }' localhost:50151 opi_api.network.evpn-gw.v1alpha1.VrfService.CreateVrf"
-docker-compose exec opi-evpn-bridge grpcurl -plaintext -d '{"logical_bridge" : {"spec" : {"vni": 10, "vlan_id": 10 } }, "logical_bridge_id" : "testbridge" }' localhost:50151 opi_api.network.evpn-gw.v1alpha1.LogicalBridgeService.CreateLogicalBridge
-docker-compose exec opi-evpn-bridge grpcurl -plaintext -d '{"bridge_port" : {"spec" : {mac_address: "qrvMAAAB", "ptype": "ACCESS", "logical_bridges": ["//network.opiproject.org/bridges/testbridge"] }}, "bridge_port_id" : "testport"}' localhost:50151 opi_api.network.evpn-gw.v1alpha1.BridgePortService.CreateBridgePort
-docker-compose exec opi-evpn-bridge grpcurl -plaintext -d '{"svi" : {"spec" : {"vrf": "//network.opiproject.org/vrfs/testvrf", "logical_bridge": "//network.opiproject.org/bridges/testbridge", mac_address: "qrvMAAAB", "gw_ip_prefix": [{"addr": {"af": "IP_AF_INET", "v4_addr": 167772162} }, "len": 24}] } }, "svi_id" : "testsvi" }' localhost:50151 opi_api.network.evpn-gw.v1alpha1.SviService.CreateSvi
+docker-compose exec opi-evpn-bridge grpcurl -plaintext -d '{"vrf" : {"spec" : {"vni" : 1234, "loopback_ip_prefix" : {"addr": {"af": "IP_AF_INET", "v4_addr": 167772162} }, "len": 24}, "vtep_ip_prefix": {"addr": {"af": "IP_AF_INET", "v4_addr": 167772162} }, "len": 24} }}, "vrf_id" : "testvrf" }' localhost:50151 opi_api.network.evpn_gw.v1alpha1.VrfService.CreateVrf"
+docker-compose exec opi-evpn-bridge grpcurl -plaintext -d '{"logical_bridge" : {"spec" : {"vni": 10, "vlan_id": 10 } }, "logical_bridge_id" : "testbridge" }' localhost:50151 opi_api.network.evpn_gw.v1alpha1.LogicalBridgeService.CreateLogicalBridge
+docker-compose exec opi-evpn-bridge grpcurl -plaintext -d '{"bridge_port" : {"spec" : {mac_address: "qrvMAAAB", "ptype": "ACCESS", "logical_bridges": ["//network.opiproject.org/bridges/testbridge"] }}, "bridge_port_id" : "testport"}' localhost:50151 opi_api.network.evpn_gw.v1alpha1.BridgePortService.CreateBridgePort
+docker-compose exec opi-evpn-bridge grpcurl -plaintext -d '{"svi" : {"spec" : {"vrf": "//network.opiproject.org/vrfs/testvrf", "logical_bridge": "//network.opiproject.org/bridges/testbridge", mac_address: "qrvMAAAB", "gw_ip_prefix": [{"addr": {"af": "IP_AF_INET", "v4_addr": 167772162} }, "len": 24}] } }, "svi_id" : "testsvi" }' localhost:50151 opi_api.network.evpn_gw.v1alpha1.SviService.CreateSvi
 # get
-docker-compose exec opi-evpn-bridge grpcurl -plaintext -d '{"name": "//network.opiproject.org/ports/testinterface"}' localhost:50151 opi_api.network.evpn-gw.v1alpha1.BridgePortService.GetBridgePort
-docker-compose exec opi-evpn-bridge grpcurl -plaintext -d '{"name": "//network.opiproject.org/bridges/testbridge"}' localhost:50151 opi_api.network.evpn-gw.v1alpha1.LogicalBridgeService.GetLogicalBridge
-docker-compose exec opi-evpn-bridge grpcurl -plaintext -d '{"name": "//network.opiproject.org/svis/testsvi"}' localhost:50151 opi_api.network.evpn-gw.v1alpha1.SviService.GetSvi
-docker-compose exec opi-evpn-bridge grpcurl -plaintext -d '{"name": "//network.opiproject.org/vrfs/testvrf"}' localhost:50151 opi_api.network.evpn-gw.v1alpha1.VrfService.GetVrf
+docker-compose exec opi-evpn-bridge grpcurl -plaintext -d '{"name": "//network.opiproject.org/ports/testinterface"}' localhost:50151 opi_api.network.evpn_gw.v1alpha1.BridgePortService.GetBridgePort
+docker-compose exec opi-evpn-bridge grpcurl -plaintext -d '{"name": "//network.opiproject.org/bridges/testbridge"}' localhost:50151 opi_api.network.evpn_gw.v1alpha1.LogicalBridgeService.GetLogicalBridge
+docker-compose exec opi-evpn-bridge grpcurl -plaintext -d '{"name": "//network.opiproject.org/svis/testsvi"}' localhost:50151 opi_api.network.evpn_gw.v1alpha1.SviService.GetSvi
+docker-compose exec opi-evpn-bridge grpcurl -plaintext -d '{"name": "//network.opiproject.org/vrfs/testvrf"}' localhost:50151 opi_api.network.evpn_gw.v1alpha1.VrfService.GetVrf
 #list
-docker-compose exec opi-evpn-bridge grpcurl -plaintext localhost:50151 opi_api.network.evpn-gw.v1alpha1.BridgePortService.ListBridgePorts
-docker-compose exec opi-evpn-bridge grpcurl -plaintext localhost:50151 opi_api.network.evpn-gw.v1alpha1.BridgePortService.ListLogicalBridges
-docker-compose exec opi-evpn-bridge grpcurl -plaintext localhost:50151 opi_api.network.evpn-gw.v1alpha1.BridgePortService.ListSvis
-docker-compose exec opi-evpn-bridge grpcurl -plaintext localhost:50151 opi_api.network.evpn-gw.v1alpha1.BridgePortService.ListVrfs
+docker-compose exec opi-evpn-bridge grpcurl -plaintext localhost:50151 opi_api.network.evpn_gw.v1alpha1.BridgePortService.ListBridgePorts
+docker-compose exec opi-evpn-bridge grpcurl -plaintext localhost:50151 opi_api.network.evpn_gw.v1alpha1.BridgePortService.ListLogicalBridges
+docker-compose exec opi-evpn-bridge grpcurl -plaintext localhost:50151 opi_api.network.evpn_gw.v1alpha1.BridgePortService.ListSvis
+docker-compose exec opi-evpn-bridge grpcurl -plaintext localhost:50151 opi_api.network.evpn_gw.v1alpha1.BridgePortService.ListVrfs
 # delete
-docker-compose exec opi-evpn-bridge grpcurl -plaintext -d '{"name": "//network.opiproject.org/ports/testinterface"}' localhost:50151 opi_api.network.evpn-gw.v1alpha1.BridgePortService.DeleteBridgePort
-docker-compose exec opi-evpn-bridge grpcurl -plaintext -d '{"name": "//network.opiproject.org/bridges/testbridge"}' localhost:50151 opi_api.network.evpn-gw.v1alpha1.LogicalBridgeService.DeleteLogicalBridge
-docker-compose exec opi-evpn-bridge grpcurl -plaintext -d '{"name" : "//network.opiproject.org/svis/testsvi"}' localhost:50151 opi_api.network.evpn-gw.v1alpha1.SviService.DeleteSvi
-docker-compose exec opi-evpn-bridge grpcurl -plaintext -d '{"name" : "//network.opiproject.org/vrfs/testvrf"}' localhost:50151 opi_api.network.evpn-gw.v1alpha1.VrfService.DeleteVrf
+docker-compose exec opi-evpn-bridge grpcurl -plaintext -d '{"name": "//network.opiproject.org/ports/testinterface"}' localhost:50151 opi_api.network.evpn_gw.v1alpha1.BridgePortService.DeleteBridgePort
+docker-compose exec opi-evpn-bridge grpcurl -plaintext -d '{"name": "//network.opiproject.org/bridges/testbridge"}' localhost:50151 opi_api.network.evpn_gw.v1alpha1.LogicalBridgeService.DeleteLogicalBridge
+docker-compose exec opi-evpn-bridge grpcurl -plaintext -d '{"name" : "//network.opiproject.org/svis/testsvi"}' localhost:50151 opi_api.network.evpn_gw.v1alpha1.SviService.DeleteSvi
+docker-compose exec opi-evpn-bridge grpcurl -plaintext -d '{"name" : "//network.opiproject.org/vrfs/testvrf"}' localhost:50151 opi_api.network.evpn_gw.v1alpha1.VrfService.DeleteVrf
 ```
 
 using [godpu](https://github.com/opiproject/godpu)
