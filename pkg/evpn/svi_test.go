@@ -826,6 +826,30 @@ func Test_ListSvis(t *testing.T) {
 			size:    0,
 			token:   "unknown-pagination-token",
 		},
+		"pagination overflow": {
+			in:      "",
+			out:     []*pb.Svi{&testSviWithStatus},
+			errCode: codes.OK,
+			errMsg:  "",
+			size:    1000,
+			token:   "",
+		},
+		"pagination normal": {
+			in:      "",
+			out:     []*pb.Svi{&testSviWithStatus},
+			errCode: codes.OK,
+			errMsg:  "",
+			size:    1,
+			token:   "",
+		},
+		"pagination offset": {
+			in:      "",
+			out:     []*pb.Svi{},
+			errCode: codes.OK,
+			errMsg:  "",
+			size:    1,
+			token:   "existing-pagination-token",
+		},
 	}
 
 	// run tests
@@ -852,6 +876,7 @@ func Test_ListSvis(t *testing.T) {
 
 			opi.Svis[testSviName] = protoClone(&testSvi)
 			opi.Svis[testSviName].Name = testSviName
+			opi.Pagination["existing-pagination-token"] = 1
 
 			request := &pb.ListSvisRequest{PageSize: tt.size, PageToken: tt.token}
 			response, err := client.ListSvis(ctx, request)

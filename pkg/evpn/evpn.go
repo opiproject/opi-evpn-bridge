@@ -107,13 +107,13 @@ func extractPagination(pageSize int32, pageToken string, pagination map[string]i
 	return size, offset, nil
 }
 
-// func limitPagination[T any](result []T, offset int, size int) ([]T, bool) {
-// 	end := offset + size
-// 	hasMoreElements := false
-// 	if end < len(result) {
-// 		hasMoreElements = true
-// 	} else {
-// 		end = len(result)
-// 	}
-// 	return result[offset:end], hasMoreElements
-// }
+func limitPagination[T any](result []T, offset int, size int) ([]T, bool) {
+	end := offset + size
+	hasMoreElements := false
+	if end < len(result) {
+		hasMoreElements = true
+	} else {
+		end = len(result)
+	}
+	return result[offset:end], hasMoreElements
+}

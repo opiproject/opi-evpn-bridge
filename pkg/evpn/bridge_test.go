@@ -667,6 +667,30 @@ func Test_ListLogicalBridges(t *testing.T) {
 			size:    0,
 			token:   "unknown-pagination-token",
 		},
+		"pagination overflow": {
+			in:      "",
+			out:     []*pb.LogicalBridge{&testLogicalBridgeWithStatus},
+			errCode: codes.OK,
+			errMsg:  "",
+			size:    1000,
+			token:   "",
+		},
+		"pagination normal": {
+			in:      "",
+			out:     []*pb.LogicalBridge{&testLogicalBridgeWithStatus},
+			errCode: codes.OK,
+			errMsg:  "",
+			size:    1,
+			token:   "",
+		},
+		"pagination offset": {
+			in:      "",
+			out:     []*pb.LogicalBridge{},
+			errCode: codes.OK,
+			errMsg:  "",
+			size:    1,
+			token:   "existing-pagination-token",
+		},
 	}
 
 	// run tests
@@ -693,6 +717,7 @@ func Test_ListLogicalBridges(t *testing.T) {
 
 			opi.Bridges[testLogicalBridgeName] = protoClone(&testLogicalBridge)
 			opi.Bridges[testLogicalBridgeName].Name = testLogicalBridgeName
+			opi.Pagination["existing-pagination-token"] = 1
 
 			request := &pb.ListLogicalBridgesRequest{PageSize: tt.size, PageToken: tt.token}
 			response, err := client.ListLogicalBridges(ctx, request)

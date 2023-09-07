@@ -15,6 +15,7 @@ import (
 	"path"
 	"sort"
 
+	"github.com/google/uuid"
 	"github.com/vishvananda/netlink"
 
 	pb "github.com/opiproject/opi-api/network/evpn-gw/v1alpha1/gen/go"
@@ -326,26 +327,27 @@ func (s *Server) ListVrfs(_ context.Context, in *pb.ListVrfsRequest) (*pb.ListVr
 		log.Printf("error: %v", err)
 		return nil, err
 	}
-	// fetch object from the database
+	// fetch pagination from the database, calculate size and offset
 	size, offset, perr := extractPagination(in.PageSize, in.PageToken, s.Pagination)
 	if perr != nil {
 		log.Printf("error: %v", perr)
 		return nil, perr
 	}
-	token := ""
-	log.Printf("Limiting result len(%d) to [%d:%d]", len(s.Vrfs), offset, size)
-	// result, hasMoreElements := limitPagination(s.Vrfs, offset, size)
-	// if hasMoreElements {
-	// 	token = uuid.New().String()
-	// 	s.Pagination[token] = offset + size
-	// }
+	// fetch object from the database
 	Blobarray := []*pb.Vrf{}
 	for _, vrf := range s.Vrfs {
 		r := protoClone(vrf)
 		r.Status = &pb.VrfStatus{LocalAs: 4}
 		Blobarray = append(Blobarray, r)
 	}
-	// TODO: fetch object from the database
+	// sort is needed, since MAP is unsorted in golang, and we might get different results
 	sortVrfs(Blobarray)
+	log.Printf("Limiting result len(%d) to [%d:%d]", len(Blobarray), offset, size)
+	Blobarray, hasMoreElements := limitPagination(Blobarray, offset, size)
+	token := ""
+	if hasMoreElements {
+		token = uuid.New().String()
+		s.Pagination[token] = offset + size
+	}
 	return &pb.ListVrfsResponse{Vrfs: Blobarray, NextPageToken: token}, nil
 }
