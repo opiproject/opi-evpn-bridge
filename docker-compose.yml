@@ -5,7 +5,7 @@ version: '3.7'
 
 services:
   spine1:
-    image: quay.io/frrouting/frr:8.5.2
+    image: quay.io/frrouting/frr:8.5.3
     cap_add:
       - NET_ADMIN
       - SYS_ADMIN
@@ -33,7 +33,7 @@ services:
             sleep infinity'
 
   leaf1:
-    image: quay.io/frrouting/frr:8.5.2
+    image: quay.io/frrouting/frr:8.5.3
     cap_add:
       - NET_ADMIN
       - SYS_ADMIN
@@ -59,7 +59,7 @@ services:
             sleep infinity'
 
   bleaf:
-    image: quay.io/frrouting/frr:8.5.2
+    image: quay.io/frrouting/frr:8.5.3
     cap_add:
       - NET_ADMIN
       - SYS_ADMIN
@@ -114,7 +114,7 @@ services:
             sleep infinity'
 
   leaf2:
-    image: quay.io/frrouting/frr:8.5.2
+    image: quay.io/frrouting/frr:8.5.3
     cap_add:
       - NET_ADMIN
       - SYS_ADMIN
