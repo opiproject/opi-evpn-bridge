@@ -3,18 +3,18 @@ module github.com/opiproject/opi-evpn-bridge
 go 1.19
 
 require (
+	github.com/google/uuid v1.3.0
 	github.com/opiproject/opi-api v0.0.0-20230905130004-eac732ac240b
 	github.com/stretchr/testify v1.8.4
 	github.com/vishvananda/netlink v1.2.1-beta.2
 	go.einride.tech/aip v0.62.0
-	google.golang.org/grpc v1.57.0
+	google.golang.org/grpc v1.58.0
 	google.golang.org/protobuf v1.31.0
 )
 
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
-	github.com/google/uuid v1.3.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/stretchr/objx v0.5.0 // indirect
 	github.com/vishvananda/netns v0.0.4 // indirect
