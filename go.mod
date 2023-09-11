@@ -3,7 +3,7 @@ module github.com/opiproject/opi-evpn-bridge
 go 1.19
 
 require (
-	github.com/google/uuid v1.3.0
+	github.com/google/uuid v1.3.1
 	github.com/opiproject/opi-api v0.0.0-20230908135156-02d38276b0f2
 	github.com/stretchr/testify v1.8.4
 	github.com/vishvananda/netlink v1.2.1-beta.2
