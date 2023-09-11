@@ -13,6 +13,7 @@ import (
 
 	pe "github.com/opiproject/opi-api/network/evpn-gw/v1alpha1/gen/go"
 	"github.com/opiproject/opi-evpn-bridge/pkg/evpn"
+	"github.com/opiproject/opi-evpn-bridge/pkg/repository"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
@@ -28,6 +29,17 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
+	// Provision for persistent storage here
+	dbvrf, err := repository.VrfFactory("memory")
+	if err != nil {
+		log.Fatalf("failed to create database: %v", err)
+	}
+	dbvsvi, err := repository.SviFactory("memory")
+	if err != nil {
+		log.Fatalf("failed to create database: %v", err)
+	}
+	log.Printf("todo: use db in opi server (%v) and (%v)", dbvrf, dbvsvi)
+
 	s := grpc.NewServer()
 	opi := evpn.NewServer()
 
