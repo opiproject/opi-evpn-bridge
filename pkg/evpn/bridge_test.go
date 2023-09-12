@@ -15,6 +15,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/philippgille/gokv/gomap"
 	"github.com/stretchr/testify/mock"
 	"github.com/vishvananda/netlink"
 
@@ -257,7 +258,8 @@ func Test_CreateLogicalBridge(t *testing.T) {
 			ctx := context.Background()
 			mockNetlink := mocks.NewNetlink(t)
 			mockFrr := mocks.NewFrr(t)
-			opi := NewServerWithArgs(mockNetlink, mockFrr)
+			store := gomap.NewStore(gomap.DefaultOptions)
+			opi := NewServerWithArgs(mockNetlink, mockFrr, store)
 			conn, err := grpc.DialContext(ctx,
 				"",
 				grpc.WithTransportCredentials(insecure.NewCredentials()),
@@ -425,7 +427,8 @@ func Test_DeleteLogicalBridge(t *testing.T) {
 			ctx := context.Background()
 			mockNetlink := mocks.NewNetlink(t)
 			mockFrr := mocks.NewFrr(t)
-			opi := NewServerWithArgs(mockNetlink, mockFrr)
+			store := gomap.NewStore(gomap.DefaultOptions)
+			opi := NewServerWithArgs(mockNetlink, mockFrr, store)
 			conn, err := grpc.DialContext(ctx,
 				"",
 				grpc.WithTransportCredentials(insecure.NewCredentials()),
@@ -516,7 +519,8 @@ func Test_UpdateLogicalBridge(t *testing.T) {
 			ctx := context.Background()
 			mockNetlink := mocks.NewNetlink(t)
 			mockFrr := mocks.NewFrr(t)
-			opi := NewServerWithArgs(mockNetlink, mockFrr)
+			store := gomap.NewStore(gomap.DefaultOptions)
+			opi := NewServerWithArgs(mockNetlink, mockFrr, store)
 			conn, err := grpc.DialContext(ctx,
 				"",
 				grpc.WithTransportCredentials(insecure.NewCredentials()),
@@ -597,7 +601,8 @@ func Test_GetLogicalBridge(t *testing.T) {
 			ctx := context.Background()
 			mockNetlink := mocks.NewNetlink(t)
 			mockFrr := mocks.NewFrr(t)
-			opi := NewServerWithArgs(mockNetlink, mockFrr)
+			store := gomap.NewStore(gomap.DefaultOptions)
+			opi := NewServerWithArgs(mockNetlink, mockFrr, store)
 			conn, err := grpc.DialContext(ctx,
 				"",
 				grpc.WithTransportCredentials(insecure.NewCredentials()),
@@ -701,7 +706,8 @@ func Test_ListLogicalBridges(t *testing.T) {
 			ctx := context.Background()
 			mockNetlink := mocks.NewNetlink(t)
 			mockFrr := mocks.NewFrr(t)
-			opi := NewServerWithArgs(mockNetlink, mockFrr)
+			store := gomap.NewStore(gomap.DefaultOptions)
+			opi := NewServerWithArgs(mockNetlink, mockFrr, store)
 			conn, err := grpc.DialContext(ctx,
 				"",
 				grpc.WithTransportCredentials(insecure.NewCredentials()),

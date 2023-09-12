@@ -17,6 +17,8 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
 
+	"github.com/philippgille/gokv"
+
 	pe "github.com/opiproject/opi-api/network/evpn-gw/v1alpha1/gen/go"
 
 	"github.com/opiproject/opi-evpn-bridge/pkg/utils"
@@ -40,23 +42,27 @@ type Server struct {
 	nLink      utils.Netlink
 	frr        utils.Frr
 	tracer     trace.Tracer
+	store      gokv.Store
 }
 
 // NewServer creates initialized instance of EVPN server
-func NewServer() *Server {
+func NewServer(store gokv.Store) *Server {
 	nLink := utils.NewNetlinkWrapper()
 	frr := utils.NewFrrWrapper()
-	return NewServerWithArgs(nLink, frr)
+	return NewServerWithArgs(nLink, frr, store)
 }
 
 // NewServerWithArgs creates initialized instance of EVPN server
 // with externally created Netlink
-func NewServerWithArgs(nLink utils.Netlink, frr utils.Frr) *Server {
+func NewServerWithArgs(nLink utils.Netlink, frr utils.Frr, store gokv.Store) *Server {
 	if frr == nil {
 		log.Panic("nil for Frr is not allowed")
 	}
 	if nLink == nil {
 		log.Panic("nil for Netlink is not allowed")
+	}
+	if store == nil {
+		log.Panic("nil for Store is not allowed")
 	}
 	return &Server{
 		Bridges:    make(map[string]*pe.LogicalBridge),
@@ -67,6 +73,7 @@ func NewServerWithArgs(nLink utils.Netlink, frr utils.Frr) *Server {
 		nLink:      nLink,
 		frr:        frr,
 		tracer:     otel.Tracer(""),
+		store:      store,
 	}
 }
 
