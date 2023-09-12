@@ -366,11 +366,10 @@ services:
                 ip route add default via 40.40.40.1 dev eth0.40 table 1001
                 sleep 5 && \
                 ping -c 3 6.6.6.6 -I 40.40.40.40 && ping -c 3 40.40.40.41 && \
-                ip link add link eth1 name eth1.50 type vlan id 50 && \
-                ip link set eth1.50 up && \
-                ip addr add 50.50.50.50/24 dev eth1.50 && \
+                ip addr add 50.50.50.50/24 dev eth1 && \
                 ip rule add from 50.50.50.50 lookup 1002
-                ip route add default via 50.50.50.1 dev eth1.50 table 1002
+                ip route add default via 50.50.50.1 dev eth1 table 1002
+                arp -s 50.50.50.1 aa:bb:cc:00:00:51
                 sleep 5 && \
                 ping -c 3 7.7.7.7 -I 50.50.50.50'
 
@@ -391,12 +390,6 @@ networks:
       driver: default
       config:
         - subnet: 10.168.3.0/24
-
-  internet:
-    ipam:
-      driver: default
-      config:
-        - subnet: 5.5.5.0/24
 
   internet1:
     ipam:
@@ -422,23 +415,11 @@ networks:
       config:
         - subnet: 10.10.10.32/28
 
-  n3htoleafbn1:
-    ipam:
-      driver: default
-      config:
-        - subnet: 20.20.20.0/24
-
   n4htoleafbn2:
     ipam:
       driver: default
       config:
         - subnet: 30.30.30.0/24
-
-  n5h1tol1r:
-    ipam:
-      driver: default
-      config:
-        - subnet: 40.40.40.16/28
 
   n6h1tol1y:
     ipam:
