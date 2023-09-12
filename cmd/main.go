@@ -20,6 +20,9 @@ import (
 	"github.com/opiproject/opi-evpn-bridge/pkg/utils"
 	"github.com/opiproject/opi-smbios-bridge/pkg/inventory"
 
+	"github.com/philippgille/gokv"
+	"github.com/philippgille/gokv/gomap"
+
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/reflection"
@@ -42,11 +45,22 @@ func main() {
 
 	flag.Parse()
 
+	// Create KV store for persistence
+	options := gomap.DefaultOptions
+	// TODO: we can change to redis or badger at any given time
+	store := gomap.NewStore(options)
+	defer func(store gokv.Store) {
+		err := store.Close()
+		if err != nil {
+			log.Panic(err)
+		}
+	}(store)
+
 	go runGatewayServer(grpcPort, httpPort)
-	runGrpcServer(grpcPort, tlsFiles)
+	runGrpcServer(grpcPort, tlsFiles, store)
 }
 
-func runGrpcServer(grpcPort int, tlsFiles string) {
+func runGrpcServer(grpcPort int, tlsFiles string, store gokv.Store) {
 	tp := utils.InitTracerProvider("opi-evpn-bridge")
 	defer func() {
 		if err := tp.Shutdown(context.Background()); err != nil {
@@ -88,7 +102,7 @@ func runGrpcServer(grpcPort int, tlsFiles string) {
 	)
 	s := grpc.NewServer(serverOptions...)
 
-	opi := evpn.NewServer()
+	opi := evpn.NewServer(store)
 
 	pe.RegisterLogicalBridgeServiceServer(s, opi)
 	pe.RegisterBridgePortServiceServer(s, opi)

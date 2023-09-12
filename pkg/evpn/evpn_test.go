@@ -15,6 +15,9 @@ import (
 	"google.golang.org/grpc/test/bufconn"
 	"google.golang.org/protobuf/proto"
 
+	"github.com/philippgille/gokv"
+	"github.com/philippgille/gokv/gomap"
+
 	pe "github.com/opiproject/opi-api/network/evpn-gw/v1alpha1/gen/go"
 
 	"github.com/opiproject/opi-evpn-bridge/pkg/utils"
@@ -58,21 +61,31 @@ func TestFrontEnd_NewServerWithArgs(t *testing.T) {
 	tests := map[string]struct {
 		frr       utils.Frr
 		nLink     utils.Netlink
+		store     gokv.Store
 		wantPanic bool
 	}{
 		"nil netlink argument": {
 			frr:       &utils.FrrWrapper{},
 			nLink:     nil,
+			store:     gomap.NewStore(gomap.DefaultOptions),
+			wantPanic: true,
+		},
+		"nil store argument": {
+			frr:       &utils.FrrWrapper{},
+			nLink:     &utils.NetlinkWrapper{},
+			store:     nil,
 			wantPanic: true,
 		},
 		"nil frr argument": {
 			frr:       nil,
 			nLink:     &utils.NetlinkWrapper{},
+			store:     gomap.NewStore(gomap.DefaultOptions),
 			wantPanic: true,
 		},
 		"all valid arguments": {
 			frr:       &utils.FrrWrapper{},
 			nLink:     &utils.NetlinkWrapper{},
+			store:     gomap.NewStore(gomap.DefaultOptions),
 			wantPanic: false,
 		},
 	}
@@ -86,7 +99,7 @@ func TestFrontEnd_NewServerWithArgs(t *testing.T) {
 				}
 			}()
 
-			server := NewServerWithArgs(tt.nLink, tt.frr)
+			server := NewServerWithArgs(tt.nLink, tt.frr, tt.store)
 			if server == nil && !tt.wantPanic {
 				t.Error("expected non nil server or panic")
 			}
