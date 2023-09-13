@@ -258,7 +258,7 @@ services:
       /entrypoint.sh call --json_input --json_output localhost:50151 CreateSvi            "{\"svi_id\"            : \"blue-vlan20\",   \"svi\" :             {\"spec\" : {\"vrf\": \"//network.opiproject.org/vrfs/blue\",   \"logical_bridge\": \"//network.opiproject.org/bridges/vlan20\", \"mac_address\" : \"qrvMAAAh\", \"gw_ip_prefix\": [{\"addr\": {\"af\": \"IP_AF_INET\", \"v4_addr\": 336860161}, \"len\": 24}] }} }" && \
       /entrypoint.sh call --json_input --json_output localhost:50151 CreateSvi            "{\"svi_id\"            : \"blue-vlan30\",   \"svi\" :             {\"spec\" : {\"vrf\": \"//network.opiproject.org/vrfs/blue\",   \"logical_bridge\": \"//network.opiproject.org/bridges/vlan30\", \"mac_address\" : \"qrvMAAAx\", \"gw_ip_prefix\": [{\"addr\": {\"af\": \"IP_AF_INET\", \"v4_addr\": 505290241}, \"len\": 24}] }} }" && \
       /entrypoint.sh call --json_input --json_output localhost:50151 CreateSvi            "{\"svi_id\"            : \"green-vlan40\",  \"svi\" :             {\"spec\" : {\"vrf\": \"//network.opiproject.org/vrfs/green\",  \"logical_bridge\": \"//network.opiproject.org/bridges/vlan40\", \"mac_address\" : \"qrvMAABB\", \"gw_ip_prefix\": [{\"addr\": {\"af\": \"IP_AF_INET\", \"v4_addr\": 673720321}, \"len\": 24}] }} }" && \
-      /entrypoint.sh call --json_input --json_output localhost:50151 CreateSvi            "{\"svi_id\"            : \"yellow-vlan50\", \"svi\" :             {\"spec\" : {\"vrf\": \"//network.opiproject.org/vrfs/yellow\", \"logical_bridge\": \"//network.opiproject.org/bridges/vlan50\", \"mac_address\" : \"qrvMAABR\", \"gw_ip_prefix\": [{\"addr\": {\"af\": \"IP_AF_INET\", \"v4_addr\": 842150401}, \"len\": 24}] }} }" && \
+      /entrypoint.sh call --json_input --json_output localhost:50151 CreateSvi            "{\"svi_id\"            : \"yellow-vlan50\", \"svi\" :             {\"spec\" : {\"vrf\": \"//network.opiproject.org/vrfs/yellow\", \"logical_bridge\": \"//network.opiproject.org/bridges/vlan50\", \"mac_address\" : \"qrvMAABR\", \"gw_ip_prefix\": [{\"addr\": {\"af\": \"IP_AF_INET\", \"v4_addr\": 842150405}, \"len\": 24}] }} }" && \
       /entrypoint.sh call --json_input --json_output localhost:50151 CreateBridgePort     "{\"bridge_port_id\"    : \"eth1\",          \"bridge_port\" :     {\"spec\" : {\"mac_address\" : \"qrvMAAAB\", \"ptype\": \"TRUNK\",  \"logical_bridges\": [\"//network.opiproject.org/bridges/vlan10\", \"//network.opiproject.org/bridges/vlan20\", \"//network.opiproject.org/bridges/vlan40\"] }} }" && \
       /entrypoint.sh call --json_input --json_output localhost:50151 CreateBridgePort     "{\"bridge_port_id\"    : \"eth2\",          \"bridge_port\" :     {\"spec\" : {\"mac_address\" : \"qrvMAAAB\", \"ptype\": \"ACCESS\", \"logical_bridges\": [\"//network.opiproject.org/bridges/vlan50\"] }} }" && \
       echo get && \
@@ -368,8 +368,7 @@ services:
                 ping -c 3 6.6.6.6 -I 40.40.40.40 && ping -c 3 40.40.40.41 && \
                 ip addr add 50.50.50.50/24 dev eth1 && \
                 ip rule add from 50.50.50.50 lookup 1002
-                ip route add default via 50.50.50.1 dev eth1 table 1002
-                arp -s 50.50.50.1 aa:bb:cc:00:00:51
+                ip route add default via 50.50.50.5 dev eth1 table 1002
                 sleep 5 && \
                 ping -c 3 7.7.7.7 -I 50.50.50.50'
 
