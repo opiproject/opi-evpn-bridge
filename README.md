@@ -140,6 +140,9 @@ Generate mocks like this:
 ```bash
 go install github.com/vektra/mockery/v2@latest
 make mock-generate
+
+# or using docker
+docker run -v "$PWD":/src -w /src vektra/mockery --config=utils/mocks/.mockery.yaml --name=Netlink --dir pkg/utils --output pkg/utils/mocks --boilerplate-file pkg/utils/mocks/boilerplate.txt --with-expecter
 ```
 
 ## POC diagrams
