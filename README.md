@@ -112,6 +112,14 @@ Flags:
 Use "godpu evpn [command] --help" for more information about a command.
 ```
 
+## Manual HTTP example
+
+In addition HTTP is supported via [grpc gateway](https://github.com/grpc-ecosystem/grpc-gateway), for example:
+
+```bash
+curl -kL http://10.10.10.10:8082/v1/inventory/1/inventory/2
+```
+
 ## Architecture Diagram
 
 ![OPI EVPN Bridge Architcture Diagram](./docs/OPI-EVPN-GW-FRR-bridge.png)
