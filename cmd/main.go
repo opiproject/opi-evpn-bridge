@@ -17,6 +17,7 @@ import (
 	pc "github.com/opiproject/opi-api/common/v1/gen/go"
 	pe "github.com/opiproject/opi-api/network/evpn-gw/v1alpha1/gen/go"
 	"github.com/opiproject/opi-evpn-bridge/pkg/evpn"
+	"github.com/opiproject/opi-evpn-bridge/pkg/utils"
 	"github.com/opiproject/opi-smbios-bridge/pkg/inventory"
 
 	"google.golang.org/grpc"
@@ -33,18 +34,39 @@ func main() {
 	var httpPort int
 	flag.IntVar(&httpPort, "http_port", 8082, "The HTTP server port")
 
+	var tlsFiles string
+	flag.StringVar(&tlsFiles, "tls", "", "TLS files in server_cert:server_key:ca_cert format.")
+
 	flag.Parse()
 
 	go runGatewayServer(grpcPort, httpPort)
-	runGrpcServer(grpcPort)
+	runGrpcServer(grpcPort, tlsFiles)
 }
 
-func runGrpcServer(grpcPort int) {
+func runGrpcServer(grpcPort int, tlsFiles string) {
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", grpcPort))
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
-	s := grpc.NewServer()
+
+	var serverOptions []grpc.ServerOption
+	if tlsFiles == "" {
+		log.Println("TLS files are not specified. Use insecure connection.")
+	} else {
+		log.Println("Use TLS certificate files:", tlsFiles)
+		config, err := utils.ParseTLSFiles(tlsFiles)
+		if err != nil {
+			log.Fatal("Failed to parse string with tls paths:", err)
+		}
+		log.Println("TLS config:", config)
+		var option grpc.ServerOption
+		if option, err = utils.SetupTLSCredentials(config); err != nil {
+			log.Fatal("Failed to setup TLS:", err)
+		}
+		serverOptions = append(serverOptions, option)
+	}
+	s := grpc.NewServer(serverOptions...)
+
 	opi := evpn.NewServer()
 
 	pe.RegisterLogicalBridgeServiceServer(s, opi)
