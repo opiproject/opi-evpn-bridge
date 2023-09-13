@@ -203,9 +203,17 @@ services:
     depends_on:
       - leaf1
     network_mode: service:leaf1
-    command: /opi-evpn-bridge -port=50151
+    command: /opi-evpn-bridge -grpc_port=50151 -http_port=8082
     healthcheck:
       test: grpcurl -plaintext localhost:50151 list || exit 1
+
+  opi-gw-test:
+    image: curlimages/curl:8.2.1
+    network_mode: service:leaf1
+    depends_on:
+      opi-evpn-bridge:
+        condition: service_healthy
+    command: curl -qkL http://localhost:8082/v1/inventory/1/inventory/2
 
   testgrpc:
     image: docker.io/namely/grpc-cli
