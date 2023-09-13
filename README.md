@@ -54,6 +54,23 @@ docker-compose exec opi-evpn-bridge grpcurl -plaintext -d '{"name" : "//network.
 docker-compose exec opi-evpn-bridge grpcurl -plaintext -d '{"name" : "//network.opiproject.org/vrfs/testvrf"}' localhost:50151 opi_api.network.evpn_gw.v1alpha1.VrfService.DeleteVrf
 ```
 
+using [grpc_cli](https://github.com/grpc/grpc/blob/master/doc/command_line_tool.md)
+
+```bash
+$ docker run --rm -it --network=container:opi-evpn-bridge-opi-evpn-bridge-1 docker.io/namely/grpc-cli ls localhost:50151
+grpc.reflection.v1.ServerReflection
+grpc.reflection.v1alpha.ServerReflection
+opi_api.network.evpn_gw.v1alpha1.BridgePortService
+opi_api.network.evpn_gw.v1alpha1.LogicalBridgeService
+opi_api.network.evpn_gw.v1alpha1.SviService
+opi_api.network.evpn_gw.v1alpha1.VrfService
+
+$ docker run --rm -it --network=container:opi-evpn-bridge-opi-evpn-bridge-1 docker.io/namely/grpc-cli call localhost:50151 VrfService.ListVrfs ""
+connecting to localhost:50151
+...
+Rpc succeeded with OK status
+```
+
 using [godpu](https://github.com/opiproject/godpu)
 
 ```bash
