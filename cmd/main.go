@@ -11,8 +11,10 @@ import (
 	"log"
 	"net"
 
+	pc "github.com/opiproject/opi-api/common/v1/gen/go"
 	pe "github.com/opiproject/opi-api/network/evpn-gw/v1alpha1/gen/go"
 	"github.com/opiproject/opi-evpn-bridge/pkg/evpn"
+	"github.com/opiproject/opi-smbios-bridge/pkg/inventory"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
@@ -35,6 +37,7 @@ func main() {
 	pe.RegisterBridgePortServiceServer(s, opi)
 	pe.RegisterVrfServiceServer(s, opi)
 	pe.RegisterSviServiceServer(s, opi)
+	pc.RegisterInventorySvcServer(s, &inventory.Server{})
 
 	reflection.Register(s)
 
