@@ -428,7 +428,7 @@ func Test_CreateSvi(t *testing.T) {
 			if tt.on != nil {
 				tt.on(mockNetlink, mockFrr, tt.errMsg)
 			}
-			opi.Vrfs[testVrfName] = protoClone(&testVrfWithStatus)
+			opi.store.Set(testVrfName, &testVrfWithStatus)
 			opi.Bridges[testLogicalBridgeName] = protoClone(&testLogicalBridgeWithStatus)
 
 			request := &pb.CreateSviRequest{Svi: tt.in, SviId: tt.id}
