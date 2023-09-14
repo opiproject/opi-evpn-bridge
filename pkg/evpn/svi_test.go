@@ -29,6 +29,7 @@ import (
 	pb "github.com/opiproject/opi-api/network/evpn-gw/v1alpha1/gen/go"
 	pc "github.com/opiproject/opi-api/network/opinetcommon/v1alpha1/gen/go"
 
+	"github.com/opiproject/opi-evpn-bridge/pkg/utils"
 	"github.com/opiproject/opi-evpn-bridge/pkg/utils/mocks"
 )
 
@@ -400,7 +401,7 @@ func Test_CreateSvi(t *testing.T) {
 			ctx := context.Background()
 			mockNetlink := mocks.NewNetlink(t)
 			mockFrr := mocks.NewFrr(t)
-			store := gomap.NewStore(gomap.DefaultOptions)
+			store := gomap.NewStore(gomap.Options{Codec: utils.ProtoCodec{}})
 			opi := NewServerWithArgs(mockNetlink, mockFrr, store)
 			conn, err := grpc.DialContext(ctx,
 				"",
@@ -583,7 +584,7 @@ func Test_DeleteSvi(t *testing.T) {
 			ctx := context.Background()
 			mockNetlink := mocks.NewNetlink(t)
 			mockFrr := mocks.NewFrr(t)
-			store := gomap.NewStore(gomap.DefaultOptions)
+			store := gomap.NewStore(gomap.Options{Codec: utils.ProtoCodec{}})
 			opi := NewServerWithArgs(mockNetlink, mockFrr, store)
 			conn, err := grpc.DialContext(ctx,
 				"",
@@ -678,7 +679,7 @@ func Test_UpdateSvi(t *testing.T) {
 			ctx := context.Background()
 			mockNetlink := mocks.NewNetlink(t)
 			mockFrr := mocks.NewFrr(t)
-			store := gomap.NewStore(gomap.DefaultOptions)
+			store := gomap.NewStore(gomap.Options{Codec: utils.ProtoCodec{}})
 			opi := NewServerWithArgs(mockNetlink, mockFrr, store)
 			conn, err := grpc.DialContext(ctx,
 				"",
@@ -760,7 +761,7 @@ func Test_GetSvi(t *testing.T) {
 			ctx := context.Background()
 			mockNetlink := mocks.NewNetlink(t)
 			mockFrr := mocks.NewFrr(t)
-			store := gomap.NewStore(gomap.DefaultOptions)
+			store := gomap.NewStore(gomap.Options{Codec: utils.ProtoCodec{}})
 			opi := NewServerWithArgs(mockNetlink, mockFrr, store)
 			conn, err := grpc.DialContext(ctx,
 				"",
@@ -865,7 +866,7 @@ func Test_ListSvis(t *testing.T) {
 			ctx := context.Background()
 			mockNetlink := mocks.NewNetlink(t)
 			mockFrr := mocks.NewFrr(t)
-			store := gomap.NewStore(gomap.DefaultOptions)
+			store := gomap.NewStore(gomap.Options{Codec: utils.ProtoCodec{}})
 			opi := NewServerWithArgs(mockNetlink, mockFrr, store)
 			conn, err := grpc.DialContext(ctx,
 				"",
