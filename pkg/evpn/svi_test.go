@@ -419,7 +419,7 @@ func Test_CreateSvi(t *testing.T) {
 			client := pb.NewSviServiceClient(conn)
 
 			if tt.exist {
-				opi.Svis[testSviName] = protoClone(&testSviWithStatus)
+				opi.store.Set(testSviName, &testSviWithStatus)
 			}
 			if tt.out != nil {
 				tt.out = protoClone(tt.out)
@@ -602,8 +602,8 @@ func Test_DeleteSvi(t *testing.T) {
 			client := pb.NewSviServiceClient(conn)
 
 			fname1 := resourceIDToFullName("svis", tt.in)
-			opi.Svis[testSviName] = protoClone(&testSviWithStatus)
-			opi.Vrfs[testVrfName] = protoClone(&testVrfWithStatus)
+			opi.store.Set(testSviName, &testSviWithStatus)
+			opi.store.Set(testVrfName, &testVrfWithStatus)
 			opi.Bridges[testLogicalBridgeName] = protoClone(&testLogicalBridgeWithStatus)
 			if tt.on != nil {
 				tt.on(mockNetlink, mockFrr, tt.errMsg)
@@ -697,7 +697,7 @@ func Test_UpdateSvi(t *testing.T) {
 			client := pb.NewSviServiceClient(conn)
 
 			if tt.exist {
-				opi.Svis[testSviName] = protoClone(&testSviWithStatus)
+				opi.store.Set(testSviName, &testSviWithStatus)
 			}
 			if tt.out != nil {
 				tt.out = protoClone(tt.out)
@@ -778,7 +778,7 @@ func Test_GetSvi(t *testing.T) {
 			}(conn)
 			client := pb.NewSviServiceClient(conn)
 
-			opi.Svis[testSviName] = protoClone(&testSviWithStatus)
+			opi.store.Set(testSviName, &testSviWithStatus)
 
 			request := &pb.GetSviRequest{Name: tt.in}
 			response, err := client.GetSvi(ctx, request)
@@ -883,7 +883,7 @@ func Test_ListSvis(t *testing.T) {
 			}(conn)
 			client := pb.NewSviServiceClient(conn)
 
-			opi.Svis[testSviName] = protoClone(&testSviWithStatus)
+			opi.store.Set(testSviName, &testSviWithStatus)
 			opi.Pagination["existing-pagination-token"] = 1
 
 			request := &pb.ListSvisRequest{PageSize: tt.size, PageToken: tt.token}

@@ -44,7 +44,12 @@ func (s *Server) CreateSvi(ctx context.Context, in *pb.CreateSviRequest) (*pb.Sv
 	}
 	in.Svi.Name = resourceIDToFullName("svis", resourceID)
 	// idempotent API when called with same key, should return same object
-	obj, ok := s.Svis[in.Svi.Name]
+	obj := new(pb.Svi)
+	ok, err := s.store.Get(in.Svi.Name, obj)
+	if err != nil {
+		fmt.Printf("Failed to interact with store: %v", err)
+		return nil, err
+	}
 	if ok {
 		log.Printf("Already existing Svi with id %v", in.Svi.Name)
 		return obj, nil
@@ -82,7 +87,10 @@ func (s *Server) CreateSvi(ctx context.Context, in *pb.CreateSviRequest) (*pb.Sv
 	response.Status = &pb.SviStatus{OperStatus: pb.SVIOperStatus_SVI_OPER_STATUS_UP}
 	log.Printf("new object %v", models.NewSvi(response))
 	// save object to the database
-	s.Svis[in.Svi.Name] = response
+	err = s.store.Set(in.Svi.Name, response)
+	if err != nil {
+		return nil, err
+	}
 	return response, nil
 }
 
@@ -93,7 +101,12 @@ func (s *Server) DeleteSvi(ctx context.Context, in *pb.DeleteSviRequest) (*empty
 		return nil, err
 	}
 	// fetch object from the database
-	obj, ok := s.Svis[in.Name]
+	obj := new(pb.Svi)
+	ok, err := s.store.Get(in.Name, obj)
+	if err != nil {
+		fmt.Printf("Failed to interact with store: %v", err)
+		return nil, err
+	}
 	if !ok {
 		if in.AllowMissing {
 			return &emptypb.Empty{}, nil
@@ -130,7 +143,10 @@ func (s *Server) DeleteSvi(ctx context.Context, in *pb.DeleteSviRequest) (*empty
 		return nil, err
 	}
 	// remove from the Database
-	delete(s.Svis, obj.Name)
+	err = s.store.Delete(obj.Name)
+	if err != nil {
+		return nil, err
+	}
 	return &emptypb.Empty{}, nil
 }
 
@@ -141,7 +157,12 @@ func (s *Server) UpdateSvi(ctx context.Context, in *pb.UpdateSviRequest) (*pb.Sv
 		return nil, err
 	}
 	// fetch object from the database
-	svi, ok := s.Svis[in.Svi.Name]
+	svi := new(pb.Svi)
+	ok, err := s.store.Get(in.Svi.Name, svi)
+	if err != nil {
+		fmt.Printf("Failed to interact with store: %v", err)
+		return nil, err
+	}
 	if !ok {
 		// TODO: introduce "in.AllowMissing" field. In case "true", create a new resource, don't return error
 		err := status.Errorf(codes.NotFound, "unable to find key %s", in.Svi.Name)
@@ -167,7 +188,10 @@ func (s *Server) UpdateSvi(ctx context.Context, in *pb.UpdateSviRequest) (*pb.Sv
 	}
 	response := protoClone(in.Svi)
 	response.Status = &pb.SviStatus{OperStatus: pb.SVIOperStatus_SVI_OPER_STATUS_UP}
-	s.Svis[in.Svi.Name] = response
+	err = s.store.Set(in.Svi.Name, response)
+	if err != nil {
+		return nil, err
+	}
 	return response, nil
 }
 
@@ -178,7 +202,12 @@ func (s *Server) GetSvi(ctx context.Context, in *pb.GetSviRequest) (*pb.Svi, err
 		return nil, err
 	}
 	// fetch object from the database
-	obj, ok := s.Svis[in.Name]
+	obj := new(pb.Svi)
+	ok, err := s.store.Get(in.Name, obj)
+	if err != nil {
+		fmt.Printf("Failed to interact with store: %v", err)
+		return nil, err
+	}
 	if !ok {
 		err := status.Errorf(codes.NotFound, "unable to find key %s", in.Name)
 		return nil, err
