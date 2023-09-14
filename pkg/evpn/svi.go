@@ -56,7 +56,12 @@ func (s *Server) CreateSvi(ctx context.Context, in *pb.CreateSviRequest) (*pb.Sv
 		return nil, err
 	}
 	// now get Vrf to plug this vlandev into
-	vrf, ok := s.Vrfs[in.Svi.Spec.Vrf]
+	vrf := new(pb.Vrf)
+	ok, err = s.store.Get(in.Svi.Spec.Vrf, vrf)
+	if err != nil {
+		fmt.Printf("Failed to interact with store: %v", err)
+		return nil, err
+	}
 	if !ok {
 		err := status.Errorf(codes.NotFound, "unable to find key %s", in.Svi.Spec.Vrf)
 		return nil, err
@@ -103,7 +108,12 @@ func (s *Server) DeleteSvi(ctx context.Context, in *pb.DeleteSviRequest) (*empty
 		return nil, err
 	}
 	// fetch object from the database
-	vrf, ok := s.Vrfs[obj.Spec.Vrf]
+	vrf := new(pb.Vrf)
+	ok, err = s.store.Get(obj.Spec.Vrf, vrf)
+	if err != nil {
+		fmt.Printf("Failed to interact with store: %v", err)
+		return nil, err
+	}
 	if !ok {
 		err := status.Errorf(codes.NotFound, "unable to find key %s", obj.Spec.Vrf)
 		return nil, err
@@ -180,7 +190,7 @@ func (s *Server) GetSvi(ctx context.Context, in *pb.GetSviRequest) (*pb.Svi, err
 		return nil, err
 	}
 	vlanName := fmt.Sprintf("vlan%d", bridgeObject.Spec.VlanId)
-	_, err := s.nLink.LinkByName(ctx, vlanName)
+	_, err = s.nLink.LinkByName(ctx, vlanName)
 	if err != nil {
 		err := status.Errorf(codes.NotFound, "unable to find key %s", vlanName)
 		return nil, err

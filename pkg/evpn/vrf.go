@@ -45,7 +45,12 @@ func (s *Server) CreateVrf(ctx context.Context, in *pb.CreateVrfRequest) (*pb.Vr
 	}
 	in.Vrf.Name = resourceIDToFullName("vrfs", resourceID)
 	// idempotent API when called with same key, should return same object
-	obj, ok := s.Vrfs[in.Vrf.Name]
+	obj := new(pb.Vrf)
+	ok, err := s.store.Get(in.Vrf.Name, obj)
+	if err != nil {
+		fmt.Printf("Failed to interact with store: %v", err)
+		return nil, err
+	}
 	if ok {
 		log.Printf("Already existing Vrf with id %v", in.Vrf.Name)
 		return obj, nil
@@ -74,7 +79,10 @@ func (s *Server) CreateVrf(ctx context.Context, in *pb.CreateVrfRequest) (*pb.Vr
 	response.Status = &pb.VrfStatus{LocalAs: 4, RoutingTable: tableID, Rmac: mac}
 	log.Printf("new object %v", models.NewVrf(response))
 	// save object to the database
-	s.Vrfs[in.Vrf.Name] = response
+	err = s.store.Set(in.Vrf.Name, response)
+	if err != nil {
+		return nil, err
+	}
 	return response, nil
 }
 
@@ -85,7 +93,12 @@ func (s *Server) DeleteVrf(ctx context.Context, in *pb.DeleteVrfRequest) (*empty
 		return nil, err
 	}
 	// fetch object from the database
-	obj, ok := s.Vrfs[in.Name]
+	obj := new(pb.Vrf)
+	ok, err := s.store.Get(in.Name, obj)
+	if err != nil {
+		fmt.Printf("Failed to interact with store: %v", err)
+		return nil, err
+	}
 	if !ok {
 		if in.AllowMissing {
 			return &emptypb.Empty{}, nil
@@ -102,7 +115,10 @@ func (s *Server) DeleteVrf(ctx context.Context, in *pb.DeleteVrfRequest) (*empty
 		return nil, err
 	}
 	// remove from the Database
-	delete(s.Vrfs, obj.Name)
+	err = s.store.Delete(obj.Name)
+	if err != nil {
+		return nil, err
+	}
 	return &emptypb.Empty{}, nil
 }
 
@@ -113,13 +129,18 @@ func (s *Server) UpdateVrf(ctx context.Context, in *pb.UpdateVrfRequest) (*pb.Vr
 		return nil, err
 	}
 	// fetch object from the database
-	vrf, ok := s.Vrfs[in.Vrf.Name]
+	obj := new(pb.Vrf)
+	ok, err := s.store.Get(in.Vrf.Name, obj)
+	if err != nil {
+		fmt.Printf("Failed to interact with store: %v", err)
+		return nil, err
+	}
 	if !ok {
 		// TODO: introduce "in.AllowMissing" field. In case "true", create a new resource, don't return error
 		err := status.Errorf(codes.NotFound, "unable to find key %s", in.Vrf.Name)
 		return nil, err
 	}
-	resourceID := path.Base(vrf.Name)
+	resourceID := path.Base(obj.Name)
 	iface, err := s.nLink.LinkByName(ctx, resourceID)
 	if err != nil {
 		err := status.Errorf(codes.NotFound, "unable to find key %s", resourceID)
@@ -133,7 +154,10 @@ func (s *Server) UpdateVrf(ctx context.Context, in *pb.UpdateVrfRequest) (*pb.Vr
 	}
 	response := protoClone(in.Vrf)
 	response.Status = &pb.VrfStatus{LocalAs: 4}
-	s.Vrfs[in.Vrf.Name] = response
+	err = s.store.Set(in.Vrf.Name, response)
+	if err != nil {
+		return nil, err
+	}
 	return response, nil
 }
 
@@ -144,13 +168,18 @@ func (s *Server) GetVrf(ctx context.Context, in *pb.GetVrfRequest) (*pb.Vrf, err
 		return nil, err
 	}
 	// fetch object from the database
-	obj, ok := s.Vrfs[in.Name]
+	obj := new(pb.Vrf)
+	ok, err := s.store.Get(in.Name, obj)
+	if err != nil {
+		fmt.Printf("Failed to interact with store: %v", err)
+		return nil, err
+	}
 	if !ok {
 		err := status.Errorf(codes.NotFound, "unable to find key %s", in.Name)
 		return nil, err
 	}
 	resourceID := path.Base(obj.Name)
-	_, err := s.nLink.LinkByName(ctx, resourceID)
+	_, err = s.nLink.LinkByName(ctx, resourceID)
 	if err != nil {
 		err := status.Errorf(codes.NotFound, "unable to find key %s", resourceID)
 		return nil, err
