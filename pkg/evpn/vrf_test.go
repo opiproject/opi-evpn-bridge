@@ -109,7 +109,7 @@ func Test_CreateVrf(t *testing.T) {
 		"already exists": {
 			id:      testVrfID,
 			in:      &testVrf,
-			out:     &testVrf,
+			out:     &testVrfWithStatus,
 			errCode: codes.OK,
 			errMsg:  "",
 			exist:   true,
@@ -340,8 +340,7 @@ func Test_CreateVrf(t *testing.T) {
 			client := pb.NewVrfServiceClient(conn)
 
 			if tt.exist {
-				opi.Vrfs[testVrfName] = protoClone(&testVrf)
-				opi.Vrfs[testVrfName].Name = testVrfName
+				opi.Vrfs[testVrfName] = protoClone(&testVrfWithStatus)
 			}
 			if tt.out != nil {
 				tt.out = protoClone(tt.out)
@@ -630,8 +629,7 @@ func Test_DeleteVrf(t *testing.T) {
 			client := pb.NewVrfServiceClient(conn)
 
 			fname1 := resourceIDToFullName("vrfs", tt.in)
-			opi.Vrfs[testVrfName] = protoClone(&testVrf)
-			opi.Vrfs[testVrfName].Name = testVrfName
+			opi.Vrfs[testVrfName] = protoClone(&testVrfWithStatus)
 			if tt.on != nil {
 				tt.on(mockNetlink, tt.errMsg)
 			}
@@ -722,8 +720,7 @@ func Test_UpdateVrf(t *testing.T) {
 			client := pb.NewVrfServiceClient(conn)
 
 			if tt.exist {
-				opi.Vrfs[testVrfName] = protoClone(&testVrf)
-				opi.Vrfs[testVrfName].Name = testVrfName
+				opi.Vrfs[testVrfName] = protoClone(&testVrfWithStatus)
 			}
 			if tt.out != nil {
 				tt.out = protoClone(tt.out)
@@ -802,8 +799,7 @@ func Test_GetVrf(t *testing.T) {
 			}(conn)
 			client := pb.NewVrfServiceClient(conn)
 
-			opi.Vrfs[testVrfName] = protoClone(&testVrf)
-			opi.Vrfs[testVrfName].Name = testVrfName
+			opi.Vrfs[testVrfName] = protoClone(&testVrfWithStatus)
 
 			request := &pb.GetVrfRequest{Name: tt.in}
 			response, err := client.GetVrf(ctx, request)
@@ -906,8 +902,7 @@ func Test_ListVrfs(t *testing.T) {
 			}(conn)
 			client := pb.NewVrfServiceClient(conn)
 
-			opi.Vrfs[testVrfName] = protoClone(&testVrf)
-			opi.Vrfs[testVrfName].Name = testVrfName
+			opi.Vrfs[testVrfName] = protoClone(&testVrfWithStatus)
 			opi.Pagination["existing-pagination-token"] = 1
 
 			request := &pb.ListVrfsRequest{PageSize: tt.size, PageToken: tt.token}
