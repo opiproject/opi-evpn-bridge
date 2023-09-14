@@ -36,7 +36,6 @@ type Server struct {
 	pb.UnimplementedBridgePortServiceServer
 	Bridges    map[string]*pb.LogicalBridge
 	Ports      map[string]*pb.BridgePort
-	Svis       map[string]*pb.Svi
 	Pagination map[string]int
 	nLink      utils.Netlink
 	frr        utils.Frr
@@ -66,7 +65,6 @@ func NewServerWithArgs(nLink utils.Netlink, frr utils.Frr, store gokv.Store) *Se
 	return &Server{
 		Bridges:    make(map[string]*pb.LogicalBridge),
 		Ports:      make(map[string]*pb.BridgePort),
-		Svis:       make(map[string]*pb.Svi),
 		Pagination: make(map[string]int),
 		nLink:      nLink,
 		frr:        frr,
