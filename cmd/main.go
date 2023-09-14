@@ -47,6 +47,7 @@ func main() {
 
 	// Create KV store for persistence
 	options := redis.DefaultOptions
+	options.Codec = utils.ProtoCodec{}
 	store, err := redis.NewClient(options)
 	if err != nil {
 		log.Panic(err)
