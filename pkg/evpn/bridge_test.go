@@ -134,7 +134,7 @@ func Test_CreateLogicalBridge(t *testing.T) {
 		"already exists": {
 			id:      testLogicalBridgeID,
 			in:      &testLogicalBridge,
-			out:     &testLogicalBridge,
+			out:     &testLogicalBridgeWithStatus,
 			errCode: codes.OK,
 			errMsg:  "",
 			exist:   true,
@@ -272,8 +272,7 @@ func Test_CreateLogicalBridge(t *testing.T) {
 			client := pb.NewLogicalBridgeServiceClient(conn)
 
 			if tt.exist {
-				opi.Bridges[testLogicalBridgeName] = protoClone(&testLogicalBridge)
-				opi.Bridges[testLogicalBridgeName].Name = testLogicalBridgeName
+				opi.Bridges[testLogicalBridgeName] = protoClone(&testLogicalBridgeWithStatus)
 			}
 			if tt.out != nil {
 				tt.out = protoClone(tt.out)
@@ -440,8 +439,7 @@ func Test_DeleteLogicalBridge(t *testing.T) {
 			client := pb.NewLogicalBridgeServiceClient(conn)
 
 			fname1 := resourceIDToFullName("bridges", tt.in)
-			opi.Bridges[testLogicalBridgeName] = protoClone(&testLogicalBridge)
-			opi.Bridges[testLogicalBridgeName].Name = testLogicalBridgeName
+			opi.Bridges[testLogicalBridgeName] = protoClone(&testLogicalBridgeWithStatus)
 
 			if tt.on != nil {
 				tt.on(mockNetlink, tt.errMsg)
@@ -531,8 +529,7 @@ func Test_UpdateLogicalBridge(t *testing.T) {
 			client := pb.NewLogicalBridgeServiceClient(conn)
 
 			if tt.exist {
-				opi.Bridges[testLogicalBridgeName] = protoClone(&testLogicalBridge)
-				opi.Bridges[testLogicalBridgeName].Name = testLogicalBridgeName
+				opi.Bridges[testLogicalBridgeName] = protoClone(&testLogicalBridgeWithStatus)
 			}
 			if tt.out != nil {
 				tt.out = protoClone(tt.out)
@@ -611,8 +608,7 @@ func Test_GetLogicalBridge(t *testing.T) {
 			}(conn)
 			client := pb.NewLogicalBridgeServiceClient(conn)
 
-			opi.Bridges[testLogicalBridgeName] = protoClone(&testLogicalBridge)
-			opi.Bridges[testLogicalBridgeName].Name = testLogicalBridgeName
+			opi.Bridges[testLogicalBridgeName] = protoClone(&testLogicalBridgeWithStatus)
 
 			request := &pb.GetLogicalBridgeRequest{Name: tt.in}
 			response, err := client.GetLogicalBridge(ctx, request)
@@ -715,8 +711,7 @@ func Test_ListLogicalBridges(t *testing.T) {
 			}(conn)
 			client := pb.NewLogicalBridgeServiceClient(conn)
 
-			opi.Bridges[testLogicalBridgeName] = protoClone(&testLogicalBridge)
-			opi.Bridges[testLogicalBridgeName].Name = testLogicalBridgeName
+			opi.Bridges[testLogicalBridgeName] = protoClone(&testLogicalBridgeWithStatus)
 			opi.Pagination["existing-pagination-token"] = 1
 
 			request := &pb.ListLogicalBridgesRequest{PageSize: tt.size, PageToken: tt.token}

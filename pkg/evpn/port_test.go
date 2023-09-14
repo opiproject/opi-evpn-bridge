@@ -71,7 +71,7 @@ func Test_CreateBridgePort(t *testing.T) {
 		"already exists": {
 			id:      testBridgePortID,
 			in:      &testBridgePort,
-			out:     &testBridgePort,
+			out:     &testBridgePortWithStatus,
 			errCode: codes.OK,
 			errMsg:  "",
 			exist:   true,
@@ -313,11 +313,9 @@ func Test_CreateBridgePort(t *testing.T) {
 			}(conn)
 			client := pb.NewBridgePortServiceClient(conn)
 
-			opi.Bridges[testLogicalBridgeName] = protoClone(&testLogicalBridge)
-			opi.Bridges[testLogicalBridgeName].Name = testLogicalBridgeName
+			opi.Bridges[testLogicalBridgeName] = protoClone(&testLogicalBridgeWithStatus)
 			if tt.exist {
-				opi.Ports[testBridgePortName] = protoClone(&testBridgePort)
-				opi.Ports[testBridgePortName].Name = testBridgePortName
+				opi.Ports[testBridgePortName] = protoClone(&testBridgePortWithStatus)
 			}
 			if tt.out != nil {
 				tt.out = protoClone(tt.out)
@@ -471,10 +469,8 @@ func Test_DeleteBridgePort(t *testing.T) {
 			client := pb.NewBridgePortServiceClient(conn)
 
 			fname1 := resourceIDToFullName("ports", tt.in)
-			opi.Ports[testBridgePortName] = protoClone(&testBridgePort)
-			opi.Ports[testBridgePortName].Name = testBridgePortName
-			opi.Bridges[testLogicalBridgeName] = protoClone(&testLogicalBridge)
-			opi.Bridges[testLogicalBridgeName].Name = testLogicalBridgeName
+			opi.Ports[testBridgePortName] = protoClone(&testBridgePortWithStatus)
+			opi.Bridges[testLogicalBridgeName] = protoClone(&testLogicalBridgeWithStatus)
 			if tt.on != nil {
 				tt.on(mockNetlink, tt.errMsg)
 			}
@@ -564,8 +560,7 @@ func Test_UpdateBridgePort(t *testing.T) {
 			client := pb.NewBridgePortServiceClient(conn)
 
 			if tt.exist {
-				opi.Ports[testBridgePortName] = protoClone(&testBridgePort)
-				opi.Ports[testBridgePortName].Name = testBridgePortName
+				opi.Ports[testBridgePortName] = protoClone(&testBridgePortWithStatus)
 			}
 			if tt.out != nil {
 				tt.out = protoClone(tt.out)
@@ -644,8 +639,7 @@ func Test_GetBridgePort(t *testing.T) {
 			}(conn)
 			client := pb.NewBridgePortServiceClient(conn)
 
-			opi.Ports[testBridgePortName] = protoClone(&testBridgePort)
-			opi.Ports[testBridgePortName].Name = testBridgePortName
+			opi.Ports[testBridgePortName] = protoClone(&testBridgePortWithStatus)
 
 			request := &pb.GetBridgePortRequest{Name: tt.in}
 			response, err := client.GetBridgePort(ctx, request)
@@ -748,8 +742,7 @@ func Test_ListBridgePorts(t *testing.T) {
 			}(conn)
 			client := pb.NewBridgePortServiceClient(conn)
 
-			opi.Ports[testBridgePortName] = protoClone(&testBridgePort)
-			opi.Ports[testBridgePortName].Name = testBridgePortName
+			opi.Ports[testBridgePortName] = protoClone(&testBridgePortWithStatus)
 			opi.Pagination["existing-pagination-token"] = 1
 
 			request := &pb.ListBridgePortsRequest{PageSize: tt.size, PageToken: tt.token}
