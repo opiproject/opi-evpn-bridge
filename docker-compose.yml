@@ -208,7 +208,7 @@ services:
       test: grpcurl -plaintext localhost:50151 list || exit 1
 
   opi-gw-test:
-    image: curlimages/curl:8.2.1
+    image: curlimages/curl:8.3.0
     network_mode: service:leaf1
     depends_on:
       opi-evpn-bridge:
