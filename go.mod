@@ -5,8 +5,10 @@ go 1.19
 require (
 	github.com/golangci/golangci-lint v1.54.2
 	github.com/google/uuid v1.3.1
+	github.com/grpc-ecosystem/grpc-gateway/v2 v2.18.0
 	github.com/onsi/ginkgo/v2 v2.12.0
-	github.com/opiproject/opi-api v0.0.0-20230911203412-3b18c0431f46
+	github.com/opiproject/opi-api v0.0.0-20230912155417-7e8775405e73
+	github.com/opiproject/opi-smbios-bridge v0.1.3-0.20230912011601-0ed114954e97
 	github.com/stretchr/testify v1.8.4
 	github.com/vektra/mockery v1.1.2
 	github.com/vishvananda/netlink v1.2.1-beta.2
@@ -88,7 +90,6 @@ require (
 	github.com/gostaticanalysis/comment v1.4.2 // indirect
 	github.com/gostaticanalysis/forcetypeassert v0.1.0 // indirect
 	github.com/gostaticanalysis/nilerr v0.1.1 // indirect
-	github.com/grpc-ecosystem/grpc-gateway/v2 v2.18.0 // indirect
 	github.com/hashicorp/errwrap v1.0.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/hashicorp/go-version v1.6.0 // indirect
@@ -129,7 +130,6 @@ require (
 	github.com/nishanths/predeclared v0.2.2 // indirect
 	github.com/nunnatsa/ginkgolinter v0.13.5 // indirect
 	github.com/olekukonko/tablewriter v0.0.5 // indirect
-	github.com/opiproject/opi-smbios-bridge v0.1.3-0.20230912011601-0ed114954e97 // indirect
 	github.com/pelletier/go-toml v1.9.5 // indirect
 	github.com/pelletier/go-toml/v2 v2.0.5 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
