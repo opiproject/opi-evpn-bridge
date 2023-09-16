@@ -8,7 +8,7 @@ require (
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.18.0
 	github.com/onsi/ginkgo/v2 v2.12.0
 	github.com/opiproject/opi-api v0.0.0-20230912155417-7e8775405e73
-	github.com/opiproject/opi-smbios-bridge v0.1.3-0.20230912011601-0ed114954e97
+	github.com/opiproject/opi-smbios-bridge v0.1.3-0.20230916044337-529b43a24315
 	github.com/stretchr/testify v1.8.4
 	github.com/vektra/mockery v1.1.2
 	github.com/vishvananda/netlink v1.2.1-beta.2
