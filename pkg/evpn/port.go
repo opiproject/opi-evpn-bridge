@@ -35,19 +35,14 @@ func sortBridgePorts(ports []*pb.BridgePort) {
 // CreateBridgePort executes the creation of the port
 func (s *Server) CreateBridgePort(_ context.Context, in *pb.CreateBridgePortRequest) (*pb.BridgePort, error) {
 	log.Printf("CreateBridgePort: Received from client: %v", in)
-	// check required fields
-	if err := fieldbehavior.ValidateRequiredFields(in); err != nil {
+	// check input correctness
+	if err := s.validateCreateBridgePortRequest(in); err != nil {
 		log.Printf("error: %v", err)
 		return nil, err
 	}
 	// see https://google.aip.dev/133#user-specified-ids
 	resourceID := resourceid.NewSystemGenerated()
 	if in.BridgePortId != "" {
-		err := resourceid.ValidateUserSettable(in.BridgePortId)
-		if err != nil {
-			log.Printf("error: %v", err)
-			return nil, err
-		}
 		log.Printf("client provided the ID of a resource %v, ignoring the name field %v", in.BridgePortId, in.BridgePort.Name)
 		resourceID = in.BridgePortId
 	}
@@ -57,13 +52,6 @@ func (s *Server) CreateBridgePort(_ context.Context, in *pb.CreateBridgePortRequ
 	if ok {
 		log.Printf("Already existing BridgePort with id %v", in.BridgePort.Name)
 		return obj, nil
-	}
-	// for Access type, the LogicalBridge list must have only one item
-	length := len(in.BridgePort.Spec.LogicalBridges)
-	if in.BridgePort.Spec.Ptype == pb.BridgePortType_ACCESS && length > 1 {
-		msg := fmt.Sprintf("ACCESS type must have single LogicalBridge and not (%d)", length)
-		log.Print(msg)
-		return nil, status.Errorf(codes.InvalidArgument, msg)
 	}
 	// not found, so create a new one
 	bridge, err := s.nLink.LinkByName(tenantbridgeName)

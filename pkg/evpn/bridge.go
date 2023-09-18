@@ -36,19 +36,14 @@ func sortLogicalBridges(bridges []*pb.LogicalBridge) {
 // CreateLogicalBridge executes the creation of the LogicalBridge
 func (s *Server) CreateLogicalBridge(_ context.Context, in *pb.CreateLogicalBridgeRequest) (*pb.LogicalBridge, error) {
 	log.Printf("CreateLogicalBridge: Received from client: %v", in)
-	// check required fields
-	if err := fieldbehavior.ValidateRequiredFields(in); err != nil {
+	// check input correctness
+	if err := s.validateCreateLogicalBridgeRequest(in); err != nil {
 		log.Printf("error: %v", err)
 		return nil, err
 	}
 	// see https://google.aip.dev/133#user-specified-ids
 	resourceID := resourceid.NewSystemGenerated()
 	if in.LogicalBridgeId != "" {
-		err := resourceid.ValidateUserSettable(in.LogicalBridgeId)
-		if err != nil {
-			log.Printf("error: %v", err)
-			return nil, err
-		}
 		log.Printf("client provided the ID of a resource %v, ignoring the name field %v", in.LogicalBridgeId, in.LogicalBridge.Name)
 		resourceID = in.LogicalBridgeId
 	}
@@ -58,12 +53,6 @@ func (s *Server) CreateLogicalBridge(_ context.Context, in *pb.CreateLogicalBrid
 	if ok {
 		log.Printf("Already existing LogicalBridge with id %v", in.LogicalBridge.Name)
 		return obj, nil
-	}
-	// not found, so create a new one
-	if in.LogicalBridge.Spec.VlanId > 4095 {
-		msg := fmt.Sprintf("VlanId value (%d) have to be between 1 and 4095", in.LogicalBridge.Spec.VlanId)
-		log.Print(msg)
-		return nil, status.Errorf(codes.InvalidArgument, msg)
 	}
 	// create vxlan only if VNI is not empty
 	if in.LogicalBridge.Spec.Vni != nil {

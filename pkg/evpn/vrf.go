@@ -38,19 +38,14 @@ func sortVrfs(vrfs []*pb.Vrf) {
 // CreateVrf executes the creation of the VRF
 func (s *Server) CreateVrf(_ context.Context, in *pb.CreateVrfRequest) (*pb.Vrf, error) {
 	log.Printf("CreateVrf: Received from client: %v", in)
-	// check required fields
-	if err := fieldbehavior.ValidateRequiredFields(in); err != nil {
+	// check input correctness
+	if err := s.validateCreateVrfRequest(in); err != nil {
 		log.Printf("error: %v", err)
 		return nil, err
 	}
 	// see https://google.aip.dev/133#user-specified-ids
 	resourceID := resourceid.NewSystemGenerated()
 	if in.VrfId != "" {
-		err := resourceid.ValidateUserSettable(in.VrfId)
-		if err != nil {
-			log.Printf("error: %v", err)
-			return nil, err
-		}
 		log.Printf("client provided the ID of a resource %v, ignoring the name field %v", in.VrfId, in.Vrf.Name)
 		resourceID = in.VrfId
 	}
