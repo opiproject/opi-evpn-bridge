@@ -202,10 +202,17 @@ services:
       - NET_ADMIN
     depends_on:
       - leaf1
+      - redis
     network_mode: service:leaf1
     command: /opi-evpn-bridge -grpc_port=50151 -http_port=8082
     healthcheck:
       test: grpcurl -plaintext localhost:50151 list || exit 1
+
+  redis:
+    image: redis:7.2.1-alpine3.18
+    network_mode: service:leaf1
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
 
   opi-gw-test:
     image: curlimages/curl:8.3.0
