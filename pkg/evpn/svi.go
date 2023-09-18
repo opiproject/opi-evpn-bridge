@@ -37,19 +37,14 @@ func sortSvis(svis []*pb.Svi) {
 // CreateSvi executes the creation of the VLAN
 func (s *Server) CreateSvi(_ context.Context, in *pb.CreateSviRequest) (*pb.Svi, error) {
 	log.Printf("CreateSvi: Received from client: %v", in)
-	// check required fields
-	if err := fieldbehavior.ValidateRequiredFields(in); err != nil {
+	// check input correctness
+	if err := s.validateCreateSviRequest(in); err != nil {
 		log.Printf("error: %v", err)
 		return nil, err
 	}
 	// see https://google.aip.dev/133#user-specified-ids
 	resourceID := resourceid.NewSystemGenerated()
 	if in.SviId != "" {
-		err := resourceid.ValidateUserSettable(in.SviId)
-		if err != nil {
-			log.Printf("error: %v", err)
-			return nil, err
-		}
 		log.Printf("client provided the ID of a resource %v, ignoring the name field %v", in.SviId, in.Svi.Name)
 		resourceID = in.SviId
 	}
@@ -59,16 +54,6 @@ func (s *Server) CreateSvi(_ context.Context, in *pb.CreateSviRequest) (*pb.Svi,
 	if ok {
 		log.Printf("Already existing Svi with id %v", in.Svi.Name)
 		return obj, nil
-	}
-	// Validate that a LogicalBridge resource name conforms to the restrictions outlined in AIP-122.
-	if err := resourcename.Validate(in.Svi.Spec.LogicalBridge); err != nil {
-		log.Printf("error: %v", err)
-		return nil, err
-	}
-	// Validate that a Vrf resource name conforms to the restrictions outlined in AIP-122.
-	if err := resourcename.Validate(in.Svi.Spec.Vrf); err != nil {
-		log.Printf("error: %v", err)
-		return nil, err
 	}
 	// now get LogicalBridge object to fetch VID field
 	bridgeObject, ok := s.Bridges[in.Svi.Spec.LogicalBridge]
