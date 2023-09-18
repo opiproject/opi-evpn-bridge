@@ -49,7 +49,7 @@ func (s *Server) CreateBridgePort(ctx context.Context, in *pb.CreateBridgePortRe
 		log.Printf("Already existing BridgePort with id %v", in.BridgePort.Name)
 		return obj, nil
 	}
-	// not found, so create a new one
+	// not ok, so create a new one
 	bridge, err := s.nLink.LinkByName(ctx, tenantbridgeName)
 	if err != nil {
 		err := status.Errorf(codes.NotFound, "unable to find key %s", tenantbridgeName)
@@ -79,7 +79,12 @@ func (s *Server) CreateBridgePort(ctx context.Context, in *pb.CreateBridgePortRe
 	for _, bridgeRefName := range in.BridgePort.Spec.LogicalBridges {
 		fmt.Printf("add iface to logical bridge %s", bridgeRefName)
 		// get object from DB
-		bridgeObject, ok := s.Bridges[bridgeRefName]
+		bridgeObject := new(pb.LogicalBridge)
+		ok, err := s.store.Get(bridgeRefName, bridgeObject)
+		if err != nil {
+			fmt.Printf("Failed to interact with store: %v", err)
+			return nil, err
+		}
 		if !ok {
 			err := status.Errorf(codes.NotFound, "unable to find key %s", bridgeRefName)
 			return nil, err
@@ -147,7 +152,12 @@ func (s *Server) DeleteBridgePort(ctx context.Context, in *pb.DeleteBridgePortRe
 	// delete bridge vlan
 	for _, bridgeRefName := range iface.Spec.LogicalBridges {
 		// get object from DB
-		bridgeObject, ok := s.Bridges[bridgeRefName]
+		bridgeObject := new(pb.LogicalBridge)
+		ok, err := s.store.Get(bridgeRefName, bridgeObject)
+		if err != nil {
+			fmt.Printf("Failed to interact with store: %v", err)
+			return nil, err
+		}
 		if !ok {
 			err := status.Errorf(codes.NotFound, "unable to find key %s", bridgeRefName)
 			return nil, err

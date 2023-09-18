@@ -317,7 +317,7 @@ func Test_CreateBridgePort(t *testing.T) {
 			}(conn)
 			client := pb.NewBridgePortServiceClient(conn)
 
-			opi.Bridges[testLogicalBridgeName] = protoClone(&testLogicalBridgeWithStatus)
+			opi.store.Set(testLogicalBridgeName, &testLogicalBridgeWithStatus)
 			if tt.exist {
 				opi.Ports[testBridgePortName] = protoClone(&testBridgePortWithStatus)
 			}
@@ -476,7 +476,7 @@ func Test_DeleteBridgePort(t *testing.T) {
 
 			fname1 := resourceIDToFullName("ports", tt.in)
 			opi.Ports[testBridgePortName] = protoClone(&testBridgePortWithStatus)
-			opi.Bridges[testLogicalBridgeName] = protoClone(&testLogicalBridgeWithStatus)
+			opi.store.Set(testLogicalBridgeName, &testLogicalBridgeWithStatus)
 			if tt.on != nil {
 				tt.on(mockNetlink, mockFrr, tt.errMsg)
 			}
