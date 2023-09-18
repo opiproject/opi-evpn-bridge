@@ -44,7 +44,12 @@ func (s *Server) CreateBridgePort(ctx context.Context, in *pb.CreateBridgePortRe
 	}
 	in.BridgePort.Name = resourceIDToFullName("ports", resourceID)
 	// idempotent API when called with same key, should return same object
-	obj, ok := s.Ports[in.BridgePort.Name]
+	obj := new(pb.BridgePort)
+	ok, err := s.store.Get(in.BridgePort.Name, obj)
+	if err != nil {
+		fmt.Printf("Failed to interact with store: %v", err)
+		return nil, err
+	}
 	if ok {
 		log.Printf("Already existing BridgePort with id %v", in.BridgePort.Name)
 		return obj, nil
@@ -118,7 +123,10 @@ func (s *Server) CreateBridgePort(ctx context.Context, in *pb.CreateBridgePortRe
 	response.Status = &pb.BridgePortStatus{OperStatus: pb.BPOperStatus_BP_OPER_STATUS_UP}
 	log.Printf("new object %v", models.NewPort(response))
 	// save object to the database
-	s.Ports[in.BridgePort.Name] = response
+	err = s.store.Set(in.BridgePort.Name, response)
+	if err != nil {
+		return nil, err
+	}
 	return response, nil
 }
 
@@ -129,7 +137,12 @@ func (s *Server) DeleteBridgePort(ctx context.Context, in *pb.DeleteBridgePortRe
 		return nil, err
 	}
 	// fetch object from the database
-	iface, ok := s.Ports[in.Name]
+	iface := new(pb.BridgePort)
+	ok, err := s.store.Get(in.Name, iface)
+	if err != nil {
+		fmt.Printf("Failed to interact with store: %v", err)
+		return nil, err
+	}
 	if !ok {
 		if in.AllowMissing {
 			return &emptypb.Empty{}, nil
@@ -174,7 +187,10 @@ func (s *Server) DeleteBridgePort(ctx context.Context, in *pb.DeleteBridgePortRe
 		return nil, err
 	}
 	// remove from the Database
-	delete(s.Ports, iface.Name)
+	err = s.store.Delete(iface.Name)
+	if err != nil {
+		return nil, err
+	}
 	return &emptypb.Empty{}, nil
 }
 
@@ -184,8 +200,13 @@ func (s *Server) UpdateBridgePort(ctx context.Context, in *pb.UpdateBridgePortRe
 	if err := s.validateUpdateBridgePortRequest(in); err != nil {
 		return nil, err
 	}
-	// fetch object from the database
-	port, ok := s.Ports[in.BridgePort.Name]
+	// fetch object from the
+	port := new(pb.BridgePort)
+	ok, err := s.store.Get(in.BridgePort.Name, port)
+	if err != nil {
+		fmt.Printf("Failed to interact with store: %v", err)
+		return nil, err
+	}
 	if !ok {
 		// TODO: introduce "in.AllowMissing" field. In case "true", create a new resource, don't return error
 		err := status.Errorf(codes.NotFound, "unable to find key %s", in.BridgePort.Name)
@@ -205,7 +226,10 @@ func (s *Server) UpdateBridgePort(ctx context.Context, in *pb.UpdateBridgePortRe
 	}
 	response := protoClone(in.BridgePort)
 	response.Status = &pb.BridgePortStatus{OperStatus: pb.BPOperStatus_BP_OPER_STATUS_UP}
-	s.Ports[in.BridgePort.Name] = response
+	err = s.store.Set(in.BridgePort.Name, response)
+	if err != nil {
+		return nil, err
+	}
 	return response, nil
 }
 
@@ -216,13 +240,18 @@ func (s *Server) GetBridgePort(ctx context.Context, in *pb.GetBridgePortRequest)
 		return nil, err
 	}
 	// fetch object from the database
-	port, ok := s.Ports[in.Name]
+	port := new(pb.BridgePort)
+	ok, err := s.store.Get(in.Name, port)
+	if err != nil {
+		fmt.Printf("Failed to interact with store: %v", err)
+		return nil, err
+	}
 	if !ok {
 		err := status.Errorf(codes.NotFound, "unable to find key %s", in.Name)
 		return nil, err
 	}
 	resourceID := path.Base(port.Name)
-	_, err := s.nLink.LinkByName(ctx, resourceID)
+	_, err = s.nLink.LinkByName(ctx, resourceID)
 	if err != nil {
 		err := status.Errorf(codes.NotFound, "unable to find key %s", resourceID)
 		return nil, err
