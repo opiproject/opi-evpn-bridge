@@ -43,7 +43,12 @@ func (s *Server) CreateLogicalBridge(ctx context.Context, in *pb.CreateLogicalBr
 	}
 	in.LogicalBridge.Name = resourceIDToFullName("bridges", resourceID)
 	// idempotent API when called with same key, should return same object
-	obj, ok := s.Bridges[in.LogicalBridge.Name]
+	obj := new(pb.LogicalBridge)
+	ok, err := s.store.Get(in.LogicalBridge.Name, obj)
+	if err != nil {
+		fmt.Printf("Failed to interact with store: %v", err)
+		return nil, err
+	}
 	if ok {
 		log.Printf("Already existing LogicalBridge with id %v", in.LogicalBridge.Name)
 		return obj, nil
@@ -57,7 +62,10 @@ func (s *Server) CreateLogicalBridge(ctx context.Context, in *pb.CreateLogicalBr
 	response.Status = &pb.LogicalBridgeStatus{OperStatus: pb.LBOperStatus_LB_OPER_STATUS_UP}
 	log.Printf("new object %v", models.NewBridge(response))
 	// save object to the database
-	s.Bridges[in.LogicalBridge.Name] = response
+	err = s.store.Set(in.LogicalBridge.Name, response)
+	if err != nil {
+		return nil, err
+	}
 	return response, nil
 }
 
@@ -68,7 +76,12 @@ func (s *Server) DeleteLogicalBridge(ctx context.Context, in *pb.DeleteLogicalBr
 		return nil, err
 	}
 	// fetch object from the database
-	obj, ok := s.Bridges[in.Name]
+	obj := new(pb.LogicalBridge)
+	ok, err := s.store.Get(in.Name, obj)
+	if err != nil {
+		fmt.Printf("Failed to interact with store: %v", err)
+		return nil, err
+	}
 	if !ok {
 		if in.AllowMissing {
 			return &emptypb.Empty{}, nil
@@ -81,7 +94,10 @@ func (s *Server) DeleteLogicalBridge(ctx context.Context, in *pb.DeleteLogicalBr
 		return nil, err
 	}
 	// remove from the Database
-	delete(s.Bridges, obj.Name)
+	err = s.store.Delete(obj.Name)
+	if err != nil {
+		return nil, err
+	}
 	return &emptypb.Empty{}, nil
 }
 
@@ -92,7 +108,12 @@ func (s *Server) UpdateLogicalBridge(ctx context.Context, in *pb.UpdateLogicalBr
 		return nil, err
 	}
 	// fetch object from the database
-	bridge, ok := s.Bridges[in.LogicalBridge.Name]
+	bridge := new(pb.LogicalBridge)
+	ok, err := s.store.Get(in.LogicalBridge.Name, bridge)
+	if err != nil {
+		fmt.Printf("Failed to interact with store: %v", err)
+		return nil, err
+	}
 	if !ok {
 		// TODO: introduce "in.AllowMissing" field. In case "true", create a new resource, don't return error
 		err := status.Errorf(codes.NotFound, "unable to find key %s", in.LogicalBridge.Name)
@@ -115,7 +136,10 @@ func (s *Server) UpdateLogicalBridge(ctx context.Context, in *pb.UpdateLogicalBr
 	}
 	response := protoClone(in.LogicalBridge)
 	response.Status = &pb.LogicalBridgeStatus{OperStatus: pb.LBOperStatus_LB_OPER_STATUS_UP}
-	s.Bridges[in.LogicalBridge.Name] = response
+	err = s.store.Set(in.LogicalBridge.Name, response)
+	if err != nil {
+		return nil, err
+	}
 	return response, nil
 }
 
@@ -126,7 +150,12 @@ func (s *Server) GetLogicalBridge(ctx context.Context, in *pb.GetLogicalBridgeRe
 		return nil, err
 	}
 	// fetch object from the database
-	bridge, ok := s.Bridges[in.Name]
+	bridge := new(pb.LogicalBridge)
+	ok, err := s.store.Get(in.Name, bridge)
+	if err != nil {
+		fmt.Printf("Failed to interact with store: %v", err)
+		return nil, err
+	}
 	if !ok {
 		err := status.Errorf(codes.NotFound, "unable to find key %s", in.Name)
 		return nil, err

@@ -55,7 +55,12 @@ func (s *Server) CreateSvi(ctx context.Context, in *pb.CreateSviRequest) (*pb.Sv
 		return obj, nil
 	}
 	// now get LogicalBridge object to fetch VID field
-	bridgeObject, ok := s.Bridges[in.Svi.Spec.LogicalBridge]
+	bridgeObject := new(pb.LogicalBridge)
+	ok, err = s.store.Get(in.Svi.Spec.LogicalBridge, bridgeObject)
+	if err != nil {
+		fmt.Printf("Failed to interact with store: %v", err)
+		return nil, err
+	}
 	if !ok {
 		err := status.Errorf(codes.NotFound, "unable to find key %s", in.Svi.Spec.LogicalBridge)
 		return nil, err
@@ -115,7 +120,12 @@ func (s *Server) DeleteSvi(ctx context.Context, in *pb.DeleteSviRequest) (*empty
 		return nil, err
 	}
 	// fetch object from the database
-	bridgeObject, ok := s.Bridges[obj.Spec.LogicalBridge]
+	bridgeObject := new(pb.LogicalBridge)
+	ok, err = s.store.Get(obj.Spec.LogicalBridge, bridgeObject)
+	if err != nil {
+		fmt.Printf("Failed to interact with store: %v", err)
+		return nil, err
+	}
 	if !ok {
 		err := status.Errorf(codes.NotFound, "unable to find key %s", obj.Spec.LogicalBridge)
 		return nil, err
@@ -169,7 +179,12 @@ func (s *Server) UpdateSvi(ctx context.Context, in *pb.UpdateSviRequest) (*pb.Sv
 		return nil, err
 	}
 	// use netlink to find VlanId from LogicalBridge object
-	bridgeObject, ok := s.Bridges[svi.Spec.LogicalBridge]
+	bridgeObject := new(pb.LogicalBridge)
+	ok, err = s.store.Get(svi.Spec.LogicalBridge, bridgeObject)
+	if err != nil {
+		fmt.Printf("Failed to interact with store: %v", err)
+		return nil, err
+	}
 	if !ok {
 		err := status.Errorf(codes.NotFound, "unable to find key %s", svi.Spec.LogicalBridge)
 		return nil, err
@@ -213,7 +228,12 @@ func (s *Server) GetSvi(ctx context.Context, in *pb.GetSviRequest) (*pb.Svi, err
 		return nil, err
 	}
 	// use netlink to find VlanId from LogicalBridge object
-	bridgeObject, ok := s.Bridges[obj.Spec.LogicalBridge]
+	bridgeObject := new(pb.LogicalBridge)
+	ok, err = s.store.Get(obj.Spec.LogicalBridge, bridgeObject)
+	if err != nil {
+		fmt.Printf("Failed to interact with store: %v", err)
+		return nil, err
+	}
 	if !ok {
 		err := status.Errorf(codes.NotFound, "unable to find key %s", obj.Spec.LogicalBridge)
 		return nil, err
