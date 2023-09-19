@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	"go.einride.tech/aip/fieldbehavior"
+	"go.einride.tech/aip/fieldmask"
 	"go.einride.tech/aip/resourceid"
 	"go.einride.tech/aip/resourcename"
 
@@ -50,6 +51,10 @@ func (s *Server) validateDeleteBridgePortRequest(in *pb.DeleteBridgePortRequest)
 func (s *Server) validateUpdateBridgePortRequest(in *pb.UpdateBridgePortRequest) error {
 	// check required fields
 	if err := fieldbehavior.ValidateRequiredFields(in); err != nil {
+		return err
+	}
+	// update_mask = 2
+	if err := fieldmask.Validate(in.UpdateMask, in.BridgePort); err != nil {
 		return err
 	}
 	// Validate that a resource name conforms to the restrictions outlined in AIP-122.

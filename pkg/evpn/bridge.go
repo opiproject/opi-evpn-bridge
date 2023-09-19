@@ -19,7 +19,6 @@ import (
 	pb "github.com/opiproject/opi-api/network/evpn-gw/v1alpha1/gen/go"
 
 	"go.einride.tech/aip/fieldbehavior"
-	"go.einride.tech/aip/fieldmask"
 	"go.einride.tech/aip/resourceid"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -159,11 +158,6 @@ func (s *Server) UpdateLogicalBridge(_ context.Context, in *pb.UpdateLogicalBrid
 	if !ok {
 		// TODO: introduce "in.AllowMissing" field. In case "true", create a new resource, don't return error
 		err := status.Errorf(codes.NotFound, "unable to find key %s", in.LogicalBridge.Name)
-		log.Printf("error: %v", err)
-		return nil, err
-	}
-	// update_mask = 2
-	if err := fieldmask.Validate(in.UpdateMask, in.LogicalBridge); err != nil {
 		log.Printf("error: %v", err)
 		return nil, err
 	}

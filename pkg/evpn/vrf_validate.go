@@ -6,6 +6,7 @@ package evpn
 
 import (
 	"go.einride.tech/aip/fieldbehavior"
+	"go.einride.tech/aip/fieldmask"
 	"go.einride.tech/aip/resourceid"
 	"go.einride.tech/aip/resourcename"
 
@@ -39,6 +40,10 @@ func (s *Server) validateDeleteVrfRequest(in *pb.DeleteVrfRequest) error {
 func (s *Server) validateUpdateVrfRequest(in *pb.UpdateVrfRequest) error {
 	// check required fields
 	if err := fieldbehavior.ValidateRequiredFields(in); err != nil {
+		return err
+	}
+	// update_mask = 2
+	if err := fieldmask.Validate(in.UpdateMask, in.Vrf); err != nil {
 		return err
 	}
 	// Validate that a resource name conforms to the restrictions outlined in AIP-122.
