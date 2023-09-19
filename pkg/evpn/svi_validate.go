@@ -31,5 +31,33 @@ func (s *Server) validateCreateSviRequest(in *pb.CreateSviRequest) error {
 			return err
 		}
 	}
+	// TODO: check in.Svi.Spec.MacAddress validity
 	return nil
+}
+
+func (s *Server) validateDeleteSviRequest(in *pb.DeleteSviRequest) error {
+	// check required fields
+	if err := fieldbehavior.ValidateRequiredFields(in); err != nil {
+		return err
+	}
+	// Validate that a resource name conforms to the restrictions outlined in AIP-122.
+	return resourcename.Validate(in.Name)
+}
+
+func (s *Server) validateUpdateSviRequest(in *pb.UpdateSviRequest) error {
+	// check required fields
+	if err := fieldbehavior.ValidateRequiredFields(in); err != nil {
+		return err
+	}
+	// Validate that a resource name conforms to the restrictions outlined in AIP-122.
+	return resourcename.Validate(in.Svi.Name)
+}
+
+func (s *Server) validateGetSviRequest(in *pb.GetSviRequest) error {
+	// check required fields
+	if err := fieldbehavior.ValidateRequiredFields(in); err != nil {
+		return err
+	}
+	// Validate that a resource name conforms to the restrictions outlined in AIP-122.
+	return resourcename.Validate(in.Name)
 }

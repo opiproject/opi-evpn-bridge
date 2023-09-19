@@ -20,7 +20,6 @@ import (
 	"go.einride.tech/aip/fieldbehavior"
 	"go.einride.tech/aip/fieldmask"
 	"go.einride.tech/aip/resourceid"
-	"go.einride.tech/aip/resourcename"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -126,13 +125,8 @@ func (s *Server) CreateBridgePort(_ context.Context, in *pb.CreateBridgePortRequ
 // DeleteBridgePort deletes a port
 func (s *Server) DeleteBridgePort(_ context.Context, in *pb.DeleteBridgePortRequest) (*emptypb.Empty, error) {
 	log.Printf("DeleteBridgePort: Received from client: %v", in)
-	// check required fields
-	if err := fieldbehavior.ValidateRequiredFields(in); err != nil {
-		log.Printf("error: %v", err)
-		return nil, err
-	}
-	// Validate that a resource name conforms to the restrictions outlined in AIP-122.
-	if err := resourcename.Validate(in.Name); err != nil {
+	// check input correctness
+	if err := s.validateDeleteBridgePortRequest(in); err != nil {
 		log.Printf("error: %v", err)
 		return nil, err
 	}
@@ -187,13 +181,8 @@ func (s *Server) DeleteBridgePort(_ context.Context, in *pb.DeleteBridgePortRequ
 // UpdateBridgePort updates an Nvme Subsystem
 func (s *Server) UpdateBridgePort(_ context.Context, in *pb.UpdateBridgePortRequest) (*pb.BridgePort, error) {
 	log.Printf("UpdateBridgePort: Received from client: %v", in)
-	// check required fields
-	if err := fieldbehavior.ValidateRequiredFields(in); err != nil {
-		log.Printf("error: %v", err)
-		return nil, err
-	}
-	// Validate that a resource name conforms to the restrictions outlined in AIP-122.
-	if err := resourcename.Validate(in.BridgePort.Name); err != nil {
+	// check input correctness
+	if err := s.validateUpdateBridgePortRequest(in); err != nil {
 		log.Printf("error: %v", err)
 		return nil, err
 	}
@@ -233,13 +222,8 @@ func (s *Server) UpdateBridgePort(_ context.Context, in *pb.UpdateBridgePortRequ
 // GetBridgePort gets an BridgePort
 func (s *Server) GetBridgePort(_ context.Context, in *pb.GetBridgePortRequest) (*pb.BridgePort, error) {
 	log.Printf("GetBridgePort: Received from client: %v", in)
-	// check required fields
-	if err := fieldbehavior.ValidateRequiredFields(in); err != nil {
-		log.Printf("error: %v", err)
-		return nil, err
-	}
-	// Validate that a resource name conforms to the restrictions outlined in AIP-122.
-	if err := resourcename.Validate(in.Name); err != nil {
+	// check input correctness
+	if err := s.validateGetBridgePortRequest(in); err != nil {
 		log.Printf("error: %v", err)
 		return nil, err
 	}

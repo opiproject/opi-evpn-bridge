@@ -9,6 +9,7 @@ import (
 
 	"go.einride.tech/aip/fieldbehavior"
 	"go.einride.tech/aip/resourceid"
+	"go.einride.tech/aip/resourcename"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -32,5 +33,33 @@ func (s *Server) validateCreateLogicalBridgeRequest(in *pb.CreateLogicalBridgeRe
 			return err
 		}
 	}
+	// TODO: check in.LogicalBridge.Spec.Vni validity
 	return nil
+}
+
+func (s *Server) validateDeleteLogicalBridgeRequest(in *pb.DeleteLogicalBridgeRequest) error {
+	// check required fields
+	if err := fieldbehavior.ValidateRequiredFields(in); err != nil {
+		return err
+	}
+	// Validate that a resource name conforms to the restrictions outlined in AIP-122.
+	return resourcename.Validate(in.Name)
+}
+
+func (s *Server) validateUpdateLogicalBridgeRequest(in *pb.UpdateLogicalBridgeRequest) error {
+	// check required fields
+	if err := fieldbehavior.ValidateRequiredFields(in); err != nil {
+		return err
+	}
+	// Validate that a resource name conforms to the restrictions outlined in AIP-122.
+	return resourcename.Validate(in.LogicalBridge.Name)
+}
+
+func (s *Server) validateGetLogicalBridgeRequest(in *pb.GetLogicalBridgeRequest) error {
+	// check required fields
+	if err := fieldbehavior.ValidateRequiredFields(in); err != nil {
+		return err
+	}
+	// Validate that a resource name conforms to the restrictions outlined in AIP-122.
+	return resourcename.Validate(in.Name)
 }

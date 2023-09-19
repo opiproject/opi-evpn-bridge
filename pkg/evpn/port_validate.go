@@ -9,6 +9,7 @@ import (
 
 	"go.einride.tech/aip/fieldbehavior"
 	"go.einride.tech/aip/resourceid"
+	"go.einride.tech/aip/resourcename"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -33,5 +34,33 @@ func (s *Server) validateCreateBridgePortRequest(in *pb.CreateBridgePortRequest)
 			return err
 		}
 	}
+	// TODO: check in.BridgePort.Spec.MacAddress validity
 	return nil
+}
+
+func (s *Server) validateDeleteBridgePortRequest(in *pb.DeleteBridgePortRequest) error {
+	// check required fields
+	if err := fieldbehavior.ValidateRequiredFields(in); err != nil {
+		return err
+	}
+	// Validate that a resource name conforms to the restrictions outlined in AIP-122.
+	return resourcename.Validate(in.Name)
+}
+
+func (s *Server) validateUpdateBridgePortRequest(in *pb.UpdateBridgePortRequest) error {
+	// check required fields
+	if err := fieldbehavior.ValidateRequiredFields(in); err != nil {
+		return err
+	}
+	// Validate that a resource name conforms to the restrictions outlined in AIP-122.
+	return resourcename.Validate(in.BridgePort.Name)
+}
+
+func (s *Server) validateGetBridgePortRequest(in *pb.GetBridgePortRequest) error {
+	// check required fields
+	if err := fieldbehavior.ValidateRequiredFields(in); err != nil {
+		return err
+	}
+	// Validate that a resource name conforms to the restrictions outlined in AIP-122.
+	return resourcename.Validate(in.Name)
 }
