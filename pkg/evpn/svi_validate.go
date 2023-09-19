@@ -6,6 +6,7 @@ package evpn
 
 import (
 	"go.einride.tech/aip/fieldbehavior"
+	"go.einride.tech/aip/fieldmask"
 	"go.einride.tech/aip/resourceid"
 	"go.einride.tech/aip/resourcename"
 
@@ -47,6 +48,10 @@ func (s *Server) validateDeleteSviRequest(in *pb.DeleteSviRequest) error {
 func (s *Server) validateUpdateSviRequest(in *pb.UpdateSviRequest) error {
 	// check required fields
 	if err := fieldbehavior.ValidateRequiredFields(in); err != nil {
+		return err
+	}
+	// update_mask = 2
+	if err := fieldmask.Validate(in.UpdateMask, in.Svi); err != nil {
 		return err
 	}
 	// Validate that a resource name conforms to the restrictions outlined in AIP-122.

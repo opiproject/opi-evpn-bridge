@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	"go.einride.tech/aip/fieldbehavior"
+	"go.einride.tech/aip/fieldmask"
 	"go.einride.tech/aip/resourceid"
 	"go.einride.tech/aip/resourcename"
 
@@ -49,6 +50,10 @@ func (s *Server) validateDeleteLogicalBridgeRequest(in *pb.DeleteLogicalBridgeRe
 func (s *Server) validateUpdateLogicalBridgeRequest(in *pb.UpdateLogicalBridgeRequest) error {
 	// check required fields
 	if err := fieldbehavior.ValidateRequiredFields(in); err != nil {
+		return err
+	}
+	// update_mask = 2
+	if err := fieldmask.Validate(in.UpdateMask, in.LogicalBridge); err != nil {
 		return err
 	}
 	// Validate that a resource name conforms to the restrictions outlined in AIP-122.
