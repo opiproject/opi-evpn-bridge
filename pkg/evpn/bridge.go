@@ -21,7 +21,6 @@ import (
 	"go.einride.tech/aip/fieldbehavior"
 	"go.einride.tech/aip/fieldmask"
 	"go.einride.tech/aip/resourceid"
-	"go.einride.tech/aip/resourcename"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -100,13 +99,8 @@ func (s *Server) CreateLogicalBridge(_ context.Context, in *pb.CreateLogicalBrid
 // DeleteLogicalBridge deletes a LogicalBridge
 func (s *Server) DeleteLogicalBridge(_ context.Context, in *pb.DeleteLogicalBridgeRequest) (*emptypb.Empty, error) {
 	log.Printf("DeleteLogicalBridge: Received from client: %v", in)
-	// check required fields
-	if err := fieldbehavior.ValidateRequiredFields(in); err != nil {
-		log.Printf("error: %v", err)
-		return nil, err
-	}
-	// Validate that a resource name conforms to the restrictions outlined in AIP-122.
-	if err := resourcename.Validate(in.Name); err != nil {
+	// check input correctness
+	if err := s.validateDeleteLogicalBridgeRequest(in); err != nil {
 		log.Printf("error: %v", err)
 		return nil, err
 	}
@@ -155,13 +149,8 @@ func (s *Server) DeleteLogicalBridge(_ context.Context, in *pb.DeleteLogicalBrid
 // UpdateLogicalBridge updates a LogicalBridge
 func (s *Server) UpdateLogicalBridge(_ context.Context, in *pb.UpdateLogicalBridgeRequest) (*pb.LogicalBridge, error) {
 	log.Printf("UpdateLogicalBridge: Received from client: %v", in)
-	// check required fields
-	if err := fieldbehavior.ValidateRequiredFields(in); err != nil {
-		log.Printf("error: %v", err)
-		return nil, err
-	}
-	// Validate that a resource name conforms to the restrictions outlined in AIP-122.
-	if err := resourcename.Validate(in.LogicalBridge.Name); err != nil {
+	// check input correctness
+	if err := s.validateUpdateLogicalBridgeRequest(in); err != nil {
 		log.Printf("error: %v", err)
 		return nil, err
 	}
@@ -204,13 +193,8 @@ func (s *Server) UpdateLogicalBridge(_ context.Context, in *pb.UpdateLogicalBrid
 // GetLogicalBridge gets a LogicalBridge
 func (s *Server) GetLogicalBridge(_ context.Context, in *pb.GetLogicalBridgeRequest) (*pb.LogicalBridge, error) {
 	log.Printf("GetLogicalBridge: Received from client: %v", in)
-	// check required fields
-	if err := fieldbehavior.ValidateRequiredFields(in); err != nil {
-		log.Printf("error: %v", err)
-		return nil, err
-	}
-	// Validate that a resource name conforms to the restrictions outlined in AIP-122.
-	if err := resourcename.Validate(in.Name); err != nil {
+	// check input correctness
+	if err := s.validateGetLogicalBridgeRequest(in); err != nil {
 		log.Printf("error: %v", err)
 		return nil, err
 	}
