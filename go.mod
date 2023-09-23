@@ -8,13 +8,13 @@ require (
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.18.0
 	github.com/onsi/ginkgo/v2 v2.12.0
 	github.com/opiproject/opi-api v0.0.0-20230921193204-fe751a63af0b
-	github.com/opiproject/opi-smbios-bridge v0.1.3-0.20230923041203-842ba3fdd025
+	github.com/opiproject/opi-smbios-bridge v0.1.3-0.20230923140300-f6b1ccd01a1c
 	github.com/stretchr/testify v1.8.4
 	github.com/vektra/mockery/v2 v2.33.3
 	github.com/vishvananda/netlink v1.2.1-beta.2
 	go.einride.tech/aip v0.62.0
 	golang.org/x/tools v0.13.0
-	google.golang.org/grpc v1.58.1
+	google.golang.org/grpc v1.58.2
 	google.golang.org/protobuf v1.31.0
 )
 
