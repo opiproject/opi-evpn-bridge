@@ -7,7 +7,7 @@ require (
 	github.com/google/uuid v1.3.1
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.18.0
 	github.com/onsi/ginkgo/v2 v2.12.1
-	github.com/opiproject/opi-api v0.0.0-20230923222441-94550f5ad975
+	github.com/opiproject/opi-api v0.0.0-20230923233644-30a342bf09da
 	github.com/opiproject/opi-smbios-bridge v0.1.3-0.20230923140300-f6b1ccd01a1c
 	github.com/stretchr/testify v1.8.4
 	github.com/vektra/mockery/v2 v2.33.3
