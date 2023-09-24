@@ -10,7 +10,7 @@ require (
 	github.com/opiproject/opi-api v0.0.0-20230924031502-67b3821b62cf
 	github.com/opiproject/opi-smbios-bridge v0.1.3-0.20230924050511-ed2cf72c2fbf
 	github.com/stretchr/testify v1.8.4
-	github.com/vektra/mockery/v2 v2.33.3
+	github.com/vektra/mockery/v2 v2.34.0
 	github.com/vishvananda/netlink v1.2.1-beta.2
 	go.einride.tech/aip v0.62.0
 	golang.org/x/tools v0.13.0
