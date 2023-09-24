@@ -9,5 +9,5 @@ on:
 
 jobs:
   call:
-    uses: opiproject/opi-smbios-bridge/.github/workflows/linters.yml@main
+    uses: opiproject/actions/.github/workflows/linters.yml@main
     secrets: inherit

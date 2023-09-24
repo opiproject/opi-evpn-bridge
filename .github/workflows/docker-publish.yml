@@ -11,5 +11,5 @@ on:
 
 jobs:
   call:
-    uses: opiproject/opi-smbios-bridge/.github/workflows/docker-publish.yml@main
+    uses: opiproject/actions/.github/workflows/docker-publish.yml@main
     secrets: inherit
