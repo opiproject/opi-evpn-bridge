@@ -32,10 +32,8 @@ func sortBridgePorts(ports []*pb.BridgePort) {
 
 // CreateBridgePort executes the creation of the port
 func (s *Server) CreateBridgePort(_ context.Context, in *pb.CreateBridgePortRequest) (*pb.BridgePort, error) {
-	log.Printf("CreateBridgePort: Received from client: %v", in)
 	// check input correctness
 	if err := s.validateCreateBridgePortRequest(in); err != nil {
-		log.Printf("error: %v", err)
 		return nil, err
 	}
 	// see https://google.aip.dev/133#user-specified-ids
@@ -55,7 +53,6 @@ func (s *Server) CreateBridgePort(_ context.Context, in *pb.CreateBridgePortRequ
 	bridge, err := s.nLink.LinkByName(tenantbridgeName)
 	if err != nil {
 		err := status.Errorf(codes.NotFound, "unable to find key %s", tenantbridgeName)
-		log.Printf("error: %v", err)
 		return nil, err
 	}
 	// get base interface (e.g.: eth2)
@@ -64,7 +61,6 @@ func (s *Server) CreateBridgePort(_ context.Context, in *pb.CreateBridgePortRequ
 	//		 iface := &netlink.Dummy{LinkAttrs: netlink.LinkAttrs{Name: resourceID}}
 	if err != nil {
 		err := status.Errorf(codes.NotFound, "unable to find key %s", resourceID)
-		log.Printf("error: %v", err)
 		return nil, err
 	}
 	// Example: ip link set eth2 addr aa:bb:cc:00:00:41
@@ -86,7 +82,6 @@ func (s *Server) CreateBridgePort(_ context.Context, in *pb.CreateBridgePortRequ
 		bridgeObject, ok := s.Bridges[bridgeRefName]
 		if !ok {
 			err := status.Errorf(codes.NotFound, "unable to find key %s", bridgeRefName)
-			log.Printf("error: %v", err)
 			return nil, err
 		}
 		vid := uint16(bridgeObject.Spec.VlanId)
@@ -105,7 +100,6 @@ func (s *Server) CreateBridgePort(_ context.Context, in *pb.CreateBridgePortRequ
 			}
 		default:
 			msg := fmt.Sprintf("Only ACCESS or TRUNK supported and not (%d)", in.BridgePort.Spec.Ptype)
-			log.Print(msg)
 			return nil, status.Errorf(codes.InvalidArgument, msg)
 		}
 	}
@@ -117,16 +111,13 @@ func (s *Server) CreateBridgePort(_ context.Context, in *pb.CreateBridgePortRequ
 	response := protoClone(in.BridgePort)
 	response.Status = &pb.BridgePortStatus{OperStatus: pb.BPOperStatus_BP_OPER_STATUS_UP}
 	s.Ports[in.BridgePort.Name] = response
-	log.Printf("CreateBridgePort: Sending to client: %v", response)
 	return response, nil
 }
 
 // DeleteBridgePort deletes a port
 func (s *Server) DeleteBridgePort(_ context.Context, in *pb.DeleteBridgePortRequest) (*emptypb.Empty, error) {
-	log.Printf("DeleteBridgePort: Received from client: %v", in)
 	// check input correctness
 	if err := s.validateDeleteBridgePortRequest(in); err != nil {
-		log.Printf("error: %v", err)
 		return nil, err
 	}
 	// fetch object from the database
@@ -136,7 +127,6 @@ func (s *Server) DeleteBridgePort(_ context.Context, in *pb.DeleteBridgePortRequ
 			return &emptypb.Empty{}, nil
 		}
 		err := status.Errorf(codes.NotFound, "unable to find key %s", in.Name)
-		log.Printf("error: %v", err)
 		return nil, err
 	}
 	resourceID := path.Base(iface.Name)
@@ -144,7 +134,6 @@ func (s *Server) DeleteBridgePort(_ context.Context, in *pb.DeleteBridgePortRequ
 	dummy, err := s.nLink.LinkByName(resourceID)
 	if err != nil {
 		err := status.Errorf(codes.NotFound, "unable to find key %s", resourceID)
-		log.Printf("error: %v", err)
 		return nil, err
 	}
 	// bring link down
@@ -158,7 +147,6 @@ func (s *Server) DeleteBridgePort(_ context.Context, in *pb.DeleteBridgePortRequ
 		bridgeObject, ok := s.Bridges[bridgeRefName]
 		if !ok {
 			err := status.Errorf(codes.NotFound, "unable to find key %s", bridgeRefName)
-			log.Printf("error: %v", err)
 			return nil, err
 		}
 		vid := uint16(bridgeObject.Spec.VlanId)
@@ -179,10 +167,8 @@ func (s *Server) DeleteBridgePort(_ context.Context, in *pb.DeleteBridgePortRequ
 
 // UpdateBridgePort updates an Nvme Subsystem
 func (s *Server) UpdateBridgePort(_ context.Context, in *pb.UpdateBridgePortRequest) (*pb.BridgePort, error) {
-	log.Printf("UpdateBridgePort: Received from client: %v", in)
 	// check input correctness
 	if err := s.validateUpdateBridgePortRequest(in); err != nil {
-		log.Printf("error: %v", err)
 		return nil, err
 	}
 	// fetch object from the database
@@ -190,14 +176,12 @@ func (s *Server) UpdateBridgePort(_ context.Context, in *pb.UpdateBridgePortRequ
 	if !ok {
 		// TODO: introduce "in.AllowMissing" field. In case "true", create a new resource, don't return error
 		err := status.Errorf(codes.NotFound, "unable to find key %s", in.BridgePort.Name)
-		log.Printf("error: %v", err)
 		return nil, err
 	}
 	resourceID := path.Base(port.Name)
 	iface, err := s.nLink.LinkByName(resourceID)
 	if err != nil {
 		err := status.Errorf(codes.NotFound, "unable to find key %s", resourceID)
-		log.Printf("error: %v", err)
 		return nil, err
 	}
 	// base := iface.Attrs()
@@ -209,30 +193,25 @@ func (s *Server) UpdateBridgePort(_ context.Context, in *pb.UpdateBridgePortRequ
 	response := protoClone(in.BridgePort)
 	response.Status = &pb.BridgePortStatus{OperStatus: pb.BPOperStatus_BP_OPER_STATUS_UP}
 	s.Ports[in.BridgePort.Name] = response
-	log.Printf("UpdateBridgePort: Sending to client: %v", response)
 	return response, nil
 }
 
 // GetBridgePort gets an BridgePort
 func (s *Server) GetBridgePort(_ context.Context, in *pb.GetBridgePortRequest) (*pb.BridgePort, error) {
-	log.Printf("GetBridgePort: Received from client: %v", in)
 	// check input correctness
 	if err := s.validateGetBridgePortRequest(in); err != nil {
-		log.Printf("error: %v", err)
 		return nil, err
 	}
 	// fetch object from the database
 	port, ok := s.Ports[in.Name]
 	if !ok {
 		err := status.Errorf(codes.NotFound, "unable to find key %s", in.Name)
-		log.Printf("error: %v", err)
 		return nil, err
 	}
 	resourceID := path.Base(port.Name)
 	_, err := s.nLink.LinkByName(resourceID)
 	if err != nil {
 		err := status.Errorf(codes.NotFound, "unable to find key %s", resourceID)
-		log.Printf("error: %v", err)
 		return nil, err
 	}
 	// TODO
@@ -241,16 +220,13 @@ func (s *Server) GetBridgePort(_ context.Context, in *pb.GetBridgePortRequest) (
 
 // ListBridgePorts lists logical bridges
 func (s *Server) ListBridgePorts(_ context.Context, in *pb.ListBridgePortsRequest) (*pb.ListBridgePortsResponse, error) {
-	log.Printf("ListBridgePorts: Received from client: %v", in)
 	// check required fields
 	if err := fieldbehavior.ValidateRequiredFields(in); err != nil {
-		log.Printf("error: %v", err)
 		return nil, err
 	}
 	// fetch pagination from the database, calculate size and offset
 	size, offset, perr := extractPagination(in.PageSize, in.PageToken, s.Pagination)
 	if perr != nil {
-		log.Printf("error: %v", perr)
 		return nil, perr
 	}
 	// fetch object from the database

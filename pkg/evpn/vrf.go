@@ -35,10 +35,8 @@ func sortVrfs(vrfs []*pb.Vrf) {
 
 // CreateVrf executes the creation of the VRF
 func (s *Server) CreateVrf(_ context.Context, in *pb.CreateVrfRequest) (*pb.Vrf, error) {
-	log.Printf("CreateVrf: Received from client: %v", in)
 	// check input correctness
 	if err := s.validateCreateVrfRequest(in); err != nil {
-		log.Printf("error: %v", err)
 		return nil, err
 	}
 	// see https://google.aip.dev/133#user-specified-ids
@@ -143,16 +141,13 @@ func (s *Server) CreateVrf(_ context.Context, in *pb.CreateVrfRequest) (*pb.Vrf,
 	response := protoClone(in.Vrf)
 	response.Status = &pb.VrfStatus{LocalAs: 4, RoutingTable: tableID, Rmac: mac}
 	s.Vrfs[in.Vrf.Name] = response
-	log.Printf("CreateVrf: Sending to client: %v", response)
 	return response, nil
 }
 
 // DeleteVrf deletes a VRF
 func (s *Server) DeleteVrf(_ context.Context, in *pb.DeleteVrfRequest) (*emptypb.Empty, error) {
-	log.Printf("DeleteVrf: Received from client: %v", in)
 	// check input correctness
 	if err := s.validateDeleteVrfRequest(in); err != nil {
-		log.Printf("error: %v", err)
 		return nil, err
 	}
 	// fetch object from the database
@@ -162,7 +157,6 @@ func (s *Server) DeleteVrf(_ context.Context, in *pb.DeleteVrfRequest) (*emptypb
 			return &emptypb.Empty{}, nil
 		}
 		err := status.Errorf(codes.NotFound, "unable to find key %s", in.Name)
-		log.Printf("error: %v", err)
 		return nil, err
 	}
 	// delete bridge and vxlan only if VNI value is not empty
@@ -173,7 +167,6 @@ func (s *Server) DeleteVrf(_ context.Context, in *pb.DeleteVrfRequest) (*emptypb
 		log.Printf("Deleting VXLAN %v", vxlandev)
 		if err != nil {
 			err := status.Errorf(codes.NotFound, "unable to find key %s", vxlanName)
-			log.Printf("error: %v", err)
 			return nil, err
 		}
 		// bring link down
@@ -192,7 +185,6 @@ func (s *Server) DeleteVrf(_ context.Context, in *pb.DeleteVrfRequest) (*emptypb
 		log.Printf("Deleting BRIDGE %v", bridgedev)
 		if err != nil {
 			err := status.Errorf(codes.NotFound, "unable to find key %s", bridgeName)
-			log.Printf("error: %v", err)
 			return nil, err
 		}
 		// bring link down
@@ -212,7 +204,6 @@ func (s *Server) DeleteVrf(_ context.Context, in *pb.DeleteVrfRequest) (*emptypb
 	log.Printf("Deleting VRF %v", vrf)
 	if err != nil {
 		err := status.Errorf(codes.NotFound, "unable to find key %s", resourceID)
-		log.Printf("error: %v", err)
 		return nil, err
 	}
 	// bring link down
@@ -232,10 +223,8 @@ func (s *Server) DeleteVrf(_ context.Context, in *pb.DeleteVrfRequest) (*emptypb
 
 // UpdateVrf updates an VRF
 func (s *Server) UpdateVrf(_ context.Context, in *pb.UpdateVrfRequest) (*pb.Vrf, error) {
-	log.Printf("UpdateVrf: Received from client: %v", in)
 	// check input correctness
 	if err := s.validateUpdateVrfRequest(in); err != nil {
-		log.Printf("error: %v", err)
 		return nil, err
 	}
 	// fetch object from the database
@@ -243,14 +232,12 @@ func (s *Server) UpdateVrf(_ context.Context, in *pb.UpdateVrfRequest) (*pb.Vrf,
 	if !ok {
 		// TODO: introduce "in.AllowMissing" field. In case "true", create a new resource, don't return error
 		err := status.Errorf(codes.NotFound, "unable to find key %s", in.Vrf.Name)
-		log.Printf("error: %v", err)
 		return nil, err
 	}
 	resourceID := path.Base(vrf.Name)
 	iface, err := s.nLink.LinkByName(resourceID)
 	if err != nil {
 		err := status.Errorf(codes.NotFound, "unable to find key %s", resourceID)
-		log.Printf("error: %v", err)
 		return nil, err
 	}
 	// base := iface.Attrs()
@@ -262,30 +249,25 @@ func (s *Server) UpdateVrf(_ context.Context, in *pb.UpdateVrfRequest) (*pb.Vrf,
 	response := protoClone(in.Vrf)
 	response.Status = &pb.VrfStatus{LocalAs: 4}
 	s.Vrfs[in.Vrf.Name] = response
-	log.Printf("UpdateVrf: Sending to client: %v", response)
 	return response, nil
 }
 
 // GetVrf gets an VRF
 func (s *Server) GetVrf(_ context.Context, in *pb.GetVrfRequest) (*pb.Vrf, error) {
-	log.Printf("GetVrf: Received from client: %v", in)
 	// check input correctness
 	if err := s.validateGetVrfRequest(in); err != nil {
-		log.Printf("error: %v", err)
 		return nil, err
 	}
 	// fetch object from the database
 	obj, ok := s.Vrfs[in.Name]
 	if !ok {
 		err := status.Errorf(codes.NotFound, "unable to find key %s", in.Name)
-		log.Printf("error: %v", err)
 		return nil, err
 	}
 	resourceID := path.Base(obj.Name)
 	_, err := s.nLink.LinkByName(resourceID)
 	if err != nil {
 		err := status.Errorf(codes.NotFound, "unable to find key %s", resourceID)
-		log.Printf("error: %v", err)
 		return nil, err
 	}
 	// TODO
@@ -294,16 +276,13 @@ func (s *Server) GetVrf(_ context.Context, in *pb.GetVrfRequest) (*pb.Vrf, error
 
 // ListVrfs lists logical bridges
 func (s *Server) ListVrfs(_ context.Context, in *pb.ListVrfsRequest) (*pb.ListVrfsResponse, error) {
-	log.Printf("ListVrfs: Received from client: %v", in)
 	// check required fields
 	if err := fieldbehavior.ValidateRequiredFields(in); err != nil {
-		log.Printf("error: %v", err)
 		return nil, err
 	}
 	// fetch pagination from the database, calculate size and offset
 	size, offset, perr := extractPagination(in.PageSize, in.PageToken, s.Pagination)
 	if perr != nil {
-		log.Printf("error: %v", perr)
 		return nil, perr
 	}
 	// fetch object from the database

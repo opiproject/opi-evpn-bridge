@@ -34,10 +34,8 @@ func sortSvis(svis []*pb.Svi) {
 
 // CreateSvi executes the creation of the VLAN
 func (s *Server) CreateSvi(_ context.Context, in *pb.CreateSviRequest) (*pb.Svi, error) {
-	log.Printf("CreateSvi: Received from client: %v", in)
 	// check input correctness
 	if err := s.validateCreateSviRequest(in); err != nil {
-		log.Printf("error: %v", err)
 		return nil, err
 	}
 	// see https://google.aip.dev/133#user-specified-ids
@@ -57,21 +55,18 @@ func (s *Server) CreateSvi(_ context.Context, in *pb.CreateSviRequest) (*pb.Svi,
 	bridgeObject, ok := s.Bridges[in.Svi.Spec.LogicalBridge]
 	if !ok {
 		err := status.Errorf(codes.NotFound, "unable to find key %s", in.Svi.Spec.LogicalBridge)
-		log.Printf("error: %v", err)
 		return nil, err
 	}
 	// now get Vrf to plug this vlandev into
 	vrf, ok := s.Vrfs[in.Svi.Spec.Vrf]
 	if !ok {
 		err := status.Errorf(codes.NotFound, "unable to find key %s", in.Svi.Spec.Vrf)
-		log.Printf("error: %v", err)
 		return nil, err
 	}
 	// not found, so create a new one
 	bridge, err := s.nLink.LinkByName(tenantbridgeName)
 	if err != nil {
 		err := status.Errorf(codes.NotFound, "unable to find key %s", tenantbridgeName)
-		log.Printf("error: %v", err)
 		return nil, err
 	}
 	vid := uint16(bridgeObject.Spec.VlanId)
@@ -110,7 +105,6 @@ func (s *Server) CreateSvi(_ context.Context, in *pb.CreateSviRequest) (*pb.Svi,
 	vrfdev, err := s.nLink.LinkByName(path.Base(vrf.Name))
 	if err != nil {
 		err := status.Errorf(codes.NotFound, "unable to find key %s", vrf.Name)
-		log.Printf("error: %v", err)
 		return nil, err
 	}
 	// Example: ip link set <link_svi> master <vrf-name> up
@@ -126,16 +120,13 @@ func (s *Server) CreateSvi(_ context.Context, in *pb.CreateSviRequest) (*pb.Svi,
 	response := protoClone(in.Svi)
 	response.Status = &pb.SviStatus{OperStatus: pb.SVIOperStatus_SVI_OPER_STATUS_UP}
 	s.Svis[in.Svi.Name] = response
-	log.Printf("CreateSvi: Sending to client: %v", response)
 	return response, nil
 }
 
 // DeleteSvi deletes a VLAN
 func (s *Server) DeleteSvi(_ context.Context, in *pb.DeleteSviRequest) (*emptypb.Empty, error) {
-	log.Printf("DeleteSvi: Received from client: %v", in)
 	// check input correctness
 	if err := s.validateDeleteSviRequest(in); err != nil {
-		log.Printf("error: %v", err)
 		return nil, err
 	}
 	// fetch object from the database
@@ -145,21 +136,18 @@ func (s *Server) DeleteSvi(_ context.Context, in *pb.DeleteSviRequest) (*emptypb
 			return &emptypb.Empty{}, nil
 		}
 		err := status.Errorf(codes.NotFound, "unable to find key %s", in.Name)
-		log.Printf("error: %v", err)
 		return nil, err
 	}
 	// use netlink to find br-tenant
 	bridge, err := s.nLink.LinkByName(tenantbridgeName)
 	if err != nil {
 		err := status.Errorf(codes.NotFound, "unable to find key %s", tenantbridgeName)
-		log.Printf("error: %v", err)
 		return nil, err
 	}
 	// use netlink to find VlanId from LogicalBridge object
 	bridgeObject, ok := s.Bridges[obj.Spec.LogicalBridge]
 	if !ok {
 		err := status.Errorf(codes.NotFound, "unable to find key %s", obj.Spec.LogicalBridge)
-		log.Printf("error: %v", err)
 		return nil, err
 	}
 	vid := uint16(bridgeObject.Spec.VlanId)
@@ -172,7 +160,6 @@ func (s *Server) DeleteSvi(_ context.Context, in *pb.DeleteSviRequest) (*emptypb
 	vlandev, err := s.nLink.LinkByName(vlanName)
 	if err != nil {
 		err := status.Errorf(codes.NotFound, "unable to find key %s", vlanName)
-		log.Printf("error: %v", err)
 		return nil, err
 	}
 	log.Printf("Deleting VLAN %v", vlandev)
@@ -193,10 +180,8 @@ func (s *Server) DeleteSvi(_ context.Context, in *pb.DeleteSviRequest) (*emptypb
 
 // UpdateSvi updates an VLAN
 func (s *Server) UpdateSvi(_ context.Context, in *pb.UpdateSviRequest) (*pb.Svi, error) {
-	log.Printf("UpdateSvi: Received from client: %v", in)
 	// check input correctness
 	if err := s.validateUpdateSviRequest(in); err != nil {
-		log.Printf("error: %v", err)
 		return nil, err
 	}
 	// fetch object from the database
@@ -204,21 +189,18 @@ func (s *Server) UpdateSvi(_ context.Context, in *pb.UpdateSviRequest) (*pb.Svi,
 	if !ok {
 		// TODO: introduce "in.AllowMissing" field. In case "true", create a new resource, don't return error
 		err := status.Errorf(codes.NotFound, "unable to find key %s", in.Svi.Name)
-		log.Printf("error: %v", err)
 		return nil, err
 	}
 	// use netlink to find VlanId from LogicalBridge object
 	bridgeObject, ok := s.Bridges[svi.Spec.LogicalBridge]
 	if !ok {
 		err := status.Errorf(codes.NotFound, "unable to find key %s", svi.Spec.LogicalBridge)
-		log.Printf("error: %v", err)
 		return nil, err
 	}
 	vlanName := fmt.Sprintf("vlan%d", bridgeObject.Spec.VlanId)
 	iface, err := s.nLink.LinkByName(vlanName)
 	if err != nil {
 		err := status.Errorf(codes.NotFound, "unable to find key %s", vlanName)
-		log.Printf("error: %v", err)
 		return nil, err
 	}
 	// base := iface.Attrs()
@@ -230,37 +212,31 @@ func (s *Server) UpdateSvi(_ context.Context, in *pb.UpdateSviRequest) (*pb.Svi,
 	response := protoClone(in.Svi)
 	response.Status = &pb.SviStatus{OperStatus: pb.SVIOperStatus_SVI_OPER_STATUS_UP}
 	s.Svis[in.Svi.Name] = response
-	log.Printf("UpdateSvi: Sending to client: %v", response)
 	return response, nil
 }
 
 // GetSvi gets an VLAN
 func (s *Server) GetSvi(_ context.Context, in *pb.GetSviRequest) (*pb.Svi, error) {
-	log.Printf("GetSvi: Received from client: %v", in)
 	// check input correctness
 	if err := s.validateGetSviRequest(in); err != nil {
-		log.Printf("error: %v", err)
 		return nil, err
 	}
 	// fetch object from the database
 	obj, ok := s.Svis[in.Name]
 	if !ok {
 		err := status.Errorf(codes.NotFound, "unable to find key %s", in.Name)
-		log.Printf("error: %v", err)
 		return nil, err
 	}
 	// use netlink to find VlanId from LogicalBridge object
 	bridgeObject, ok := s.Bridges[obj.Spec.LogicalBridge]
 	if !ok {
 		err := status.Errorf(codes.NotFound, "unable to find key %s", obj.Spec.LogicalBridge)
-		log.Printf("error: %v", err)
 		return nil, err
 	}
 	vlanName := fmt.Sprintf("vlan%d", bridgeObject.Spec.VlanId)
 	_, err := s.nLink.LinkByName(vlanName)
 	if err != nil {
 		err := status.Errorf(codes.NotFound, "unable to find key %s", vlanName)
-		log.Printf("error: %v", err)
 		return nil, err
 	}
 	// TODO
@@ -269,16 +245,13 @@ func (s *Server) GetSvi(_ context.Context, in *pb.GetSviRequest) (*pb.Svi, error
 
 // ListSvis lists logical bridges
 func (s *Server) ListSvis(_ context.Context, in *pb.ListSvisRequest) (*pb.ListSvisResponse, error) {
-	log.Printf("ListSvis: Received from client: %v", in)
 	// check required fields
 	if err := fieldbehavior.ValidateRequiredFields(in); err != nil {
-		log.Printf("error: %v", err)
 		return nil, err
 	}
 	// fetch pagination from the database, calculate size and offset
 	size, offset, perr := extractPagination(in.PageSize, in.PageToken, s.Pagination)
 	if perr != nil {
-		log.Printf("error: %v", perr)
 		return nil, perr
 	}
 	// fetch object from the database
