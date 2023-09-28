@@ -33,10 +33,8 @@ func sortLogicalBridges(bridges []*pb.LogicalBridge) {
 
 // CreateLogicalBridge executes the creation of the LogicalBridge
 func (s *Server) CreateLogicalBridge(_ context.Context, in *pb.CreateLogicalBridgeRequest) (*pb.LogicalBridge, error) {
-	log.Printf("CreateLogicalBridge: Received from client: %v", in)
 	// check input correctness
 	if err := s.validateCreateLogicalBridgeRequest(in); err != nil {
-		log.Printf("error: %v", err)
 		return nil, err
 	}
 	// see https://google.aip.dev/133#user-specified-ids
@@ -57,7 +55,6 @@ func (s *Server) CreateLogicalBridge(_ context.Context, in *pb.CreateLogicalBrid
 		bridge, err := s.nLink.LinkByName(tenantbridgeName)
 		if err != nil {
 			err := status.Errorf(codes.NotFound, "unable to find key %s", tenantbridgeName)
-			log.Printf("error: %v", err)
 			return nil, err
 		}
 		// Example: ip link add vxlan-<LB-vlan-id> type vxlan id <LB-vni> local <vtep-ip> dstport 4789 nolearning proxy
@@ -91,16 +88,13 @@ func (s *Server) CreateLogicalBridge(_ context.Context, in *pb.CreateLogicalBrid
 	response := protoClone(in.LogicalBridge)
 	response.Status = &pb.LogicalBridgeStatus{OperStatus: pb.LBOperStatus_LB_OPER_STATUS_UP}
 	s.Bridges[in.LogicalBridge.Name] = response
-	log.Printf("CreateLogicalBridge: Sending to client: %v", response)
 	return response, nil
 }
 
 // DeleteLogicalBridge deletes a LogicalBridge
 func (s *Server) DeleteLogicalBridge(_ context.Context, in *pb.DeleteLogicalBridgeRequest) (*emptypb.Empty, error) {
-	log.Printf("DeleteLogicalBridge: Received from client: %v", in)
 	// check input correctness
 	if err := s.validateDeleteLogicalBridgeRequest(in); err != nil {
-		log.Printf("error: %v", err)
 		return nil, err
 	}
 	// fetch object from the database
@@ -110,7 +104,6 @@ func (s *Server) DeleteLogicalBridge(_ context.Context, in *pb.DeleteLogicalBrid
 			return &emptypb.Empty{}, nil
 		}
 		err := status.Errorf(codes.NotFound, "unable to find key %s", in.Name)
-		log.Printf("error: %v", err)
 		return nil, err
 	}
 	// only if VNI is not empty
@@ -120,7 +113,6 @@ func (s *Server) DeleteLogicalBridge(_ context.Context, in *pb.DeleteLogicalBrid
 		vxlan, err := s.nLink.LinkByName(vxlanName)
 		if err != nil {
 			err := status.Errorf(codes.NotFound, "unable to find key %s", vxlanName)
-			log.Printf("error: %v", err)
 			return nil, err
 		}
 		log.Printf("Deleting Vxlan %v", vxlan)
@@ -147,10 +139,8 @@ func (s *Server) DeleteLogicalBridge(_ context.Context, in *pb.DeleteLogicalBrid
 
 // UpdateLogicalBridge updates a LogicalBridge
 func (s *Server) UpdateLogicalBridge(_ context.Context, in *pb.UpdateLogicalBridgeRequest) (*pb.LogicalBridge, error) {
-	log.Printf("UpdateLogicalBridge: Received from client: %v", in)
 	// check input correctness
 	if err := s.validateUpdateLogicalBridgeRequest(in); err != nil {
-		log.Printf("error: %v", err)
 		return nil, err
 	}
 	// fetch object from the database
@@ -158,7 +148,6 @@ func (s *Server) UpdateLogicalBridge(_ context.Context, in *pb.UpdateLogicalBrid
 	if !ok {
 		// TODO: introduce "in.AllowMissing" field. In case "true", create a new resource, don't return error
 		err := status.Errorf(codes.NotFound, "unable to find key %s", in.LogicalBridge.Name)
-		log.Printf("error: %v", err)
 		return nil, err
 	}
 	// only if VNI is not empty
@@ -167,7 +156,6 @@ func (s *Server) UpdateLogicalBridge(_ context.Context, in *pb.UpdateLogicalBrid
 		iface, err := s.nLink.LinkByName(vxlanName)
 		if err != nil {
 			err := status.Errorf(codes.NotFound, "unable to find key %s", vxlanName)
-			log.Printf("error: %v", err)
 			return nil, err
 		}
 		// base := iface.Attrs()
@@ -180,23 +168,19 @@ func (s *Server) UpdateLogicalBridge(_ context.Context, in *pb.UpdateLogicalBrid
 	response := protoClone(in.LogicalBridge)
 	response.Status = &pb.LogicalBridgeStatus{OperStatus: pb.LBOperStatus_LB_OPER_STATUS_UP}
 	s.Bridges[in.LogicalBridge.Name] = response
-	log.Printf("UpdateLogicalBridge: Sending to client: %v", response)
 	return response, nil
 }
 
 // GetLogicalBridge gets a LogicalBridge
 func (s *Server) GetLogicalBridge(_ context.Context, in *pb.GetLogicalBridgeRequest) (*pb.LogicalBridge, error) {
-	log.Printf("GetLogicalBridge: Received from client: %v", in)
 	// check input correctness
 	if err := s.validateGetLogicalBridgeRequest(in); err != nil {
-		log.Printf("error: %v", err)
 		return nil, err
 	}
 	// fetch object from the database
 	bridge, ok := s.Bridges[in.Name]
 	if !ok {
 		err := status.Errorf(codes.NotFound, "unable to find key %s", in.Name)
-		log.Printf("error: %v", err)
 		return nil, err
 	}
 	// only if VNI is not empty
@@ -205,7 +189,6 @@ func (s *Server) GetLogicalBridge(_ context.Context, in *pb.GetLogicalBridgeRequ
 		_, err := s.nLink.LinkByName(vxlanName)
 		if err != nil {
 			err := status.Errorf(codes.NotFound, "unable to find key %s", vxlanName)
-			log.Printf("error: %v", err)
 			return nil, err
 		}
 	}
@@ -215,16 +198,13 @@ func (s *Server) GetLogicalBridge(_ context.Context, in *pb.GetLogicalBridgeRequ
 
 // ListLogicalBridges lists logical bridges
 func (s *Server) ListLogicalBridges(_ context.Context, in *pb.ListLogicalBridgesRequest) (*pb.ListLogicalBridgesResponse, error) {
-	log.Printf("ListLogicalBridges: Received from client: %v", in)
 	// check required fields
 	if err := fieldbehavior.ValidateRequiredFields(in); err != nil {
-		log.Printf("error: %v", err)
 		return nil, err
 	}
 	// fetch pagination from the database, calculate size and offset
 	size, offset, perr := extractPagination(in.PageSize, in.PageToken, s.Pagination)
 	if perr != nil {
-		log.Printf("error: %v", perr)
 		return nil, perr
 	}
 	// fetch object from the database
