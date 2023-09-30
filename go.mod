@@ -5,9 +5,10 @@ go 1.19
 require (
 	github.com/golangci/golangci-lint v1.54.2
 	github.com/google/uuid v1.3.1
+	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.0.1
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.18.0
 	github.com/onsi/ginkgo/v2 v2.12.1
-	github.com/opiproject/opi-api v0.0.0-20230924031502-67b3821b62cf
+	github.com/opiproject/opi-api v0.0.0-20230926113732-f307f1aa0bd1
 	github.com/opiproject/opi-smbios-bridge v0.1.3-0.20230924050511-ed2cf72c2fbf
 	github.com/stretchr/testify v1.8.4
 	github.com/vektra/mockery/v2 v2.34.0
@@ -90,7 +91,6 @@ require (
 	github.com/gostaticanalysis/comment v1.4.2 // indirect
 	github.com/gostaticanalysis/forcetypeassert v0.1.0 // indirect
 	github.com/gostaticanalysis/nilerr v0.1.1 // indirect
-	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.0.1 // indirect
 	github.com/hashicorp/errwrap v1.0.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/hashicorp/go-version v1.6.0 // indirect
