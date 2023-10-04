@@ -200,13 +200,22 @@ services:
       context: .
     cap_add:
       - NET_ADMIN
+    environment:
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317
     depends_on:
       - leaf1
       - redis
+      - jaeger
     network_mode: service:leaf1
     command: /opi-evpn-bridge -grpc_port=50151 -http_port=8082
     healthcheck:
       test: grpcurl -plaintext localhost:50151 list || exit 1
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.49.0
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+    network_mode: service:leaf1
 
   redis:
     image: redis:7.2.1-alpine3.18
@@ -221,6 +230,13 @@ services:
       opi-evpn-bridge:
         condition: service_healthy
     command: curl -qkL http://localhost:8082/v1/inventory/1/inventory/2
+
+  opi-jaeger-test:
+    image: curlimages/curl:8.3.0
+    network_mode: service:leaf1
+    depends_on:
+      - testgrpc
+    command: sh -c 'curl -s "http://localhost:16686/api/traces?service=opi-evpn-bridge&lookback=20m&prettyPrint=true&limit=10" | grep operationName'
 
   testgrpc:
     image: docker.io/namely/grpc-cli
@@ -353,6 +369,7 @@ services:
       - host4-leaf2
       - opi-evpn-bridge
       - testgrpc
+      - opi-jaeger-test
     # HOST1
     # L2 VXLAN - VLAN10 stretched with VNI10 to leaf2 from leaf1, ping Host2 IP from Host1
     # L3VXLAN Asymmetric IRB:
