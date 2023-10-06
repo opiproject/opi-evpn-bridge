@@ -14,6 +14,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/stretchr/testify/mock"
 	"github.com/vishvananda/netlink"
 
 	"google.golang.org/grpc"
@@ -212,7 +213,7 @@ func Test_CreateSvi(t *testing.T) {
 			errMsg:  fmt.Sprintf("unable to find key %v", tenantbridgeName),
 			exist:   false,
 			on: func(mockNetlink *mocks.Netlink, errMsg string) {
-				mockNetlink.EXPECT().LinkByName(tenantbridgeName).Return(nil, errors.New(errMsg)).Once()
+				mockNetlink.EXPECT().LinkByName(mock.Anything, tenantbridgeName).Return(nil, errors.New(errMsg)).Once()
 			},
 		},
 		"failed BridgeVlanAdd call": {
@@ -225,8 +226,8 @@ func Test_CreateSvi(t *testing.T) {
 			on: func(mockNetlink *mocks.Netlink, errMsg string) {
 				vid := uint16(testLogicalBridge.Spec.VlanId)
 				bridge := &netlink.Bridge{LinkAttrs: netlink.LinkAttrs{Name: tenantbridgeName}}
-				mockNetlink.EXPECT().LinkByName(tenantbridgeName).Return(bridge, nil).Once()
-				mockNetlink.EXPECT().BridgeVlanAdd(bridge, vid, false, false, true, false).Return(errors.New(errMsg)).Once()
+				mockNetlink.EXPECT().LinkByName(mock.Anything, tenantbridgeName).Return(bridge, nil).Once()
+				mockNetlink.EXPECT().BridgeVlanAdd(mock.Anything, bridge, vid, false, false, true, false).Return(errors.New(errMsg)).Once()
 			},
 		},
 		"failed LinkAdd call": {
@@ -239,11 +240,11 @@ func Test_CreateSvi(t *testing.T) {
 			on: func(mockNetlink *mocks.Netlink, errMsg string) {
 				vid := uint16(testLogicalBridge.Spec.VlanId)
 				bridge := &netlink.Bridge{LinkAttrs: netlink.LinkAttrs{Name: tenantbridgeName}}
-				mockNetlink.EXPECT().LinkByName(tenantbridgeName).Return(bridge, nil).Once()
-				mockNetlink.EXPECT().BridgeVlanAdd(bridge, vid, false, false, true, false).Return(nil).Once()
+				mockNetlink.EXPECT().LinkByName(mock.Anything, tenantbridgeName).Return(bridge, nil).Once()
+				mockNetlink.EXPECT().BridgeVlanAdd(mock.Anything, bridge, vid, false, false, true, false).Return(nil).Once()
 				vlanName := fmt.Sprintf("vlan%d", vid)
 				vlandev := &netlink.Vlan{LinkAttrs: netlink.LinkAttrs{Name: vlanName, ParentIndex: bridge.Attrs().Index}, VlanId: int(vid)}
-				mockNetlink.EXPECT().LinkAdd(vlandev).Return(errors.New(errMsg)).Once()
+				mockNetlink.EXPECT().LinkAdd(mock.Anything, vlandev).Return(errors.New(errMsg)).Once()
 			},
 		},
 		"failed LinkSetHardwareAddr call": {
@@ -256,13 +257,13 @@ func Test_CreateSvi(t *testing.T) {
 			on: func(mockNetlink *mocks.Netlink, errMsg string) {
 				vid := uint16(testLogicalBridge.Spec.VlanId)
 				bridge := &netlink.Bridge{LinkAttrs: netlink.LinkAttrs{Name: tenantbridgeName}}
-				mockNetlink.EXPECT().LinkByName(tenantbridgeName).Return(bridge, nil).Once()
-				mockNetlink.EXPECT().BridgeVlanAdd(bridge, vid, false, false, true, false).Return(nil).Once()
+				mockNetlink.EXPECT().LinkByName(mock.Anything, tenantbridgeName).Return(bridge, nil).Once()
+				mockNetlink.EXPECT().BridgeVlanAdd(mock.Anything, bridge, vid, false, false, true, false).Return(nil).Once()
 				vlanName := fmt.Sprintf("vlan%d", vid)
 				vlandev := &netlink.Vlan{LinkAttrs: netlink.LinkAttrs{Name: vlanName, ParentIndex: bridge.Attrs().Index}, VlanId: int(vid)}
-				mockNetlink.EXPECT().LinkAdd(vlandev).Return(nil).Once()
+				mockNetlink.EXPECT().LinkAdd(mock.Anything, vlandev).Return(nil).Once()
 				mac := net.HardwareAddr(testSvi.Spec.MacAddress[:])
-				mockNetlink.EXPECT().LinkSetHardwareAddr(vlandev, mac).Return(errors.New(errMsg)).Once()
+				mockNetlink.EXPECT().LinkSetHardwareAddr(mock.Anything, vlandev, mac).Return(errors.New(errMsg)).Once()
 			},
 		},
 		"failed AddrAdd call": {
@@ -275,16 +276,16 @@ func Test_CreateSvi(t *testing.T) {
 			on: func(mockNetlink *mocks.Netlink, errMsg string) {
 				vid := uint16(testLogicalBridge.Spec.VlanId)
 				bridge := &netlink.Bridge{LinkAttrs: netlink.LinkAttrs{Name: tenantbridgeName}}
-				mockNetlink.EXPECT().LinkByName(tenantbridgeName).Return(bridge, nil).Once()
-				mockNetlink.EXPECT().BridgeVlanAdd(bridge, vid, false, false, true, false).Return(nil).Once()
+				mockNetlink.EXPECT().LinkByName(mock.Anything, tenantbridgeName).Return(bridge, nil).Once()
+				mockNetlink.EXPECT().BridgeVlanAdd(mock.Anything, bridge, vid, false, false, true, false).Return(nil).Once()
 				vlanName := fmt.Sprintf("vlan%d", vid)
 				vlandev := &netlink.Vlan{LinkAttrs: netlink.LinkAttrs{Name: vlanName, ParentIndex: bridge.Attrs().Index}, VlanId: int(vid)}
-				mockNetlink.EXPECT().LinkAdd(vlandev).Return(nil).Once()
+				mockNetlink.EXPECT().LinkAdd(mock.Anything, vlandev).Return(nil).Once()
 				mac := net.HardwareAddr(testSvi.Spec.MacAddress[:])
-				mockNetlink.EXPECT().LinkSetHardwareAddr(vlandev, mac).Return(nil).Once()
+				mockNetlink.EXPECT().LinkSetHardwareAddr(mock.Anything, vlandev, mac).Return(nil).Once()
 				myip := make(net.IP, 4)
 				addr := &netlink.Addr{IPNet: &net.IPNet{IP: myip, Mask: net.CIDRMask(24, 32)}}
-				mockNetlink.EXPECT().AddrAdd(vlandev, addr).Return(errors.New(errMsg)).Once()
+				mockNetlink.EXPECT().AddrAdd(mock.Anything, vlandev, addr).Return(errors.New(errMsg)).Once()
 			},
 		},
 		"failed LinkByName call": {
@@ -297,17 +298,17 @@ func Test_CreateSvi(t *testing.T) {
 			on: func(mockNetlink *mocks.Netlink, errMsg string) {
 				vid := uint16(testLogicalBridge.Spec.VlanId)
 				bridge := &netlink.Bridge{LinkAttrs: netlink.LinkAttrs{Name: tenantbridgeName}}
-				mockNetlink.EXPECT().LinkByName(tenantbridgeName).Return(bridge, nil).Once()
-				mockNetlink.EXPECT().BridgeVlanAdd(bridge, vid, false, false, true, false).Return(nil).Once()
+				mockNetlink.EXPECT().LinkByName(mock.Anything, tenantbridgeName).Return(bridge, nil).Once()
+				mockNetlink.EXPECT().BridgeVlanAdd(mock.Anything, bridge, vid, false, false, true, false).Return(nil).Once()
 				vlanName := fmt.Sprintf("vlan%d", vid)
 				vlandev := &netlink.Vlan{LinkAttrs: netlink.LinkAttrs{Name: vlanName, ParentIndex: bridge.Attrs().Index}, VlanId: int(vid)}
-				mockNetlink.EXPECT().LinkAdd(vlandev).Return(nil).Once()
+				mockNetlink.EXPECT().LinkAdd(mock.Anything, vlandev).Return(nil).Once()
 				mac := net.HardwareAddr(testSvi.Spec.MacAddress[:])
-				mockNetlink.EXPECT().LinkSetHardwareAddr(vlandev, mac).Return(nil).Once()
+				mockNetlink.EXPECT().LinkSetHardwareAddr(mock.Anything, vlandev, mac).Return(nil).Once()
 				myip := make(net.IP, 4)
 				addr := &netlink.Addr{IPNet: &net.IPNet{IP: myip, Mask: net.CIDRMask(24, 32)}}
-				mockNetlink.EXPECT().AddrAdd(vlandev, addr).Return(nil).Once()
-				mockNetlink.EXPECT().LinkByName(testVrfID).Return(nil, errors.New(errMsg)).Once()
+				mockNetlink.EXPECT().AddrAdd(mock.Anything, vlandev, addr).Return(nil).Once()
+				mockNetlink.EXPECT().LinkByName(mock.Anything, testVrfID).Return(nil, errors.New(errMsg)).Once()
 			},
 		},
 		"failed LinkSetMaster call": {
@@ -320,19 +321,19 @@ func Test_CreateSvi(t *testing.T) {
 			on: func(mockNetlink *mocks.Netlink, errMsg string) {
 				vid := uint16(testLogicalBridge.Spec.VlanId)
 				bridge := &netlink.Bridge{LinkAttrs: netlink.LinkAttrs{Name: tenantbridgeName}}
-				mockNetlink.EXPECT().LinkByName(tenantbridgeName).Return(bridge, nil).Once()
-				mockNetlink.EXPECT().BridgeVlanAdd(bridge, vid, false, false, true, false).Return(nil).Once()
+				mockNetlink.EXPECT().LinkByName(mock.Anything, tenantbridgeName).Return(bridge, nil).Once()
+				mockNetlink.EXPECT().BridgeVlanAdd(mock.Anything, bridge, vid, false, false, true, false).Return(nil).Once()
 				vlanName := fmt.Sprintf("vlan%d", vid)
 				vlandev := &netlink.Vlan{LinkAttrs: netlink.LinkAttrs{Name: vlanName, ParentIndex: bridge.Attrs().Index}, VlanId: int(vid)}
-				mockNetlink.EXPECT().LinkAdd(vlandev).Return(nil).Once()
+				mockNetlink.EXPECT().LinkAdd(mock.Anything, vlandev).Return(nil).Once()
 				mac := net.HardwareAddr(testSvi.Spec.MacAddress[:])
-				mockNetlink.EXPECT().LinkSetHardwareAddr(vlandev, mac).Return(nil).Once()
+				mockNetlink.EXPECT().LinkSetHardwareAddr(mock.Anything, vlandev, mac).Return(nil).Once()
 				myip := make(net.IP, 4)
 				addr := &netlink.Addr{IPNet: &net.IPNet{IP: myip, Mask: net.CIDRMask(24, 32)}}
-				mockNetlink.EXPECT().AddrAdd(vlandev, addr).Return(nil).Once()
+				mockNetlink.EXPECT().AddrAdd(mock.Anything, vlandev, addr).Return(nil).Once()
 				vrfdev := &netlink.Vrf{LinkAttrs: netlink.LinkAttrs{Name: testVrfID}, Table: 1001}
-				mockNetlink.EXPECT().LinkByName(testVrfID).Return(vrfdev, nil).Once()
-				mockNetlink.EXPECT().LinkSetMaster(vlandev, vrfdev).Return(errors.New(errMsg)).Once()
+				mockNetlink.EXPECT().LinkByName(mock.Anything, testVrfID).Return(vrfdev, nil).Once()
+				mockNetlink.EXPECT().LinkSetMaster(mock.Anything, vlandev, vrfdev).Return(errors.New(errMsg)).Once()
 			},
 		},
 		"failed LinkSetUp call": {
@@ -345,20 +346,20 @@ func Test_CreateSvi(t *testing.T) {
 			on: func(mockNetlink *mocks.Netlink, errMsg string) {
 				vid := uint16(testLogicalBridge.Spec.VlanId)
 				bridge := &netlink.Bridge{LinkAttrs: netlink.LinkAttrs{Name: tenantbridgeName}}
-				mockNetlink.EXPECT().LinkByName(tenantbridgeName).Return(bridge, nil).Once()
-				mockNetlink.EXPECT().BridgeVlanAdd(bridge, vid, false, false, true, false).Return(nil).Once()
+				mockNetlink.EXPECT().LinkByName(mock.Anything, tenantbridgeName).Return(bridge, nil).Once()
+				mockNetlink.EXPECT().BridgeVlanAdd(mock.Anything, bridge, vid, false, false, true, false).Return(nil).Once()
 				vlanName := fmt.Sprintf("vlan%d", vid)
 				vlandev := &netlink.Vlan{LinkAttrs: netlink.LinkAttrs{Name: vlanName, ParentIndex: bridge.Attrs().Index}, VlanId: int(vid)}
-				mockNetlink.EXPECT().LinkAdd(vlandev).Return(nil).Once()
+				mockNetlink.EXPECT().LinkAdd(mock.Anything, vlandev).Return(nil).Once()
 				mac := net.HardwareAddr(testSvi.Spec.MacAddress[:])
-				mockNetlink.EXPECT().LinkSetHardwareAddr(vlandev, mac).Return(nil).Once()
+				mockNetlink.EXPECT().LinkSetHardwareAddr(mock.Anything, vlandev, mac).Return(nil).Once()
 				myip := make(net.IP, 4)
 				addr := &netlink.Addr{IPNet: &net.IPNet{IP: myip, Mask: net.CIDRMask(24, 32)}}
-				mockNetlink.EXPECT().AddrAdd(vlandev, addr).Return(nil).Once()
+				mockNetlink.EXPECT().AddrAdd(mock.Anything, vlandev, addr).Return(nil).Once()
 				vrfdev := &netlink.Vrf{LinkAttrs: netlink.LinkAttrs{Name: testVrfID}, Table: 1001}
-				mockNetlink.EXPECT().LinkByName(testVrfID).Return(vrfdev, nil).Once()
-				mockNetlink.EXPECT().LinkSetMaster(vlandev, vrfdev).Return(nil).Once()
-				mockNetlink.EXPECT().LinkSetUp(vlandev).Return(errors.New(errMsg)).Once()
+				mockNetlink.EXPECT().LinkByName(mock.Anything, testVrfID).Return(vrfdev, nil).Once()
+				mockNetlink.EXPECT().LinkSetMaster(mock.Anything, vlandev, vrfdev).Return(nil).Once()
+				mockNetlink.EXPECT().LinkSetUp(mock.Anything, vlandev).Return(errors.New(errMsg)).Once()
 			},
 		},
 		"successful call": {
@@ -371,20 +372,20 @@ func Test_CreateSvi(t *testing.T) {
 			on: func(mockNetlink *mocks.Netlink, errMsg string) {
 				vid := uint16(testLogicalBridge.Spec.VlanId)
 				bridge := &netlink.Bridge{LinkAttrs: netlink.LinkAttrs{Name: tenantbridgeName}}
-				mockNetlink.EXPECT().LinkByName(tenantbridgeName).Return(bridge, nil).Once()
-				mockNetlink.EXPECT().BridgeVlanAdd(bridge, vid, false, false, true, false).Return(nil).Once()
+				mockNetlink.EXPECT().LinkByName(mock.Anything, tenantbridgeName).Return(bridge, nil).Once()
+				mockNetlink.EXPECT().BridgeVlanAdd(mock.Anything, bridge, vid, false, false, true, false).Return(nil).Once()
 				vlanName := fmt.Sprintf("vlan%d", vid)
 				vlandev := &netlink.Vlan{LinkAttrs: netlink.LinkAttrs{Name: vlanName, ParentIndex: bridge.Attrs().Index}, VlanId: int(vid)}
-				mockNetlink.EXPECT().LinkAdd(vlandev).Return(nil).Once()
+				mockNetlink.EXPECT().LinkAdd(mock.Anything, vlandev).Return(nil).Once()
 				mac := net.HardwareAddr(testSvi.Spec.MacAddress[:])
-				mockNetlink.EXPECT().LinkSetHardwareAddr(vlandev, mac).Return(nil).Once()
+				mockNetlink.EXPECT().LinkSetHardwareAddr(mock.Anything, vlandev, mac).Return(nil).Once()
 				myip := make(net.IP, 4)
 				addr := &netlink.Addr{IPNet: &net.IPNet{IP: myip, Mask: net.CIDRMask(24, 32)}}
-				mockNetlink.EXPECT().AddrAdd(vlandev, addr).Return(nil).Once()
+				mockNetlink.EXPECT().AddrAdd(mock.Anything, vlandev, addr).Return(nil).Once()
 				vrfdev := &netlink.Vrf{LinkAttrs: netlink.LinkAttrs{Name: testVrfID}, Table: 1001}
-				mockNetlink.EXPECT().LinkByName(testVrfID).Return(vrfdev, nil).Once()
-				mockNetlink.EXPECT().LinkSetMaster(vlandev, vrfdev).Return(nil).Once()
-				mockNetlink.EXPECT().LinkSetUp(vlandev).Return(nil).Once()
+				mockNetlink.EXPECT().LinkByName(mock.Anything, testVrfID).Return(vrfdev, nil).Once()
+				mockNetlink.EXPECT().LinkSetMaster(mock.Anything, vlandev, vrfdev).Return(nil).Once()
+				mockNetlink.EXPECT().LinkSetUp(mock.Anything, vlandev).Return(nil).Once()
 			},
 		},
 	}
@@ -484,7 +485,7 @@ func Test_DeleteSvi(t *testing.T) {
 			errMsg:  fmt.Sprintf("unable to find key %v", tenantbridgeName),
 			missing: false,
 			on: func(mockNetlink *mocks.Netlink, errMsg string) {
-				mockNetlink.EXPECT().LinkByName(tenantbridgeName).Return(nil, errors.New(errMsg)).Once()
+				mockNetlink.EXPECT().LinkByName(mock.Anything, tenantbridgeName).Return(nil, errors.New(errMsg)).Once()
 			},
 		},
 		"failed BridgeVlanDel call": {
@@ -495,9 +496,9 @@ func Test_DeleteSvi(t *testing.T) {
 			missing: false,
 			on: func(mockNetlink *mocks.Netlink, errMsg string) {
 				bridge := &netlink.Bridge{LinkAttrs: netlink.LinkAttrs{Name: tenantbridgeName}}
-				mockNetlink.EXPECT().LinkByName(tenantbridgeName).Return(bridge, nil).Once()
+				mockNetlink.EXPECT().LinkByName(mock.Anything, tenantbridgeName).Return(bridge, nil).Once()
 				vid := uint16(testLogicalBridge.Spec.VlanId)
-				mockNetlink.EXPECT().BridgeVlanDel(bridge, vid, false, false, true, false).Return(errors.New(errMsg)).Once()
+				mockNetlink.EXPECT().BridgeVlanDel(mock.Anything, bridge, vid, false, false, true, false).Return(errors.New(errMsg)).Once()
 			},
 		},
 		"failed LinkByName call": {
@@ -508,11 +509,11 @@ func Test_DeleteSvi(t *testing.T) {
 			missing: false,
 			on: func(mockNetlink *mocks.Netlink, errMsg string) {
 				bridge := &netlink.Bridge{LinkAttrs: netlink.LinkAttrs{Name: tenantbridgeName}}
-				mockNetlink.EXPECT().LinkByName(tenantbridgeName).Return(bridge, nil).Once()
+				mockNetlink.EXPECT().LinkByName(mock.Anything, tenantbridgeName).Return(bridge, nil).Once()
 				vid := uint16(testLogicalBridge.Spec.VlanId)
-				mockNetlink.EXPECT().BridgeVlanDel(bridge, vid, false, false, true, false).Return(nil).Once()
+				mockNetlink.EXPECT().BridgeVlanDel(mock.Anything, bridge, vid, false, false, true, false).Return(nil).Once()
 				vlanName := fmt.Sprintf("vlan%d", vid)
-				mockNetlink.EXPECT().LinkByName(vlanName).Return(nil, errors.New(errMsg)).Once()
+				mockNetlink.EXPECT().LinkByName(mock.Anything, vlanName).Return(nil, errors.New(errMsg)).Once()
 			},
 		},
 		"failed LinkSetDown call": {
@@ -523,13 +524,13 @@ func Test_DeleteSvi(t *testing.T) {
 			missing: false,
 			on: func(mockNetlink *mocks.Netlink, errMsg string) {
 				bridge := &netlink.Bridge{LinkAttrs: netlink.LinkAttrs{Name: tenantbridgeName}}
-				mockNetlink.EXPECT().LinkByName(tenantbridgeName).Return(bridge, nil).Once()
+				mockNetlink.EXPECT().LinkByName(mock.Anything, tenantbridgeName).Return(bridge, nil).Once()
 				vid := uint16(testLogicalBridge.Spec.VlanId)
-				mockNetlink.EXPECT().BridgeVlanDel(bridge, vid, false, false, true, false).Return(nil).Once()
+				mockNetlink.EXPECT().BridgeVlanDel(mock.Anything, bridge, vid, false, false, true, false).Return(nil).Once()
 				vlanName := fmt.Sprintf("vlan%d", vid)
 				vlandev := &netlink.Vlan{LinkAttrs: netlink.LinkAttrs{Name: vlanName, ParentIndex: bridge.Attrs().Index}, VlanId: int(vid)}
-				mockNetlink.EXPECT().LinkByName(vlanName).Return(vlandev, nil).Once()
-				mockNetlink.EXPECT().LinkSetDown(vlandev).Return(errors.New(errMsg)).Once()
+				mockNetlink.EXPECT().LinkByName(mock.Anything, vlanName).Return(vlandev, nil).Once()
+				mockNetlink.EXPECT().LinkSetDown(mock.Anything, vlandev).Return(errors.New(errMsg)).Once()
 			},
 		},
 		"failed LinkDel call": {
@@ -540,14 +541,14 @@ func Test_DeleteSvi(t *testing.T) {
 			missing: false,
 			on: func(mockNetlink *mocks.Netlink, errMsg string) {
 				bridge := &netlink.Bridge{LinkAttrs: netlink.LinkAttrs{Name: tenantbridgeName}}
-				mockNetlink.EXPECT().LinkByName(tenantbridgeName).Return(bridge, nil).Once()
+				mockNetlink.EXPECT().LinkByName(mock.Anything, tenantbridgeName).Return(bridge, nil).Once()
 				vid := uint16(testLogicalBridge.Spec.VlanId)
-				mockNetlink.EXPECT().BridgeVlanDel(bridge, vid, false, false, true, false).Return(nil).Once()
+				mockNetlink.EXPECT().BridgeVlanDel(mock.Anything, bridge, vid, false, false, true, false).Return(nil).Once()
 				vlanName := fmt.Sprintf("vlan%d", vid)
 				vlandev := &netlink.Vlan{LinkAttrs: netlink.LinkAttrs{Name: vlanName, ParentIndex: bridge.Attrs().Index}, VlanId: int(vid)}
-				mockNetlink.EXPECT().LinkByName(vlanName).Return(vlandev, nil).Once()
-				mockNetlink.EXPECT().LinkSetDown(vlandev).Return(nil).Once()
-				mockNetlink.EXPECT().LinkDel(vlandev).Return(errors.New(errMsg)).Once()
+				mockNetlink.EXPECT().LinkByName(mock.Anything, vlanName).Return(vlandev, nil).Once()
+				mockNetlink.EXPECT().LinkSetDown(mock.Anything, vlandev).Return(nil).Once()
+				mockNetlink.EXPECT().LinkDel(mock.Anything, vlandev).Return(errors.New(errMsg)).Once()
 			},
 		},
 		"successful call": {
@@ -558,14 +559,14 @@ func Test_DeleteSvi(t *testing.T) {
 			missing: false,
 			on: func(mockNetlink *mocks.Netlink, errMsg string) {
 				bridge := &netlink.Bridge{LinkAttrs: netlink.LinkAttrs{Name: tenantbridgeName}}
-				mockNetlink.EXPECT().LinkByName(tenantbridgeName).Return(bridge, nil).Once()
+				mockNetlink.EXPECT().LinkByName(mock.Anything, tenantbridgeName).Return(bridge, nil).Once()
 				vid := uint16(testLogicalBridge.Spec.VlanId)
-				mockNetlink.EXPECT().BridgeVlanDel(bridge, vid, false, false, true, false).Return(nil).Once()
+				mockNetlink.EXPECT().BridgeVlanDel(mock.Anything, bridge, vid, false, false, true, false).Return(nil).Once()
 				vlanName := fmt.Sprintf("vlan%d", vid)
 				vlandev := &netlink.Vlan{LinkAttrs: netlink.LinkAttrs{Name: vlanName, ParentIndex: bridge.Attrs().Index}, VlanId: int(vid)}
-				mockNetlink.EXPECT().LinkByName(vlanName).Return(vlandev, nil).Once()
-				mockNetlink.EXPECT().LinkSetDown(vlandev).Return(nil).Once()
-				mockNetlink.EXPECT().LinkDel(vlandev).Return(nil).Once()
+				mockNetlink.EXPECT().LinkByName(mock.Anything, vlanName).Return(vlandev, nil).Once()
+				mockNetlink.EXPECT().LinkSetDown(mock.Anything, vlandev).Return(nil).Once()
+				mockNetlink.EXPECT().LinkDel(mock.Anything, vlandev).Return(nil).Once()
 			},
 		},
 	}
