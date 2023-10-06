@@ -10,6 +10,9 @@ import (
 	"fmt"
 	"log"
 
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/trace"
+
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
@@ -35,12 +38,13 @@ type Server struct {
 	Vrfs       map[string]*pe.Vrf
 	Pagination map[string]int
 	nLink      utils.Netlink
+	tracer     trace.Tracer
 }
 
 // NewServer creates initialized instance of EVPN server
 func NewServer() *Server {
-	nLink := utils.NetlinkWrapper{}
-	return NewServerWithArgs(&nLink)
+	nLink := utils.NewNetlinkWrapper()
+	return NewServerWithArgs(nLink)
 }
 
 // NewServerWithArgs creates initialized instance of EVPN server
@@ -56,6 +60,7 @@ func NewServerWithArgs(nLink utils.Netlink) *Server {
 		Vrfs:       make(map[string]*pe.Vrf),
 		Pagination: make(map[string]int),
 		nLink:      nLink,
+		tracer:     otel.Tracer(""),
 	}
 }
 

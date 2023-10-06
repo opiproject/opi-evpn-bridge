@@ -43,6 +43,8 @@ services:
     tty: true
     volumes:
       - ./conf/leaf1.conf:/etc/frr/frr.conf
+    ports:
+      - "16686:16686"
     networks:
       n1l1tos1:
         ipv4_address: 10.168.1.5
