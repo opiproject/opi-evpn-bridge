@@ -32,7 +32,7 @@ func sortLogicalBridges(bridges []*pb.LogicalBridge) {
 }
 
 // CreateLogicalBridge executes the creation of the LogicalBridge
-func (s *Server) CreateLogicalBridge(_ context.Context, in *pb.CreateLogicalBridgeRequest) (*pb.LogicalBridge, error) {
+func (s *Server) CreateLogicalBridge(ctx context.Context, in *pb.CreateLogicalBridgeRequest) (*pb.LogicalBridge, error) {
 	// check input correctness
 	if err := s.validateCreateLogicalBridgeRequest(in); err != nil {
 		return nil, err
@@ -52,7 +52,7 @@ func (s *Server) CreateLogicalBridge(_ context.Context, in *pb.CreateLogicalBrid
 	}
 	// create vxlan only if VNI is not empty
 	if in.LogicalBridge.Spec.Vni != nil {
-		bridge, err := s.nLink.LinkByName(tenantbridgeName)
+		bridge, err := s.nLink.LinkByName(ctx, tenantbridgeName)
 		if err != nil {
 			err := status.Errorf(codes.NotFound, "unable to find key %s", tenantbridgeName)
 			return nil, err
@@ -64,22 +64,22 @@ func (s *Server) CreateLogicalBridge(_ context.Context, in *pb.CreateLogicalBrid
 		vxlan := &netlink.Vxlan{LinkAttrs: netlink.LinkAttrs{Name: vxlanName}, VxlanId: int(*in.LogicalBridge.Spec.Vni), Port: 4789, Learning: false, SrcAddr: myip}
 		log.Printf("Creating Vxlan %v", vxlan)
 		// TODO: take Port from proto instead of hard-coded
-		if err := s.nLink.LinkAdd(vxlan); err != nil {
+		if err := s.nLink.LinkAdd(ctx, vxlan); err != nil {
 			fmt.Printf("Failed to create Vxlan link: %v", err)
 			return nil, err
 		}
 		// Example: ip link set vxlan-<LB-vlan-id> master br-tenant addrgenmode none
-		if err := s.nLink.LinkSetMaster(vxlan, bridge); err != nil {
+		if err := s.nLink.LinkSetMaster(ctx, vxlan, bridge); err != nil {
 			fmt.Printf("Failed to add Vxlan to bridge: %v", err)
 			return nil, err
 		}
 		// Example: ip link set vxlan-<LB-vlan-id> up
-		if err := s.nLink.LinkSetUp(vxlan); err != nil {
+		if err := s.nLink.LinkSetUp(ctx, vxlan); err != nil {
 			fmt.Printf("Failed to up Vxlan link: %v", err)
 			return nil, err
 		}
 		// Example: bridge vlan add dev vxlan-<LB-vlan-id> vid <LB-vlan-id> pvid untagged
-		if err := s.nLink.BridgeVlanAdd(vxlan, uint16(in.LogicalBridge.Spec.VlanId), true, true, false, false); err != nil {
+		if err := s.nLink.BridgeVlanAdd(ctx, vxlan, uint16(in.LogicalBridge.Spec.VlanId), true, true, false, false); err != nil {
 			fmt.Printf("Failed to add vlan to bridge: %v", err)
 			return nil, err
 		}
@@ -92,7 +92,7 @@ func (s *Server) CreateLogicalBridge(_ context.Context, in *pb.CreateLogicalBrid
 }
 
 // DeleteLogicalBridge deletes a LogicalBridge
-func (s *Server) DeleteLogicalBridge(_ context.Context, in *pb.DeleteLogicalBridgeRequest) (*emptypb.Empty, error) {
+func (s *Server) DeleteLogicalBridge(ctx context.Context, in *pb.DeleteLogicalBridgeRequest) (*emptypb.Empty, error) {
 	// check input correctness
 	if err := s.validateDeleteLogicalBridgeRequest(in); err != nil {
 		return nil, err
@@ -110,24 +110,24 @@ func (s *Server) DeleteLogicalBridge(_ context.Context, in *pb.DeleteLogicalBrid
 	if obj.Spec.Vni != nil {
 		// use netlink to find vxlan device
 		vxlanName := fmt.Sprintf("vni%d", *obj.Spec.Vni)
-		vxlan, err := s.nLink.LinkByName(vxlanName)
+		vxlan, err := s.nLink.LinkByName(ctx, vxlanName)
 		if err != nil {
 			err := status.Errorf(codes.NotFound, "unable to find key %s", vxlanName)
 			return nil, err
 		}
 		log.Printf("Deleting Vxlan %v", vxlan)
 		// bring link down
-		if err := s.nLink.LinkSetDown(vxlan); err != nil {
+		if err := s.nLink.LinkSetDown(ctx, vxlan); err != nil {
 			fmt.Printf("Failed to up link: %v", err)
 			return nil, err
 		}
 		// delete bridge vlan
-		if err := s.nLink.BridgeVlanDel(vxlan, uint16(obj.Spec.VlanId), true, true, false, false); err != nil {
+		if err := s.nLink.BridgeVlanDel(ctx, vxlan, uint16(obj.Spec.VlanId), true, true, false, false); err != nil {
 			fmt.Printf("Failed to delete vlan to bridge: %v", err)
 			return nil, err
 		}
 		// use netlink to delete vxlan device
-		if err := s.nLink.LinkDel(vxlan); err != nil {
+		if err := s.nLink.LinkDel(ctx, vxlan); err != nil {
 			fmt.Printf("Failed to delete link: %v", err)
 			return nil, err
 		}
@@ -138,7 +138,7 @@ func (s *Server) DeleteLogicalBridge(_ context.Context, in *pb.DeleteLogicalBrid
 }
 
 // UpdateLogicalBridge updates a LogicalBridge
-func (s *Server) UpdateLogicalBridge(_ context.Context, in *pb.UpdateLogicalBridgeRequest) (*pb.LogicalBridge, error) {
+func (s *Server) UpdateLogicalBridge(ctx context.Context, in *pb.UpdateLogicalBridgeRequest) (*pb.LogicalBridge, error) {
 	// check input correctness
 	if err := s.validateUpdateLogicalBridgeRequest(in); err != nil {
 		return nil, err
@@ -153,14 +153,14 @@ func (s *Server) UpdateLogicalBridge(_ context.Context, in *pb.UpdateLogicalBrid
 	// only if VNI is not empty
 	if bridge.Spec.Vni != nil {
 		vxlanName := fmt.Sprintf("vni%d", *bridge.Spec.Vni)
-		iface, err := s.nLink.LinkByName(vxlanName)
+		iface, err := s.nLink.LinkByName(ctx, vxlanName)
 		if err != nil {
 			err := status.Errorf(codes.NotFound, "unable to find key %s", vxlanName)
 			return nil, err
 		}
 		// base := iface.Attrs()
 		// iface.MTU = 1500 // TODO: remove this, just an example
-		if err := s.nLink.LinkModify(iface); err != nil {
+		if err := s.nLink.LinkModify(ctx, iface); err != nil {
 			fmt.Printf("Failed to update link: %v", err)
 			return nil, err
 		}
@@ -172,7 +172,7 @@ func (s *Server) UpdateLogicalBridge(_ context.Context, in *pb.UpdateLogicalBrid
 }
 
 // GetLogicalBridge gets a LogicalBridge
-func (s *Server) GetLogicalBridge(_ context.Context, in *pb.GetLogicalBridgeRequest) (*pb.LogicalBridge, error) {
+func (s *Server) GetLogicalBridge(ctx context.Context, in *pb.GetLogicalBridgeRequest) (*pb.LogicalBridge, error) {
 	// check input correctness
 	if err := s.validateGetLogicalBridgeRequest(in); err != nil {
 		return nil, err
@@ -186,7 +186,7 @@ func (s *Server) GetLogicalBridge(_ context.Context, in *pb.GetLogicalBridgeRequ
 	// only if VNI is not empty
 	if bridge.Spec.Vni != nil {
 		vxlanName := fmt.Sprintf("vni%d", *bridge.Spec.Vni)
-		_, err := s.nLink.LinkByName(vxlanName)
+		_, err := s.nLink.LinkByName(ctx, vxlanName)
 		if err != nil {
 			err := status.Errorf(codes.NotFound, "unable to find key %s", vxlanName)
 			return nil, err

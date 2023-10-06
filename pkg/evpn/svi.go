@@ -33,7 +33,7 @@ func sortSvis(svis []*pb.Svi) {
 }
 
 // CreateSvi executes the creation of the VLAN
-func (s *Server) CreateSvi(_ context.Context, in *pb.CreateSviRequest) (*pb.Svi, error) {
+func (s *Server) CreateSvi(ctx context.Context, in *pb.CreateSviRequest) (*pb.Svi, error) {
 	// check input correctness
 	if err := s.validateCreateSviRequest(in); err != nil {
 		return nil, err
@@ -64,14 +64,14 @@ func (s *Server) CreateSvi(_ context.Context, in *pb.CreateSviRequest) (*pb.Svi,
 		return nil, err
 	}
 	// not found, so create a new one
-	bridge, err := s.nLink.LinkByName(tenantbridgeName)
+	bridge, err := s.nLink.LinkByName(ctx, tenantbridgeName)
 	if err != nil {
 		err := status.Errorf(codes.NotFound, "unable to find key %s", tenantbridgeName)
 		return nil, err
 	}
 	vid := uint16(bridgeObject.Spec.VlanId)
 	// Example: bridge vlan add dev br-tenant vid <vlan-id> self
-	if err := s.nLink.BridgeVlanAdd(bridge, vid, false, false, true, false); err != nil {
+	if err := s.nLink.BridgeVlanAdd(ctx, bridge, vid, false, false, true, false); err != nil {
 		fmt.Printf("Failed to add vlan to bridge: %v", err)
 		return nil, err
 	}
@@ -79,13 +79,13 @@ func (s *Server) CreateSvi(_ context.Context, in *pb.CreateSviRequest) (*pb.Svi,
 	vlanName := fmt.Sprintf("vlan%d", vid)
 	vlandev := &netlink.Vlan{LinkAttrs: netlink.LinkAttrs{Name: vlanName, ParentIndex: bridge.Attrs().Index}, VlanId: int(vid)}
 	log.Printf("Creating VLAN %v", vlandev)
-	if err := s.nLink.LinkAdd(vlandev); err != nil {
+	if err := s.nLink.LinkAdd(ctx, vlandev); err != nil {
 		fmt.Printf("Failed to create vlan link: %v", err)
 		return nil, err
 	}
 	// Example: ip link set <link_svi> addr aa:bb:cc:00:00:41
 	if len(in.Svi.Spec.MacAddress) > 0 {
-		if err := s.nLink.LinkSetHardwareAddr(vlandev, in.Svi.Spec.MacAddress); err != nil {
+		if err := s.nLink.LinkSetHardwareAddr(ctx, vlandev, in.Svi.Spec.MacAddress); err != nil {
 			fmt.Printf("Failed to set MAC on link: %v", err)
 			return nil, err
 		}
@@ -96,24 +96,24 @@ func (s *Server) CreateSvi(_ context.Context, in *pb.CreateSviRequest) (*pb.Svi,
 		myip := make(net.IP, 4)
 		binary.BigEndian.PutUint32(myip, gwip.Addr.GetV4Addr())
 		addr := &netlink.Addr{IPNet: &net.IPNet{IP: myip, Mask: net.CIDRMask(int(gwip.Len), 32)}}
-		if err := s.nLink.AddrAdd(vlandev, addr); err != nil {
+		if err := s.nLink.AddrAdd(ctx, vlandev, addr); err != nil {
 			fmt.Printf("Failed to set IP on link: %v", err)
 			return nil, err
 		}
 	}
 	// get net device by name
-	vrfdev, err := s.nLink.LinkByName(path.Base(vrf.Name))
+	vrfdev, err := s.nLink.LinkByName(ctx, path.Base(vrf.Name))
 	if err != nil {
 		err := status.Errorf(codes.NotFound, "unable to find key %s", vrf.Name)
 		return nil, err
 	}
 	// Example: ip link set <link_svi> master <vrf-name> up
-	if err := s.nLink.LinkSetMaster(vlandev, vrfdev); err != nil {
+	if err := s.nLink.LinkSetMaster(ctx, vlandev, vrfdev); err != nil {
 		fmt.Printf("Failed to add vlandev to vrf: %v", err)
 		return nil, err
 	}
 	// Example: ip link set <link_svi> up
-	if err := s.nLink.LinkSetUp(vlandev); err != nil {
+	if err := s.nLink.LinkSetUp(ctx, vlandev); err != nil {
 		fmt.Printf("Failed to up link: %v", err)
 		return nil, err
 	}
@@ -124,7 +124,7 @@ func (s *Server) CreateSvi(_ context.Context, in *pb.CreateSviRequest) (*pb.Svi,
 }
 
 // DeleteSvi deletes a VLAN
-func (s *Server) DeleteSvi(_ context.Context, in *pb.DeleteSviRequest) (*emptypb.Empty, error) {
+func (s *Server) DeleteSvi(ctx context.Context, in *pb.DeleteSviRequest) (*emptypb.Empty, error) {
 	// check input correctness
 	if err := s.validateDeleteSviRequest(in); err != nil {
 		return nil, err
@@ -139,7 +139,7 @@ func (s *Server) DeleteSvi(_ context.Context, in *pb.DeleteSviRequest) (*emptypb
 		return nil, err
 	}
 	// use netlink to find br-tenant
-	bridge, err := s.nLink.LinkByName(tenantbridgeName)
+	bridge, err := s.nLink.LinkByName(ctx, tenantbridgeName)
 	if err != nil {
 		err := status.Errorf(codes.NotFound, "unable to find key %s", tenantbridgeName)
 		return nil, err
@@ -152,24 +152,24 @@ func (s *Server) DeleteSvi(_ context.Context, in *pb.DeleteSviRequest) (*emptypb
 	}
 	vid := uint16(bridgeObject.Spec.VlanId)
 	// Example: bridge vlan del dev br-tenant vid <vlan-id> self
-	if err := s.nLink.BridgeVlanDel(bridge, vid, false, false, true, false); err != nil {
+	if err := s.nLink.BridgeVlanDel(ctx, bridge, vid, false, false, true, false); err != nil {
 		fmt.Printf("Failed to del vlan to bridge: %v", err)
 		return nil, err
 	}
 	vlanName := fmt.Sprintf("vlan%d", vid)
-	vlandev, err := s.nLink.LinkByName(vlanName)
+	vlandev, err := s.nLink.LinkByName(ctx, vlanName)
 	if err != nil {
 		err := status.Errorf(codes.NotFound, "unable to find key %s", vlanName)
 		return nil, err
 	}
 	log.Printf("Deleting VLAN %v", vlandev)
 	// bring link down
-	if err := s.nLink.LinkSetDown(vlandev); err != nil {
+	if err := s.nLink.LinkSetDown(ctx, vlandev); err != nil {
 		fmt.Printf("Failed to up link: %v", err)
 		return nil, err
 	}
 	// use netlink to delete vlan
-	if err := s.nLink.LinkDel(vlandev); err != nil {
+	if err := s.nLink.LinkDel(ctx, vlandev); err != nil {
 		fmt.Printf("Failed to delete link: %v", err)
 		return nil, err
 	}
@@ -179,7 +179,7 @@ func (s *Server) DeleteSvi(_ context.Context, in *pb.DeleteSviRequest) (*emptypb
 }
 
 // UpdateSvi updates an VLAN
-func (s *Server) UpdateSvi(_ context.Context, in *pb.UpdateSviRequest) (*pb.Svi, error) {
+func (s *Server) UpdateSvi(ctx context.Context, in *pb.UpdateSviRequest) (*pb.Svi, error) {
 	// check input correctness
 	if err := s.validateUpdateSviRequest(in); err != nil {
 		return nil, err
@@ -198,14 +198,14 @@ func (s *Server) UpdateSvi(_ context.Context, in *pb.UpdateSviRequest) (*pb.Svi,
 		return nil, err
 	}
 	vlanName := fmt.Sprintf("vlan%d", bridgeObject.Spec.VlanId)
-	iface, err := s.nLink.LinkByName(vlanName)
+	iface, err := s.nLink.LinkByName(ctx, vlanName)
 	if err != nil {
 		err := status.Errorf(codes.NotFound, "unable to find key %s", vlanName)
 		return nil, err
 	}
 	// base := iface.Attrs()
 	// iface.MTU = 1500 // TODO: remove this, just an example
-	if err := s.nLink.LinkModify(iface); err != nil {
+	if err := s.nLink.LinkModify(ctx, iface); err != nil {
 		fmt.Printf("Failed to update link: %v", err)
 		return nil, err
 	}
@@ -216,7 +216,7 @@ func (s *Server) UpdateSvi(_ context.Context, in *pb.UpdateSviRequest) (*pb.Svi,
 }
 
 // GetSvi gets an VLAN
-func (s *Server) GetSvi(_ context.Context, in *pb.GetSviRequest) (*pb.Svi, error) {
+func (s *Server) GetSvi(ctx context.Context, in *pb.GetSviRequest) (*pb.Svi, error) {
 	// check input correctness
 	if err := s.validateGetSviRequest(in); err != nil {
 		return nil, err
@@ -234,7 +234,7 @@ func (s *Server) GetSvi(_ context.Context, in *pb.GetSviRequest) (*pb.Svi, error
 		return nil, err
 	}
 	vlanName := fmt.Sprintf("vlan%d", bridgeObject.Spec.VlanId)
-	_, err := s.nLink.LinkByName(vlanName)
+	_, err := s.nLink.LinkByName(ctx, vlanName)
 	if err != nil {
 		err := status.Errorf(codes.NotFound, "unable to find key %s", vlanName)
 		return nil, err
