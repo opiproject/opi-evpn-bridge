@@ -56,6 +56,7 @@ func (n *NetlinkWrapper) LinkByName(ctx context.Context, name string) (netlink.L
 // LinkModify is a wrapper for netlink.LinkModify
 func (n *NetlinkWrapper) LinkModify(ctx context.Context, link netlink.Link) error {
 	_, childSpan := n.tracer.Start(ctx, "netlink.LinkModify")
+	childSpan.SetAttributes(attribute.String("link.name", link.Attrs().Name))
 	defer childSpan.End()
 	return netlink.LinkModify(link)
 }
@@ -63,6 +64,7 @@ func (n *NetlinkWrapper) LinkModify(ctx context.Context, link netlink.Link) erro
 // LinkSetHardwareAddr is a wrapper for netlink.LinkSetHardwareAddr
 func (n *NetlinkWrapper) LinkSetHardwareAddr(ctx context.Context, link netlink.Link, hwaddr net.HardwareAddr) error {
 	_, childSpan := n.tracer.Start(ctx, "netlink.LinkSetHardwareAddr")
+	childSpan.SetAttributes(attribute.String("link.name", link.Attrs().Name))
 	defer childSpan.End()
 	return netlink.LinkSetHardwareAddr(link, hwaddr)
 }
@@ -70,6 +72,7 @@ func (n *NetlinkWrapper) LinkSetHardwareAddr(ctx context.Context, link netlink.L
 // AddrAdd is a wrapper for netlink.AddrAdd
 func (n *NetlinkWrapper) AddrAdd(ctx context.Context, link netlink.Link, addr *netlink.Addr) error {
 	_, childSpan := n.tracer.Start(ctx, "netlink.AddrAdd")
+	childSpan.SetAttributes(attribute.String("link.name", link.Attrs().Name))
 	defer childSpan.End()
 	return netlink.AddrAdd(link, addr)
 }
@@ -77,6 +80,7 @@ func (n *NetlinkWrapper) AddrAdd(ctx context.Context, link netlink.Link, addr *n
 // AddrDel is a wrapper for netlink.AddrDel
 func (n *NetlinkWrapper) AddrDel(ctx context.Context, link netlink.Link, addr *netlink.Addr) error {
 	_, childSpan := n.tracer.Start(ctx, "netlink.AddrDel")
+	childSpan.SetAttributes(attribute.String("link.name", link.Attrs().Name))
 	defer childSpan.End()
 	return netlink.AddrDel(link, addr)
 }
@@ -84,6 +88,7 @@ func (n *NetlinkWrapper) AddrDel(ctx context.Context, link netlink.Link, addr *n
 // LinkAdd is a wrapper for netlink.LinkAdd
 func (n *NetlinkWrapper) LinkAdd(ctx context.Context, link netlink.Link) error {
 	_, childSpan := n.tracer.Start(ctx, "netlink.LinkAdd")
+	childSpan.SetAttributes(attribute.String("link.name", link.Attrs().Name))
 	defer childSpan.End()
 	return netlink.LinkAdd(link)
 }
@@ -91,6 +96,7 @@ func (n *NetlinkWrapper) LinkAdd(ctx context.Context, link netlink.Link) error {
 // LinkDel is a wrapper for netlink.LinkDel
 func (n *NetlinkWrapper) LinkDel(ctx context.Context, link netlink.Link) error {
 	_, childSpan := n.tracer.Start(ctx, "netlink.LinkDel")
+	childSpan.SetAttributes(attribute.String("link.name", link.Attrs().Name))
 	defer childSpan.End()
 	return netlink.LinkDel(link)
 }
@@ -98,6 +104,7 @@ func (n *NetlinkWrapper) LinkDel(ctx context.Context, link netlink.Link) error {
 // LinkSetUp is a wrapper for netlink.LinkSetUp
 func (n *NetlinkWrapper) LinkSetUp(ctx context.Context, link netlink.Link) error {
 	_, childSpan := n.tracer.Start(ctx, "netlink.LinkSetUp")
+	childSpan.SetAttributes(attribute.String("link.name", link.Attrs().Name))
 	defer childSpan.End()
 	return netlink.LinkSetUp(link)
 }
@@ -105,6 +112,7 @@ func (n *NetlinkWrapper) LinkSetUp(ctx context.Context, link netlink.Link) error
 // LinkSetDown is a wrapper for netlink.LinkSetDown
 func (n *NetlinkWrapper) LinkSetDown(ctx context.Context, link netlink.Link) error {
 	_, childSpan := n.tracer.Start(ctx, "netlink.LinkSetDown")
+	childSpan.SetAttributes(attribute.String("link.name", link.Attrs().Name))
 	defer childSpan.End()
 	return netlink.LinkSetDown(link)
 }
@@ -112,6 +120,7 @@ func (n *NetlinkWrapper) LinkSetDown(ctx context.Context, link netlink.Link) err
 // LinkSetMaster is a wrapper for netlink.LinkSetMaster
 func (n *NetlinkWrapper) LinkSetMaster(ctx context.Context, link, master netlink.Link) error {
 	_, childSpan := n.tracer.Start(ctx, "netlink.LinkSetMaster")
+	childSpan.SetAttributes(attribute.String("link.name", link.Attrs().Name))
 	defer childSpan.End()
 	return netlink.LinkSetMaster(link, master)
 }
@@ -119,6 +128,7 @@ func (n *NetlinkWrapper) LinkSetMaster(ctx context.Context, link, master netlink
 // LinkSetNoMaster is a wrapper for netlink.LinkSetNoMaster
 func (n *NetlinkWrapper) LinkSetNoMaster(ctx context.Context, link netlink.Link) error {
 	_, childSpan := n.tracer.Start(ctx, "netlink.LinkSetNoMaster")
+	childSpan.SetAttributes(attribute.String("link.name", link.Attrs().Name))
 	defer childSpan.End()
 	return netlink.LinkSetNoMaster(link)
 }
@@ -126,6 +136,7 @@ func (n *NetlinkWrapper) LinkSetNoMaster(ctx context.Context, link netlink.Link)
 // BridgeVlanAdd is a wrapper for netlink.BridgeVlanAdd
 func (n *NetlinkWrapper) BridgeVlanAdd(ctx context.Context, link netlink.Link, vid uint16, pvid, untagged, self, master bool) error {
 	_, childSpan := n.tracer.Start(ctx, "netlink.BridgeVlanAdd")
+	childSpan.SetAttributes(attribute.String("link.name", link.Attrs().Name))
 	defer childSpan.End()
 	return netlink.BridgeVlanAdd(link, vid, pvid, untagged, self, master)
 }
@@ -133,6 +144,7 @@ func (n *NetlinkWrapper) BridgeVlanAdd(ctx context.Context, link netlink.Link, v
 // BridgeVlanDel is a wrapper for netlink.BridgeVlanDel
 func (n *NetlinkWrapper) BridgeVlanDel(ctx context.Context, link netlink.Link, vid uint16, pvid, untagged, self, master bool) error {
 	_, childSpan := n.tracer.Start(ctx, "netlink.BridgeVlanDel")
+	childSpan.SetAttributes(attribute.String("link.name", link.Attrs().Name))
 	defer childSpan.End()
 	return netlink.BridgeVlanDel(link, vid, pvid, untagged, self, master)
 }
