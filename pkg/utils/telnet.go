@@ -9,6 +9,9 @@ import (
 	"time"
 
 	"github.com/ziutek/telnet"
+
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 )
 
 const (
@@ -18,8 +21,15 @@ const (
 	timeout  = 10 * time.Second
 )
 
+// default tracer name is good for now
+var tracer = otel.Tracer("")
+
 // TelnetDialAndCommunicate connects to telnet with password and runs command
-func TelnetDialAndCommunicate(_ context.Context, command string) (string, error) {
+func TelnetDialAndCommunicate(ctx context.Context, command string) (string, error) {
+	_, childSpan := tracer.Start(ctx, "frr.Command")
+	childSpan.SetAttributes(attribute.String("command.name", command))
+	defer childSpan.End()
+
 	// new connection every time
 	conn, err := telnet.DialTimeout(network, address, timeout)
 	if err != nil {
