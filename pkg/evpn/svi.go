@@ -18,6 +18,7 @@ import (
 	"github.com/vishvananda/netlink"
 
 	pb "github.com/opiproject/opi-api/network/evpn-gw/v1alpha1/gen/go"
+	"github.com/opiproject/opi-evpn-bridge/pkg/utils"
 
 	"go.einride.tech/aip/fieldbehavior"
 	"go.einride.tech/aip/resourceid"
@@ -117,6 +118,10 @@ func (s *Server) CreateSvi(ctx context.Context, in *pb.CreateSviRequest) (*pb.Sv
 		fmt.Printf("Failed to up link: %v", err)
 		return nil, err
 	}
+	// configure FRR
+	data, err := utils.TelnetDialAndCommunicate(ctx, "show bgp vrf "+path.Base(vrf.Name)+" vni")
+	fmt.Printf("TelnetDialAndCommunicate: %v:%v", data, err)
+	// save object to the database
 	response := protoClone(in.Svi)
 	response.Status = &pb.SviStatus{OperStatus: pb.SVIOperStatus_SVI_OPER_STATUS_UP}
 	s.Svis[in.Svi.Name] = response

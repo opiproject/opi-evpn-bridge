@@ -85,6 +85,7 @@ func (s *Server) CreateLogicalBridge(ctx context.Context, in *pb.CreateLogicalBr
 		}
 		// TODO: bridge link set dev vxlan-<LB-vlan-id> neigh_suppress on
 	}
+	// save object to the database
 	response := protoClone(in.LogicalBridge)
 	response.Status = &pb.LogicalBridgeStatus{OperStatus: pb.LBOperStatus_LB_OPER_STATUS_UP}
 	s.Bridges[in.LogicalBridge.Name] = response
