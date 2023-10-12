@@ -19,6 +19,7 @@ import (
 	"github.com/vishvananda/netlink"
 
 	pb "github.com/opiproject/opi-api/network/evpn-gw/v1alpha1/gen/go"
+	"github.com/opiproject/opi-evpn-bridge/pkg/utils"
 
 	"go.einride.tech/aip/fieldbehavior"
 	"go.einride.tech/aip/resourceid"
@@ -138,6 +139,10 @@ func (s *Server) CreateVrf(ctx context.Context, in *pb.CreateVrfRequest) (*pb.Vr
 			return nil, err
 		}
 	}
+	// configure FRR
+	data, err := utils.TelnetDialAndCommunicate(ctx, "show bgp vrf "+vrfName+" vni")
+	fmt.Printf("TelnetDialAndCommunicate: %v:%v", data, err)
+	// save object to the database
 	response := protoClone(in.Vrf)
 	response.Status = &pb.VrfStatus{LocalAs: 4, RoutingTable: tableID, Rmac: mac}
 	s.Vrfs[in.Vrf.Name] = response
