@@ -14,7 +14,7 @@ import (
 	"net/http"
 	"time"
 
-	pc "github.com/opiproject/opi-api/common/v1/gen/go"
+	pc "github.com/opiproject/opi-api/inventory/v1/gen/go"
 	pe "github.com/opiproject/opi-api/network/evpn-gw/v1alpha1/gen/go"
 	"github.com/opiproject/opi-evpn-bridge/pkg/evpn"
 	"github.com/opiproject/opi-evpn-bridge/pkg/utils"
