@@ -17,7 +17,7 @@ import (
 const (
 	network  = "tcp"
 	password = "opi"
-	address  = "localhost:2605"
+	address  = "localhost:2601"
 	timeout  = 10 * time.Second
 )
 
