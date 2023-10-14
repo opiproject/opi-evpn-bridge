@@ -63,8 +63,16 @@ func FrrBgpCmd(ctx context.Context, command string) (string, error) {
 // TelnetDialAndCommunicate connects to telnet with password and runs command
 func TelnetDialAndCommunicate(ctx context.Context, command string, port int) (string, error) {
 	_, childSpan := tracer.Start(ctx, "frr.Command")
-	childSpan.SetAttributes(attribute.String("command.name", command))
 	defer childSpan.End()
+
+	if childSpan.IsRecording() {
+		childSpan.SetAttributes(
+			attribute.Int("frr.port", port),
+			attribute.String("frr.name", command),
+			attribute.String("frr.address", address),
+			attribute.String("frr.network", network),
+		)
+	}
 
 	// new connection every time
 	conn, err := telnet.DialTimeout(network, fmt.Sprintf("%s:%d", address, port), timeout)
