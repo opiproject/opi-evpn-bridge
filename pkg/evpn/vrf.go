@@ -138,9 +138,17 @@ func (s *Server) CreateVrf(ctx context.Context, in *pb.CreateVrfRequest) (*pb.Vr
 			fmt.Printf("Failed to up Vxlan link: %v", err)
 			return nil, err
 		}
+		// configure FRR
+		data, err := utils.TelnetDialAndCommunicate(ctx, fmt.Sprintf(
+			`configure terminal
+			vrf %s-opi
+				vni 3%d
+				exit-vrf
+			exit`, vrfName, *in.Vrf.Spec.Vni))
+		fmt.Printf("TelnetDialAndCommunicate: %v:%v", data, err)
 	}
-	// configure FRR
-	data, err := utils.TelnetDialAndCommunicate(ctx, "show bgp vrf "+vrfName+" vni")
+	// check FRR for debug
+	data, err := utils.TelnetDialAndCommunicate(ctx, "show vrf")
 	fmt.Printf("TelnetDialAndCommunicate: %v:%v", data, err)
 	// save object to the database
 	response := protoClone(in.Vrf)

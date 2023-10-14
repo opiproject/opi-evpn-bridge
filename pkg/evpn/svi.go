@@ -119,7 +119,7 @@ func (s *Server) CreateSvi(ctx context.Context, in *pb.CreateSviRequest) (*pb.Sv
 		return nil, err
 	}
 	// configure FRR
-	data, err := utils.TelnetDialAndCommunicate(ctx, "show bgp vrf "+path.Base(vrf.Name)+" vni")
+	data, err := utils.TelnetDialAndCommunicate(ctx, "show vrf "+path.Base(vrf.Name)+" vni")
 	fmt.Printf("TelnetDialAndCommunicate: %v:%v", data, err)
 	// save object to the database
 	response := protoClone(in.Svi)
