@@ -8,11 +8,12 @@ require (
 	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.0.1
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.18.0
 	github.com/onsi/ginkgo/v2 v2.12.1
-	github.com/opiproject/opi-api v0.0.0-20231005114927-ec55946e5197
-	github.com/opiproject/opi-smbios-bridge v0.1.3-0.20231002193517-9e34badb6265
+	github.com/opiproject/opi-api v0.0.0-20231009064235-b166668c8a86
+	github.com/opiproject/opi-smbios-bridge v0.1.3-0.20231009232146-ce6b7d81f3fb
 	github.com/stretchr/testify v1.8.4
 	github.com/vektra/mockery/v2 v2.35.2
 	github.com/vishvananda/netlink v1.2.1-beta.2
+	github.com/ziutek/telnet v0.0.0-20180329124119-c3b780dc415b
 	go.einride.tech/aip v0.62.0
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.45.0
 	go.opentelemetry.io/otel v1.19.0
@@ -193,7 +194,6 @@ require (
 	github.com/yagipy/maintidx v1.0.0 // indirect
 	github.com/yeya24/promlinter v0.2.0 // indirect
 	github.com/ykadowak/zerologlint v0.1.3 // indirect
-	github.com/ziutek/telnet v0.0.0-20180329124119-c3b780dc415b // indirect
 	gitlab.com/bosi/decorder v0.4.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.19.0 // indirect
 	go.opentelemetry.io/otel/metric v1.19.0 // indirect
