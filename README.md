@@ -25,6 +25,8 @@ See [CONTRIBUTING](https://github.com/opiproject/opi/blob/main/CONTRIBUTING.md) 
 
 ## Getting started
 
+:exclamation: `docker-compose` is deprecated. For details, see [Migrate to Compose V2](https://docs.docker.com/compose/migrate/).
+
 Run `docker-compose up -d` or `docker compose up -d`
 
 ## Manual gRPC example
