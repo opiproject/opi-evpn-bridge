@@ -11,7 +11,7 @@ require (
 	github.com/opiproject/opi-api v0.0.0-20231012135448-00e9f8d63cb4
 	github.com/opiproject/opi-smbios-bridge v0.1.3-0.20231014032351-c6a3b5c3d360
 	github.com/stretchr/testify v1.8.4
-	github.com/vektra/mockery/v2 v2.35.2
+	github.com/vektra/mockery/v2 v2.35.4
 	github.com/vishvananda/netlink v1.2.1-beta.2
 	github.com/ziutek/telnet v0.0.0-20180329124119-c3b780dc415b
 	go.einride.tech/aip v0.62.0
