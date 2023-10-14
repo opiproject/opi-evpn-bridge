@@ -53,19 +53,36 @@ func TelnetDialAndCommunicate(ctx context.Context, command string) (string, erro
 	if err != nil {
 		return "", err
 	}
-
-	// command
 	err = conn.SkipUntil(">")
 	if err != nil {
 		return "", err
 	}
-	_, err = conn.Write([]byte(command + "\n"))
+
+	// privileged
+	_, err = conn.Write([]byte("enable\n"))
+	if err != nil {
+		return "", err
+	}
+	err = conn.SkipUntil("Password: ")
+	if err != nil {
+		return "", err
+	}
+	_, err = conn.Write([]byte(password + "\n"))
+	if err != nil {
+		return "", err
+	}
+	err = conn.SkipUntil("#")
 	if err != nil {
 		return "", err
 	}
 
+	// command
+	_, err = conn.Write([]byte(command + "\n"))
+	if err != nil {
+		return "", err
+	}
 	// response
-	data, err := conn.ReadBytes('>')
+	data, err := conn.ReadBytes('#')
 	if err != nil {
 		return "", err
 	}
