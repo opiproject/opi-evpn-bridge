@@ -19,7 +19,6 @@ import (
 	"github.com/vishvananda/netlink"
 
 	pb "github.com/opiproject/opi-api/network/evpn-gw/v1alpha1/gen/go"
-	"github.com/opiproject/opi-evpn-bridge/pkg/utils"
 
 	"go.einride.tech/aip/fieldbehavior"
 	"go.einride.tech/aip/resourceid"
@@ -138,18 +137,11 @@ func (s *Server) CreateVrf(ctx context.Context, in *pb.CreateVrfRequest) (*pb.Vr
 			fmt.Printf("Failed to up Vxlan link: %v", err)
 			return nil, err
 		}
-		// configure FRR
-		data, err := utils.FrrZebraCmd(ctx, fmt.Sprintf(
-			`configure terminal
-			vrf %s-opi
-				vni 3%d
-				exit-vrf
-			exit`, vrfName, *in.Vrf.Spec.Vni))
-		fmt.Printf("FrrZebraCmd: %v:%v", data, err)
 	}
-	// check FRR for debug
-	data, err := utils.FrrZebraCmd(ctx, "show vrf")
-	fmt.Printf("FrrZebraCmd: %v:%v", data, err)
+	// configure FRR
+	if err := s.frrCreateVrfRequest(ctx, in); err != nil {
+		return nil, err
+	}
 	// save object to the database
 	response := protoClone(in.Vrf)
 	response.Status = &pb.VrfStatus{LocalAs: 4, RoutingTable: tableID, Rmac: mac}
@@ -227,6 +219,10 @@ func (s *Server) DeleteVrf(ctx context.Context, in *pb.DeleteVrfRequest) (*empty
 	// use netlink to delete VRF
 	if err := s.nLink.LinkDel(ctx, vrf); err != nil {
 		fmt.Printf("Failed to delete link: %v", err)
+		return nil, err
+	}
+	// delete from FRR
+	if err := s.frrDeleteVrfRequest(ctx, obj); err != nil {
 		return nil, err
 	}
 	// remove from the Database
