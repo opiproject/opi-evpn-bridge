@@ -139,17 +139,17 @@ func (s *Server) CreateVrf(ctx context.Context, in *pb.CreateVrfRequest) (*pb.Vr
 			return nil, err
 		}
 		// configure FRR
-		data, err := utils.TelnetDialAndCommunicate(ctx, fmt.Sprintf(
+		data, err := utils.FrrZebraCmd(ctx, fmt.Sprintf(
 			`configure terminal
 			vrf %s-opi
 				vni 3%d
 				exit-vrf
 			exit`, vrfName, *in.Vrf.Spec.Vni))
-		fmt.Printf("TelnetDialAndCommunicate: %v:%v", data, err)
+		fmt.Printf("FrrZebraCmd: %v:%v", data, err)
 	}
 	// check FRR for debug
-	data, err := utils.TelnetDialAndCommunicate(ctx, "show vrf")
-	fmt.Printf("TelnetDialAndCommunicate: %v:%v", data, err)
+	data, err := utils.FrrZebraCmd(ctx, "show vrf")
+	fmt.Printf("FrrZebraCmd: %v:%v", data, err)
 	// save object to the database
 	response := protoClone(in.Vrf)
 	response.Status = &pb.VrfStatus{LocalAs: 4, RoutingTable: tableID, Rmac: mac}

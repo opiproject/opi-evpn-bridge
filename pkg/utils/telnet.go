@@ -7,6 +7,7 @@ package utils
 import (
 	"bufio"
 	"context"
+	"fmt"
 	"strings"
 	"time"
 
@@ -19,21 +20,54 @@ import (
 const (
 	network  = "tcp"
 	password = "opi"
-	address  = "localhost:2601"
+	address  = "localhost"
 	timeout  = 10 * time.Second
+)
+
+// Ports defined here https://docs.frrouting.org/en/latest/setup.html#servicess
+const (
+	zebrasrv = iota + 2600
+	zebra
+	ripd
+	ripngd
+	ospfd
+	bgpd
+	ospf6d
+	ospfapi
+	isisd
+	babeld
+	nhrpd
+	pimd
+	ldpd
+	eigprd
+	bfdd
+	fabricd
+	vrrpd
 )
 
 // default tracer name is good for now
 var tracer = otel.Tracer("")
 
+// FrrZebraCmd connects to Zebra telnet with password and runs command
+func FrrZebraCmd(ctx context.Context, command string) (string, error) {
+	// ports defined here https://docs.frrouting.org/en/latest/setup.html#services
+	return TelnetDialAndCommunicate(ctx, command, zebra)
+}
+
+// FrrBgpCmd connects to Bgp telnet with password and runs command
+func FrrBgpCmd(ctx context.Context, command string) (string, error) {
+	// ports defined here https://docs.frrouting.org/en/latest/setup.html#services
+	return TelnetDialAndCommunicate(ctx, command, bgpd)
+}
+
 // TelnetDialAndCommunicate connects to telnet with password and runs command
-func TelnetDialAndCommunicate(ctx context.Context, command string) (string, error) {
+func TelnetDialAndCommunicate(ctx context.Context, command string, port int) (string, error) {
 	_, childSpan := tracer.Start(ctx, "frr.Command")
 	childSpan.SetAttributes(attribute.String("command.name", command))
 	defer childSpan.End()
 
 	// new connection every time
-	conn, err := telnet.DialTimeout(network, address, timeout)
+	conn, err := telnet.DialTimeout(network, fmt.Sprintf("%s:%d", address, port), timeout)
 	if err != nil {
 		return "", err
 	}

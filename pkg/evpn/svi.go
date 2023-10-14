@@ -119,8 +119,8 @@ func (s *Server) CreateSvi(ctx context.Context, in *pb.CreateSviRequest) (*pb.Sv
 		return nil, err
 	}
 	// configure FRR
-	data, err := utils.TelnetDialAndCommunicate(ctx, "show vrf "+path.Base(vrf.Name)+" vni")
-	fmt.Printf("TelnetDialAndCommunicate: %v:%v", data, err)
+	data, err := utils.FrrZebraCmd(ctx, "show vrf "+path.Base(vrf.Name)+" vni")
+	fmt.Printf("FrrZebraCmd: %v:%v", data, err)
 	// save object to the database
 	response := protoClone(in.Svi)
 	response.Status = &pb.SviStatus{OperStatus: pb.SVIOperStatus_SVI_OPER_STATUS_UP}
