@@ -5,7 +5,9 @@
 package utils
 
 import (
+	"bufio"
 	"context"
+	"strings"
 	"time"
 
 	"github.com/ziutek/telnet"
@@ -76,15 +78,19 @@ func TelnetDialAndCommunicate(ctx context.Context, command string) (string, erro
 		return "", err
 	}
 
-	// command
-	_, err = conn.Write([]byte(command + "\n"))
-	if err != nil {
-		return "", err
+	// multi-line command
+	scanner := bufio.NewScanner(strings.NewReader(command))
+	result := []byte{}
+	for scanner.Scan() {
+		_, err = conn.Write([]byte(scanner.Text() + "\n"))
+		if err != nil {
+			return "", err
+		}
+		data, err := conn.ReadBytes('#')
+		if err != nil {
+			return "", err
+		}
+		result = append(result, data...)
 	}
-	// response
-	data, err := conn.ReadBytes('#')
-	if err != nil {
-		return "", err
-	}
-	return string(data), nil
+	return string(result), nil
 }
