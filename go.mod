@@ -9,7 +9,7 @@ require (
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.18.0
 	github.com/onsi/ginkgo/v2 v2.13.0
 	github.com/opiproject/opi-api v0.0.0-20231016162146-d81cc5ee60d4
-	github.com/opiproject/opi-smbios-bridge v0.1.3-0.20231014170027-e57f2147e10f
+	github.com/opiproject/opi-smbios-bridge v0.1.3-0.20231016193849-4f8fc2771276
 	github.com/stretchr/testify v1.8.4
 	github.com/vektra/mockery/v2 v2.35.4
 	github.com/vishvananda/netlink v1.2.1-beta.2
@@ -72,7 +72,7 @@ require (
 	github.com/go-critic/go-critic v0.9.0 // indirect
 	github.com/go-logr/logr v1.2.4 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
-	github.com/go-ole/go-ole v1.2.6 // indirect
+	github.com/go-ole/go-ole v1.3.0 // indirect
 	github.com/go-task/slim-sprig v0.0.0-20230315185526-52ccab3ef572 // indirect
 	github.com/go-toolsmith/astcast v1.1.0 // indirect
 	github.com/go-toolsmith/astcopy v1.1.0 // indirect
