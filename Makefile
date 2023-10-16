@@ -49,4 +49,5 @@ fmt:
 mock-generate:
 	@echo "  >  Starting mock code generation..."
 	# Generate mocks for exported interfaces
+	mockery --config=utils/mocks/.mockery.yaml --name=Frr --dir pkg/utils --output pkg/utils/mocks --boilerplate-file pkg/utils/mocks/boilerplate.txt --with-expecter
 	mockery --config=utils/mocks/.mockery.yaml --name=Netlink --dir pkg/utils --output pkg/utils/mocks --boilerplate-file pkg/utils/mocks/boilerplate.txt --with-expecter
