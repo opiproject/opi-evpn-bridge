@@ -13,22 +13,20 @@ import (
 
 func (s *Server) frrCreateSviRequest(ctx context.Context, in *pb.CreateSviRequest, vrfName, vlanName string) error {
 	if in.Svi.Spec.EnableBgp {
-		fmt.Printf("TODO: add configuration for <%s:%s> here, see issue #233", vrfName, vlanName)
-		// data, err := s.frr.FrrBgpCmd(ctx, fmt.Sprintf(
-		// 	`configure terminal
-		// 	router bgp 65000 vrf %s
-		// 	bgp disable-ebgp-connected-route-check" \
-		// 	neighbor %s peer-group" \
-		// 	neighbor %s remote-as %s" \
-		// 	neighbor %s update-source %s" \
-		// 	neighbor %s as-override" \
-		// 	neighbor %s soft-reconfiguration inbound" \
-		// 	bgp listen range <svi-ip-with prefixlength> peer-group %s" \
-		// 	exit`, vrfName, vlanName, in.Svi.Spec.RemoteAs, in.Svi.Spec.GwIpPrefix))
-		// fmt.Printf("FrrBgpCmd: %v:%v", data, err)
-		// if err != nil {
-		// 	return err
-		// }
+		data, err := s.frr.FrrBgpCmd(ctx, fmt.Sprintf(
+			`configure terminal
+			router bgp 65000 vrf %[1]s
+			bgp disable-ebgp-connected-route-check" \
+			neighbor %[2]s peer-group" \
+			neighbor %[2]s remote-as %[3]d" \
+			neighbor %[2]s as-override" \
+			neighbor %[2]s soft-reconfiguration inbound" \
+			exit`, vrfName, vlanName, in.Svi.Spec.RemoteAs))
+		// TODO: see issue #233, add "neighbor update-source" and "bgp listen range" with in.Svi.Spec.GwIpPrefix
+		fmt.Printf("FrrBgpCmd: %v:%v", data, err)
+		if err != nil {
+			return err
+		}
 	}
 	// check FRR for debug
 	data, err := s.frr.FrrZebraCmd(ctx, "show vrf")

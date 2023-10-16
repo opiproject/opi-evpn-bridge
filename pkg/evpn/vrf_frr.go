@@ -27,6 +27,7 @@ func (s *Server) frrCreateVrfRequest(ctx context.Context, in *pb.CreateVrfReques
 		}
 	}
 	if in.Vrf.Spec.Vni != nil {
+		// TODO: add "bgp router-id <vrf-loopback>" based on in.Vrf.Spec.LoopbackIpPrefix.Addr.GetV4Addr()
 		data, err := s.frr.FrrBgpCmd(ctx, fmt.Sprintf(
 			`configure terminal
 			router bgp 65000 vrf %s
