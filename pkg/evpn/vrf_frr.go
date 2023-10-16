@@ -10,13 +10,12 @@ import (
 	"path"
 
 	pb "github.com/opiproject/opi-api/network/evpn-gw/v1alpha1/gen/go"
-	"github.com/opiproject/opi-evpn-bridge/pkg/utils"
 )
 
 func (s *Server) frrCreateVrfRequest(ctx context.Context, in *pb.CreateVrfRequest) error {
 	vrfName := path.Base(in.Vrf.Name)
 	if in.Vrf.Spec.Vni != nil {
-		data, err := utils.FrrZebraCmd(ctx, fmt.Sprintf(
+		data, err := s.frr.FrrZebraCmd(ctx, fmt.Sprintf(
 			`configure terminal
 			vrf %s
 				vni %d
@@ -28,7 +27,7 @@ func (s *Server) frrCreateVrfRequest(ctx context.Context, in *pb.CreateVrfReques
 		}
 	}
 	if in.Vrf.Spec.Vni != nil {
-		data, err := utils.FrrBgpCmd(ctx, fmt.Sprintf(
+		data, err := s.frr.FrrBgpCmd(ctx, fmt.Sprintf(
 			`configure terminal
 			router bgp 65000 vrf %s
 			no bgp log-neighbor-changes
@@ -53,7 +52,7 @@ func (s *Server) frrCreateVrfRequest(ctx context.Context, in *pb.CreateVrfReques
 		}
 	}
 	// check FRR for debug
-	data, err := utils.FrrZebraCmd(ctx, "show vrf")
+	data, err := s.frr.FrrZebraCmd(ctx, "show vrf")
 	fmt.Printf("FrrZebraCmd: %v:%v", data, err)
 	if err != nil {
 		return err
@@ -64,7 +63,7 @@ func (s *Server) frrCreateVrfRequest(ctx context.Context, in *pb.CreateVrfReques
 func (s *Server) frrDeleteVrfRequest(ctx context.Context, obj *pb.Vrf) error {
 	vrfName := path.Base(obj.Name)
 	if obj.Spec.Vni != nil {
-		data, err := utils.FrrBgpCmd(ctx, fmt.Sprintf(
+		data, err := s.frr.FrrBgpCmd(ctx, fmt.Sprintf(
 			`configure terminal
 			no router bgp 65000 vrf %s
 			exit`, vrfName))
@@ -74,7 +73,7 @@ func (s *Server) frrDeleteVrfRequest(ctx context.Context, obj *pb.Vrf) error {
 		}
 	}
 	if obj.Spec.Vni != nil {
-		data, err := utils.FrrZebraCmd(ctx, fmt.Sprintf(
+		data, err := s.frr.FrrZebraCmd(ctx, fmt.Sprintf(
 			`configure terminal
 			no vrf %s
 			exit`, vrfName))

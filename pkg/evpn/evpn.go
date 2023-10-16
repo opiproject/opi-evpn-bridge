@@ -38,6 +38,7 @@ type Server struct {
 	Vrfs       map[string]*pe.Vrf
 	Pagination map[string]int
 	nLink      utils.Netlink
+	frr        utils.Frr
 	tracer     trace.Tracer
 }
 
@@ -60,6 +61,7 @@ func NewServerWithArgs(nLink utils.Netlink) *Server {
 		Vrfs:       make(map[string]*pe.Vrf),
 		Pagination: make(map[string]int),
 		nLink:      nLink,
+		frr:        utils.NewFrrWrapper(),
 		tracer:     otel.Tracer(""),
 	}
 }

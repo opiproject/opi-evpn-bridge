@@ -15,6 +15,7 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
 
 const (
@@ -45,24 +46,67 @@ const (
 	vrrpd
 )
 
-// default tracer name is good for now
-var tracer = otel.Tracer("")
+// Frr represents limited subset of functions from Frr package
+type Frr interface {
+	TelnetDialAndCommunicate(ctx context.Context, command string, port int) (string, error)
+	FrrZebraCmd(ctx context.Context, command string) (string, error)
+	FrrBgpCmd(ctx context.Context, command string) (string, error)
+	Password(conn *telnet.Conn, delim string) error
+	Privileged(conn *telnet.Conn) error
+}
+
+// FrrWrapper wrapper for Frr package
+type FrrWrapper struct {
+	tracer trace.Tracer
+}
+
+// NewFrrWrapper creates initialized instance of FrrWrapper
+func NewFrrWrapper() *FrrWrapper {
+	// default tracer name is good for now
+	return &FrrWrapper{tracer: otel.Tracer("")}
+}
+
+// build time check that struct implements interface
+var _ Frr = (*FrrWrapper)(nil)
+
+// Password handles password sending
+func (n *FrrWrapper) Password(conn *telnet.Conn, delim string) error {
+	err := conn.SkipUntil("Password: ")
+	if err != nil {
+		return err
+	}
+	_, err = conn.Write([]byte(password + "\n"))
+	if err != nil {
+		return err
+	}
+	return conn.SkipUntil(delim)
+}
+
+// Privileged turns on privileged mode command
+func (n *FrrWrapper) Privileged(conn *telnet.Conn) error {
+	_, err := conn.Write([]byte("enable\n"))
+	if err != nil {
+		return err
+	}
+	return n.Password(conn, "#")
+}
 
 // FrrZebraCmd connects to Zebra telnet with password and runs command
-func FrrZebraCmd(ctx context.Context, command string) (string, error) {
+func (n *FrrWrapper) FrrZebraCmd(ctx context.Context, command string) (string, error) {
 	// ports defined here https://docs.frrouting.org/en/latest/setup.html#services
-	return TelnetDialAndCommunicate(ctx, command, zebra)
+	return n.TelnetDialAndCommunicate(ctx, command, zebra)
 }
 
 // FrrBgpCmd connects to Bgp telnet with password and runs command
-func FrrBgpCmd(ctx context.Context, command string) (string, error) {
+func (n *FrrWrapper) FrrBgpCmd(ctx context.Context, command string) (string, error) {
 	// ports defined here https://docs.frrouting.org/en/latest/setup.html#services
-	return TelnetDialAndCommunicate(ctx, command, bgpd)
+	return n.TelnetDialAndCommunicate(ctx, command, bgpd)
 }
 
 // TelnetDialAndCommunicate connects to telnet with password and runs command
-func TelnetDialAndCommunicate(ctx context.Context, command string, port int) (string, error) {
-	_, childSpan := tracer.Start(ctx, "frr.Command")
+func (n *FrrWrapper) TelnetDialAndCommunicate(ctx context.Context, command string, port int) (string, error) {
+	_, childSpan := n.tracer.Start(ctx, "frr.Command")
+	childSpan.SetAttributes(attribute.String("command.name", command))
 	defer childSpan.End()
 
 	if childSpan.IsRecording() {
@@ -88,34 +132,12 @@ func TelnetDialAndCommunicate(ctx context.Context, command string, port int) (st
 		return "", err
 	}
 
-	// login
-	err = conn.SkipUntil("Password: ")
-	if err != nil {
-		return "", err
-	}
-	_, err = conn.Write([]byte(password + "\n"))
-	if err != nil {
-		return "", err
-	}
-	err = conn.SkipUntil(">")
+	err = n.Password(conn, ">")
 	if err != nil {
 		return "", err
 	}
 
-	// privileged
-	_, err = conn.Write([]byte("enable\n"))
-	if err != nil {
-		return "", err
-	}
-	err = conn.SkipUntil("Password: ")
-	if err != nil {
-		return "", err
-	}
-	_, err = conn.Write([]byte(password + "\n"))
-	if err != nil {
-		return "", err
-	}
-	err = conn.SkipUntil("#")
+	err = n.Privileged(conn)
 	if err != nil {
 		return "", err
 	}
