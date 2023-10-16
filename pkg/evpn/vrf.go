@@ -138,6 +138,12 @@ func (s *Server) CreateVrf(ctx context.Context, in *pb.CreateVrfRequest) (*pb.Vr
 			return nil, err
 		}
 	}
+	// configure FRR
+	if err := s.frrCreateVrfRequest(ctx, in); err != nil {
+		fmt.Printf("skip err check for now: %v", err)
+		// return nil, err
+	}
+	// save object to the database
 	response := protoClone(in.Vrf)
 	response.Status = &pb.VrfStatus{LocalAs: 4, RoutingTable: tableID, Rmac: mac}
 	s.Vrfs[in.Vrf.Name] = response
@@ -215,6 +221,11 @@ func (s *Server) DeleteVrf(ctx context.Context, in *pb.DeleteVrfRequest) (*empty
 	if err := s.nLink.LinkDel(ctx, vrf); err != nil {
 		fmt.Printf("Failed to delete link: %v", err)
 		return nil, err
+	}
+	// delete from FRR
+	if err := s.frrDeleteVrfRequest(ctx, obj); err != nil {
+		fmt.Printf("skip err check for now: %v", err)
+		// return nil, err
 	}
 	// remove from the Database
 	delete(s.Vrfs, obj.Name)

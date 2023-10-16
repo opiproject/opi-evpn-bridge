@@ -595,6 +595,7 @@ func Test_DeleteSvi(t *testing.T) {
 
 			fname1 := resourceIDToFullName("svis", tt.in)
 			opi.Svis[testSviName] = protoClone(&testSviWithStatus)
+			opi.Vrfs[testVrfName] = protoClone(&testVrfWithStatus)
 			opi.Bridges[testLogicalBridgeName] = protoClone(&testLogicalBridgeWithStatus)
 			if tt.on != nil {
 				tt.on(mockNetlink, tt.errMsg)

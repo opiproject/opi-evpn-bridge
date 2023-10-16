@@ -7,12 +7,13 @@ require (
 	github.com/google/uuid v1.3.1
 	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.0.1
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.18.0
-	github.com/onsi/ginkgo/v2 v2.12.1
-	github.com/opiproject/opi-api v0.0.0-20231005114927-ec55946e5197
-	github.com/opiproject/opi-smbios-bridge v0.1.3-0.20231002193517-9e34badb6265
+	github.com/onsi/ginkgo/v2 v2.13.0
+	github.com/opiproject/opi-api v0.0.0-20231012135448-00e9f8d63cb4
+	github.com/opiproject/opi-smbios-bridge v0.1.3-0.20231014170027-e57f2147e10f
 	github.com/stretchr/testify v1.8.4
-	github.com/vektra/mockery/v2 v2.35.2
+	github.com/vektra/mockery/v2 v2.35.4
 	github.com/vishvananda/netlink v1.2.1-beta.2
+	github.com/ziutek/telnet v0.0.0-20180329124119-c3b780dc415b
 	go.einride.tech/aip v0.62.0
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.45.0
 	go.opentelemetry.io/otel v1.19.0
@@ -20,7 +21,7 @@ require (
 	go.opentelemetry.io/otel/sdk v1.19.0
 	go.opentelemetry.io/otel/trace v1.19.0
 	golang.org/x/tools v0.14.0
-	google.golang.org/grpc v1.58.2
+	google.golang.org/grpc v1.58.3
 	google.golang.org/protobuf v1.31.0
 )
 

@@ -108,6 +108,7 @@ func (s *Server) CreateBridgePort(ctx context.Context, in *pb.CreateBridgePortRe
 		fmt.Printf("Failed to up iface link: %v", err)
 		return nil, err
 	}
+	// save object to the database
 	response := protoClone(in.BridgePort)
 	response.Status = &pb.BridgePortStatus{OperStatus: pb.BPOperStatus_BP_OPER_STATUS_UP}
 	s.Ports[in.BridgePort.Name] = response
