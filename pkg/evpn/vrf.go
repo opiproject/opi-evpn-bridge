@@ -140,7 +140,8 @@ func (s *Server) CreateVrf(ctx context.Context, in *pb.CreateVrfRequest) (*pb.Vr
 	}
 	// configure FRR
 	if err := s.frrCreateVrfRequest(ctx, in); err != nil {
-		return nil, err
+		fmt.Printf("skip err check for now: %v", err)
+		// return nil, err
 	}
 	// save object to the database
 	response := protoClone(in.Vrf)
@@ -223,7 +224,8 @@ func (s *Server) DeleteVrf(ctx context.Context, in *pb.DeleteVrfRequest) (*empty
 	}
 	// delete from FRR
 	if err := s.frrDeleteVrfRequest(ctx, obj); err != nil {
-		return nil, err
+		fmt.Printf("skip err check for now: %v", err)
+		// return nil, err
 	}
 	// remove from the Database
 	delete(s.Vrfs, obj.Name)
