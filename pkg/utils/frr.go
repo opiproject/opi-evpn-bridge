@@ -52,7 +52,8 @@ type Frr interface {
 	FrrZebraCmd(ctx context.Context, command string) (string, error)
 	FrrBgpCmd(ctx context.Context, command string) (string, error)
 	Password(conn *telnet.Conn, delim string) error
-	Privileged(conn *telnet.Conn) error
+	EnterPrivileged(conn *telnet.Conn) error
+	ExitPrivileged(conn *telnet.Conn) error
 }
 
 // FrrWrapper wrapper for Frr package
@@ -82,13 +83,22 @@ func (n *FrrWrapper) Password(conn *telnet.Conn, delim string) error {
 	return conn.SkipUntil(delim)
 }
 
-// Privileged turns on privileged mode command
-func (n *FrrWrapper) Privileged(conn *telnet.Conn) error {
+// EnterPrivileged turns on privileged mode command
+func (n *FrrWrapper) EnterPrivileged(conn *telnet.Conn) error {
 	_, err := conn.Write([]byte("enable\n"))
 	if err != nil {
 		return err
 	}
 	return n.Password(conn, "#")
+}
+
+// ExitPrivileged turns off privileged mode command
+func (n *FrrWrapper) ExitPrivileged(conn *telnet.Conn) error {
+	_, err := conn.Write([]byte("disable\n"))
+	if err != nil {
+		return err
+	}
+	return conn.SkipUntil(">")
 }
 
 // FrrZebraCmd connects to Zebra telnet with password and runs command
@@ -136,7 +146,7 @@ func (n *FrrWrapper) TelnetDialAndCommunicate(ctx context.Context, command strin
 		return "", err
 	}
 
-	err = n.Privileged(conn)
+	err = n.EnterPrivileged(conn)
 	if err != nil {
 		return "", err
 	}

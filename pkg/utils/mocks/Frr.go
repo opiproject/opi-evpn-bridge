@@ -25,6 +25,90 @@ func (_m *Frr) EXPECT() *Frr_Expecter {
 	return &Frr_Expecter{mock: &_m.Mock}
 }
 
+// EnterPrivileged provides a mock function with given fields: conn
+func (_m *Frr) EnterPrivileged(conn *telnet.Conn) error {
+	ret := _m.Called(conn)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(*telnet.Conn) error); ok {
+		r0 = rf(conn)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// Frr_EnterPrivileged_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'EnterPrivileged'
+type Frr_EnterPrivileged_Call struct {
+	*mock.Call
+}
+
+// EnterPrivileged is a helper method to define mock.On call
+//   - conn *telnet.Conn
+func (_e *Frr_Expecter) EnterPrivileged(conn interface{}) *Frr_EnterPrivileged_Call {
+	return &Frr_EnterPrivileged_Call{Call: _e.mock.On("EnterPrivileged", conn)}
+}
+
+func (_c *Frr_EnterPrivileged_Call) Run(run func(conn *telnet.Conn)) *Frr_EnterPrivileged_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(*telnet.Conn))
+	})
+	return _c
+}
+
+func (_c *Frr_EnterPrivileged_Call) Return(_a0 error) *Frr_EnterPrivileged_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *Frr_EnterPrivileged_Call) RunAndReturn(run func(*telnet.Conn) error) *Frr_EnterPrivileged_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ExitPrivileged provides a mock function with given fields: conn
+func (_m *Frr) ExitPrivileged(conn *telnet.Conn) error {
+	ret := _m.Called(conn)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(*telnet.Conn) error); ok {
+		r0 = rf(conn)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// Frr_ExitPrivileged_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ExitPrivileged'
+type Frr_ExitPrivileged_Call struct {
+	*mock.Call
+}
+
+// ExitPrivileged is a helper method to define mock.On call
+//   - conn *telnet.Conn
+func (_e *Frr_Expecter) ExitPrivileged(conn interface{}) *Frr_ExitPrivileged_Call {
+	return &Frr_ExitPrivileged_Call{Call: _e.mock.On("ExitPrivileged", conn)}
+}
+
+func (_c *Frr_ExitPrivileged_Call) Run(run func(conn *telnet.Conn)) *Frr_ExitPrivileged_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(*telnet.Conn))
+	})
+	return _c
+}
+
+func (_c *Frr_ExitPrivileged_Call) Return(_a0 error) *Frr_ExitPrivileged_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *Frr_ExitPrivileged_Call) RunAndReturn(run func(*telnet.Conn) error) *Frr_ExitPrivileged_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // FrrBgpCmd provides a mock function with given fields: ctx, command
 func (_m *Frr) FrrBgpCmd(ctx context.Context, command string) (string, error) {
 	ret := _m.Called(ctx, command)
@@ -170,48 +254,6 @@ func (_c *Frr_Password_Call) Return(_a0 error) *Frr_Password_Call {
 }
 
 func (_c *Frr_Password_Call) RunAndReturn(run func(*telnet.Conn, string) error) *Frr_Password_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// Privileged provides a mock function with given fields: conn
-func (_m *Frr) Privileged(conn *telnet.Conn) error {
-	ret := _m.Called(conn)
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(*telnet.Conn) error); ok {
-		r0 = rf(conn)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
-
-// Frr_Privileged_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Privileged'
-type Frr_Privileged_Call struct {
-	*mock.Call
-}
-
-// Privileged is a helper method to define mock.On call
-//   - conn *telnet.Conn
-func (_e *Frr_Expecter) Privileged(conn interface{}) *Frr_Privileged_Call {
-	return &Frr_Privileged_Call{Call: _e.mock.On("Privileged", conn)}
-}
-
-func (_c *Frr_Privileged_Call) Run(run func(conn *telnet.Conn)) *Frr_Privileged_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(*telnet.Conn))
-	})
-	return _c
-}
-
-func (_c *Frr_Privileged_Call) Return(_a0 error) *Frr_Privileged_Call {
-	_c.Call.Return(_a0)
-	return _c
-}
-
-func (_c *Frr_Privileged_Call) RunAndReturn(run func(*telnet.Conn) error) *Frr_Privileged_Call {
 	_c.Call.Return(run)
 	return _c
 }
