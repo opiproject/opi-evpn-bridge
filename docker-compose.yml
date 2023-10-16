@@ -45,6 +45,8 @@ services:
       - ./conf/leaf1.conf:/etc/frr/frr.conf
     ports:
       - "16686:16686"
+      - "50151:50151"
+      - "8082:8082"
     networks:
       n1l1tos1:
         ipv4_address: 10.168.1.5
