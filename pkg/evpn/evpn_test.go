@@ -56,14 +56,22 @@ func equalProtoSlices[T proto.Message](x, y []T) bool {
 
 func TestFrontEnd_NewServerWithArgs(t *testing.T) {
 	tests := map[string]struct {
+		frr       utils.Frr
 		nLink     utils.Netlink
 		wantPanic bool
 	}{
 		"nil netlink argument": {
+			frr:       &utils.FrrWrapper{},
 			nLink:     nil,
 			wantPanic: true,
 		},
+		"nil frr argument": {
+			frr:       nil,
+			nLink:     &utils.NetlinkWrapper{},
+			wantPanic: true,
+		},
 		"all valid arguments": {
+			frr:       &utils.FrrWrapper{},
 			nLink:     &utils.NetlinkWrapper{},
 			wantPanic: false,
 		},
@@ -78,7 +86,7 @@ func TestFrontEnd_NewServerWithArgs(t *testing.T) {
 				}
 			}()
 
-			server := NewServerWithArgs(tt.nLink)
+			server := NewServerWithArgs(tt.nLink, tt.frr)
 			if server == nil && !tt.wantPanic {
 				t.Error("expected non nil server or panic")
 			}

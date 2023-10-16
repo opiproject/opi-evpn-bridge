@@ -67,7 +67,7 @@ func Test_CreateLogicalBridge(t *testing.T) {
 		errCode codes.Code
 		errMsg  string
 		exist   bool
-		on      func(mockNetlink *mocks.Netlink, errMsg string)
+		on      func(mockNetlink *mocks.Netlink, mockFrr *mocks.Frr, errMsg string)
 	}{
 		"illegal resource_id": {
 			id:      "CapitalLettersNotAllowed",
@@ -147,7 +147,7 @@ func Test_CreateLogicalBridge(t *testing.T) {
 			errCode: codes.NotFound,
 			errMsg:  fmt.Sprintf("unable to find key %v", tenantbridgeName),
 			exist:   false,
-			on: func(mockNetlink *mocks.Netlink, errMsg string) {
+			on: func(mockNetlink *mocks.Netlink, mockFrr *mocks.Frr, errMsg string) {
 				mockNetlink.EXPECT().LinkByName(mock.Anything, tenantbridgeName).Return(nil, errors.New(errMsg)).Once()
 			},
 		},
@@ -158,7 +158,7 @@ func Test_CreateLogicalBridge(t *testing.T) {
 			errCode: codes.Unknown,
 			errMsg:  "Failed to call LinkAdd",
 			exist:   false,
-			on: func(mockNetlink *mocks.Netlink, errMsg string) {
+			on: func(mockNetlink *mocks.Netlink, mockFrr *mocks.Frr, errMsg string) {
 				// myip := net.ParseIP("10.0.0.2")
 				myip := make(net.IP, 4)
 				binary.BigEndian.PutUint32(myip, 167772162)
@@ -176,7 +176,7 @@ func Test_CreateLogicalBridge(t *testing.T) {
 			errCode: codes.Unknown,
 			errMsg:  "Failed to call LinkSetMaster",
 			exist:   false,
-			on: func(mockNetlink *mocks.Netlink, errMsg string) {
+			on: func(mockNetlink *mocks.Netlink, mockFrr *mocks.Frr, errMsg string) {
 				myip := make(net.IP, 4)
 				binary.BigEndian.PutUint32(myip, 167772162)
 				vxlanName := fmt.Sprintf("vni%d", *testLogicalBridge.Spec.Vni)
@@ -194,7 +194,7 @@ func Test_CreateLogicalBridge(t *testing.T) {
 			errCode: codes.Unknown,
 			errMsg:  "Failed to call LinkSetUp",
 			exist:   false,
-			on: func(mockNetlink *mocks.Netlink, errMsg string) {
+			on: func(mockNetlink *mocks.Netlink, mockFrr *mocks.Frr, errMsg string) {
 				myip := make(net.IP, 4)
 				binary.BigEndian.PutUint32(myip, 167772162)
 				vxlanName := fmt.Sprintf("vni%d", *testLogicalBridge.Spec.Vni)
@@ -213,7 +213,7 @@ func Test_CreateLogicalBridge(t *testing.T) {
 			errCode: codes.Unknown,
 			errMsg:  "Failed to call BridgeVlanAdd",
 			exist:   false,
-			on: func(mockNetlink *mocks.Netlink, errMsg string) {
+			on: func(mockNetlink *mocks.Netlink, mockFrr *mocks.Frr, errMsg string) {
 				myip := make(net.IP, 4)
 				binary.BigEndian.PutUint32(myip, 167772162)
 				vxlanName := fmt.Sprintf("vni%d", *testLogicalBridge.Spec.Vni)
@@ -234,7 +234,7 @@ func Test_CreateLogicalBridge(t *testing.T) {
 			errCode: codes.OK,
 			errMsg:  "",
 			exist:   false,
-			on: func(mockNetlink *mocks.Netlink, errMsg string) {
+			on: func(mockNetlink *mocks.Netlink, mockFrr *mocks.Frr, errMsg string) {
 				myip := make(net.IP, 4)
 				binary.BigEndian.PutUint32(myip, 167772162)
 				vxlanName := fmt.Sprintf("vni%d", *testLogicalBridge.Spec.Vni)
@@ -256,7 +256,8 @@ func Test_CreateLogicalBridge(t *testing.T) {
 			// start GRPC mockup server
 			ctx := context.Background()
 			mockNetlink := mocks.NewNetlink(t)
-			opi := NewServerWithArgs(mockNetlink)
+			mockFrr := mocks.NewFrr(t)
+			opi := NewServerWithArgs(mockNetlink, mockFrr)
 			conn, err := grpc.DialContext(ctx,
 				"",
 				grpc.WithTransportCredentials(insecure.NewCredentials()),
@@ -280,7 +281,7 @@ func Test_CreateLogicalBridge(t *testing.T) {
 				tt.out.Name = testLogicalBridgeName
 			}
 			if tt.on != nil {
-				tt.on(mockNetlink, tt.errMsg)
+				tt.on(mockNetlink, mockFrr, tt.errMsg)
 			}
 
 			request := &pb.CreateLogicalBridgeRequest{LogicalBridge: tt.in, LogicalBridgeId: tt.id}
@@ -310,7 +311,7 @@ func Test_DeleteLogicalBridge(t *testing.T) {
 		errCode codes.Code
 		errMsg  string
 		missing bool
-		on      func(mockNetlink *mocks.Netlink, errMsg string)
+		on      func(mockNetlink *mocks.Netlink, mockFrr *mocks.Frr, errMsg string)
 	}{
 		"valid request with unknown key": {
 			in:      "unknown-id",
@@ -342,7 +343,7 @@ func Test_DeleteLogicalBridge(t *testing.T) {
 			errCode: codes.NotFound,
 			errMsg:  fmt.Sprintf("unable to find key %v", "vni11"),
 			missing: false,
-			on: func(mockNetlink *mocks.Netlink, errMsg string) {
+			on: func(mockNetlink *mocks.Netlink, mockFrr *mocks.Frr, errMsg string) {
 				vxlanName := fmt.Sprintf("vni%d", *testLogicalBridge.Spec.Vni)
 				mockNetlink.EXPECT().LinkByName(mock.Anything, vxlanName).Return(nil, errors.New(errMsg)).Once()
 			},
@@ -353,7 +354,7 @@ func Test_DeleteLogicalBridge(t *testing.T) {
 			errCode: codes.Unknown,
 			errMsg:  "Failed to call LinkSetDown",
 			missing: false,
-			on: func(mockNetlink *mocks.Netlink, errMsg string) {
+			on: func(mockNetlink *mocks.Netlink, mockFrr *mocks.Frr, errMsg string) {
 				myip := make(net.IP, 4)
 				binary.BigEndian.PutUint32(myip, 167772162)
 				vxlanName := fmt.Sprintf("vni%d", *testLogicalBridge.Spec.Vni)
@@ -368,7 +369,7 @@ func Test_DeleteLogicalBridge(t *testing.T) {
 			errCode: codes.Unknown,
 			errMsg:  "Failed to call BridgeVlanDel",
 			missing: false,
-			on: func(mockNetlink *mocks.Netlink, errMsg string) {
+			on: func(mockNetlink *mocks.Netlink, mockFrr *mocks.Frr, errMsg string) {
 				myip := make(net.IP, 4)
 				binary.BigEndian.PutUint32(myip, 167772162)
 				vxlanName := fmt.Sprintf("vni%d", *testLogicalBridge.Spec.Vni)
@@ -385,7 +386,7 @@ func Test_DeleteLogicalBridge(t *testing.T) {
 			errCode: codes.Unknown,
 			errMsg:  "Failed to call LinkDel",
 			missing: false,
-			on: func(mockNetlink *mocks.Netlink, errMsg string) {
+			on: func(mockNetlink *mocks.Netlink, mockFrr *mocks.Frr, errMsg string) {
 				myip := make(net.IP, 4)
 				binary.BigEndian.PutUint32(myip, 167772162)
 				vxlanName := fmt.Sprintf("vni%d", *testLogicalBridge.Spec.Vni)
@@ -403,7 +404,7 @@ func Test_DeleteLogicalBridge(t *testing.T) {
 			errCode: codes.OK,
 			errMsg:  "",
 			missing: false,
-			on: func(mockNetlink *mocks.Netlink, errMsg string) {
+			on: func(mockNetlink *mocks.Netlink, mockFrr *mocks.Frr, errMsg string) {
 				myip := make(net.IP, 4)
 				binary.BigEndian.PutUint32(myip, 167772162)
 				vxlanName := fmt.Sprintf("vni%d", *testLogicalBridge.Spec.Vni)
@@ -423,7 +424,8 @@ func Test_DeleteLogicalBridge(t *testing.T) {
 			// start GRPC mockup server
 			ctx := context.Background()
 			mockNetlink := mocks.NewNetlink(t)
-			opi := NewServerWithArgs(mockNetlink)
+			mockFrr := mocks.NewFrr(t)
+			opi := NewServerWithArgs(mockNetlink, mockFrr)
 			conn, err := grpc.DialContext(ctx,
 				"",
 				grpc.WithTransportCredentials(insecure.NewCredentials()),
@@ -443,7 +445,7 @@ func Test_DeleteLogicalBridge(t *testing.T) {
 			opi.Bridges[testLogicalBridgeName] = protoClone(&testLogicalBridgeWithStatus)
 
 			if tt.on != nil {
-				tt.on(mockNetlink, tt.errMsg)
+				tt.on(mockNetlink, mockFrr, tt.errMsg)
 			}
 
 			request := &pb.DeleteLogicalBridgeRequest{Name: fname1, AllowMissing: tt.missing}
@@ -513,7 +515,8 @@ func Test_UpdateLogicalBridge(t *testing.T) {
 			// start GRPC mockup server
 			ctx := context.Background()
 			mockNetlink := mocks.NewNetlink(t)
-			opi := NewServerWithArgs(mockNetlink)
+			mockFrr := mocks.NewFrr(t)
+			opi := NewServerWithArgs(mockNetlink, mockFrr)
 			conn, err := grpc.DialContext(ctx,
 				"",
 				grpc.WithTransportCredentials(insecure.NewCredentials()),
@@ -593,7 +596,8 @@ func Test_GetLogicalBridge(t *testing.T) {
 			// start GRPC mockup server
 			ctx := context.Background()
 			mockNetlink := mocks.NewNetlink(t)
-			opi := NewServerWithArgs(mockNetlink)
+			mockFrr := mocks.NewFrr(t)
+			opi := NewServerWithArgs(mockNetlink, mockFrr)
 			conn, err := grpc.DialContext(ctx,
 				"",
 				grpc.WithTransportCredentials(insecure.NewCredentials()),
@@ -696,7 +700,8 @@ func Test_ListLogicalBridges(t *testing.T) {
 			// start GRPC mockup server
 			ctx := context.Background()
 			mockNetlink := mocks.NewNetlink(t)
-			opi := NewServerWithArgs(mockNetlink)
+			mockFrr := mocks.NewFrr(t)
+			opi := NewServerWithArgs(mockNetlink, mockFrr)
 			conn, err := grpc.DialContext(ctx,
 				"",
 				grpc.WithTransportCredentials(insecure.NewCredentials()),

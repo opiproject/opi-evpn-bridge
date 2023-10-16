@@ -59,7 +59,7 @@ func Test_CreateSvi(t *testing.T) {
 		errCode codes.Code
 		errMsg  string
 		exist   bool
-		on      func(mockNetlink *mocks.Netlink, errMsg string)
+		on      func(mockNetlink *mocks.Netlink, mockFrr *mocks.Frr, errMsg string)
 	}{
 		"illegal resource_id": {
 			id:      "CapitalLettersNotAllowed",
@@ -212,7 +212,7 @@ func Test_CreateSvi(t *testing.T) {
 			errCode: codes.NotFound,
 			errMsg:  fmt.Sprintf("unable to find key %v", tenantbridgeName),
 			exist:   false,
-			on: func(mockNetlink *mocks.Netlink, errMsg string) {
+			on: func(mockNetlink *mocks.Netlink, mockFrr *mocks.Frr, errMsg string) {
 				mockNetlink.EXPECT().LinkByName(mock.Anything, tenantbridgeName).Return(nil, errors.New(errMsg)).Once()
 			},
 		},
@@ -223,7 +223,7 @@ func Test_CreateSvi(t *testing.T) {
 			errCode: codes.Unknown,
 			errMsg:  "Failed to call BridgeVlanAdd",
 			exist:   false,
-			on: func(mockNetlink *mocks.Netlink, errMsg string) {
+			on: func(mockNetlink *mocks.Netlink, mockFrr *mocks.Frr, errMsg string) {
 				vid := uint16(testLogicalBridge.Spec.VlanId)
 				bridge := &netlink.Bridge{LinkAttrs: netlink.LinkAttrs{Name: tenantbridgeName}}
 				mockNetlink.EXPECT().LinkByName(mock.Anything, tenantbridgeName).Return(bridge, nil).Once()
@@ -237,7 +237,7 @@ func Test_CreateSvi(t *testing.T) {
 			errCode: codes.Unknown,
 			errMsg:  "Failed to call LinkAdd",
 			exist:   false,
-			on: func(mockNetlink *mocks.Netlink, errMsg string) {
+			on: func(mockNetlink *mocks.Netlink, mockFrr *mocks.Frr, errMsg string) {
 				vid := uint16(testLogicalBridge.Spec.VlanId)
 				bridge := &netlink.Bridge{LinkAttrs: netlink.LinkAttrs{Name: tenantbridgeName}}
 				mockNetlink.EXPECT().LinkByName(mock.Anything, tenantbridgeName).Return(bridge, nil).Once()
@@ -254,7 +254,7 @@ func Test_CreateSvi(t *testing.T) {
 			errCode: codes.Unknown,
 			errMsg:  "Failed to call LinkSetHardwareAddr",
 			exist:   false,
-			on: func(mockNetlink *mocks.Netlink, errMsg string) {
+			on: func(mockNetlink *mocks.Netlink, mockFrr *mocks.Frr, errMsg string) {
 				vid := uint16(testLogicalBridge.Spec.VlanId)
 				bridge := &netlink.Bridge{LinkAttrs: netlink.LinkAttrs{Name: tenantbridgeName}}
 				mockNetlink.EXPECT().LinkByName(mock.Anything, tenantbridgeName).Return(bridge, nil).Once()
@@ -273,7 +273,7 @@ func Test_CreateSvi(t *testing.T) {
 			errCode: codes.Unknown,
 			errMsg:  "Failed to call AddrAdd",
 			exist:   false,
-			on: func(mockNetlink *mocks.Netlink, errMsg string) {
+			on: func(mockNetlink *mocks.Netlink, mockFrr *mocks.Frr, errMsg string) {
 				vid := uint16(testLogicalBridge.Spec.VlanId)
 				bridge := &netlink.Bridge{LinkAttrs: netlink.LinkAttrs{Name: tenantbridgeName}}
 				mockNetlink.EXPECT().LinkByName(mock.Anything, tenantbridgeName).Return(bridge, nil).Once()
@@ -295,7 +295,7 @@ func Test_CreateSvi(t *testing.T) {
 			errCode: codes.NotFound,
 			errMsg:  fmt.Sprintf("unable to find key %v", testVrfName),
 			exist:   false,
-			on: func(mockNetlink *mocks.Netlink, errMsg string) {
+			on: func(mockNetlink *mocks.Netlink, mockFrr *mocks.Frr, errMsg string) {
 				vid := uint16(testLogicalBridge.Spec.VlanId)
 				bridge := &netlink.Bridge{LinkAttrs: netlink.LinkAttrs{Name: tenantbridgeName}}
 				mockNetlink.EXPECT().LinkByName(mock.Anything, tenantbridgeName).Return(bridge, nil).Once()
@@ -318,7 +318,7 @@ func Test_CreateSvi(t *testing.T) {
 			errCode: codes.Unknown,
 			errMsg:  "Failed to call LinkSetMaster",
 			exist:   false,
-			on: func(mockNetlink *mocks.Netlink, errMsg string) {
+			on: func(mockNetlink *mocks.Netlink, mockFrr *mocks.Frr, errMsg string) {
 				vid := uint16(testLogicalBridge.Spec.VlanId)
 				bridge := &netlink.Bridge{LinkAttrs: netlink.LinkAttrs{Name: tenantbridgeName}}
 				mockNetlink.EXPECT().LinkByName(mock.Anything, tenantbridgeName).Return(bridge, nil).Once()
@@ -343,7 +343,7 @@ func Test_CreateSvi(t *testing.T) {
 			errCode: codes.Unknown,
 			errMsg:  "Failed to call LinkSetUp",
 			exist:   false,
-			on: func(mockNetlink *mocks.Netlink, errMsg string) {
+			on: func(mockNetlink *mocks.Netlink, mockFrr *mocks.Frr, errMsg string) {
 				vid := uint16(testLogicalBridge.Spec.VlanId)
 				bridge := &netlink.Bridge{LinkAttrs: netlink.LinkAttrs{Name: tenantbridgeName}}
 				mockNetlink.EXPECT().LinkByName(mock.Anything, tenantbridgeName).Return(bridge, nil).Once()
@@ -369,7 +369,7 @@ func Test_CreateSvi(t *testing.T) {
 			errCode: codes.OK,
 			errMsg:  "",
 			exist:   false,
-			on: func(mockNetlink *mocks.Netlink, errMsg string) {
+			on: func(mockNetlink *mocks.Netlink, mockFrr *mocks.Frr, errMsg string) {
 				vid := uint16(testLogicalBridge.Spec.VlanId)
 				bridge := &netlink.Bridge{LinkAttrs: netlink.LinkAttrs{Name: tenantbridgeName}}
 				mockNetlink.EXPECT().LinkByName(mock.Anything, tenantbridgeName).Return(bridge, nil).Once()
@@ -386,6 +386,8 @@ func Test_CreateSvi(t *testing.T) {
 				mockNetlink.EXPECT().LinkByName(mock.Anything, testVrfID).Return(vrfdev, nil).Once()
 				mockNetlink.EXPECT().LinkSetMaster(mock.Anything, vlandev, vrfdev).Return(nil).Once()
 				mockNetlink.EXPECT().LinkSetUp(mock.Anything, vlandev).Return(nil).Once()
+				// frr
+				mockFrr.EXPECT().FrrZebraCmd(mock.Anything, mock.Anything).Return("", nil).Once()
 			},
 		},
 	}
@@ -396,7 +398,8 @@ func Test_CreateSvi(t *testing.T) {
 			// start GRPC mockup server
 			ctx := context.Background()
 			mockNetlink := mocks.NewNetlink(t)
-			opi := NewServerWithArgs(mockNetlink)
+			mockFrr := mocks.NewFrr(t)
+			opi := NewServerWithArgs(mockNetlink, mockFrr)
 			conn, err := grpc.DialContext(ctx,
 				"",
 				grpc.WithTransportCredentials(insecure.NewCredentials()),
@@ -420,7 +423,7 @@ func Test_CreateSvi(t *testing.T) {
 				tt.out.Name = testSviName
 			}
 			if tt.on != nil {
-				tt.on(mockNetlink, tt.errMsg)
+				tt.on(mockNetlink, mockFrr, tt.errMsg)
 			}
 			opi.Vrfs[testVrfName] = protoClone(&testVrfWithStatus)
 			opi.Bridges[testLogicalBridgeName] = protoClone(&testLogicalBridgeWithStatus)
@@ -452,7 +455,7 @@ func Test_DeleteSvi(t *testing.T) {
 		errCode codes.Code
 		errMsg  string
 		missing bool
-		on      func(mockNetlink *mocks.Netlink, errMsg string)
+		on      func(mockNetlink *mocks.Netlink, mockFrr *mocks.Frr, errMsg string)
 	}{
 		"valid request with unknown key": {
 			in:      "unknown-id",
@@ -484,7 +487,7 @@ func Test_DeleteSvi(t *testing.T) {
 			errCode: codes.NotFound,
 			errMsg:  fmt.Sprintf("unable to find key %v", tenantbridgeName),
 			missing: false,
-			on: func(mockNetlink *mocks.Netlink, errMsg string) {
+			on: func(mockNetlink *mocks.Netlink, mockFrr *mocks.Frr, errMsg string) {
 				mockNetlink.EXPECT().LinkByName(mock.Anything, tenantbridgeName).Return(nil, errors.New(errMsg)).Once()
 			},
 		},
@@ -494,7 +497,7 @@ func Test_DeleteSvi(t *testing.T) {
 			errCode: codes.Unknown,
 			errMsg:  "Failed to call BridgeVlanDel",
 			missing: false,
-			on: func(mockNetlink *mocks.Netlink, errMsg string) {
+			on: func(mockNetlink *mocks.Netlink, mockFrr *mocks.Frr, errMsg string) {
 				bridge := &netlink.Bridge{LinkAttrs: netlink.LinkAttrs{Name: tenantbridgeName}}
 				mockNetlink.EXPECT().LinkByName(mock.Anything, tenantbridgeName).Return(bridge, nil).Once()
 				vid := uint16(testLogicalBridge.Spec.VlanId)
@@ -507,7 +510,7 @@ func Test_DeleteSvi(t *testing.T) {
 			errCode: codes.NotFound,
 			errMsg:  fmt.Sprintf("unable to find key %v", "vlan22"),
 			missing: false,
-			on: func(mockNetlink *mocks.Netlink, errMsg string) {
+			on: func(mockNetlink *mocks.Netlink, mockFrr *mocks.Frr, errMsg string) {
 				bridge := &netlink.Bridge{LinkAttrs: netlink.LinkAttrs{Name: tenantbridgeName}}
 				mockNetlink.EXPECT().LinkByName(mock.Anything, tenantbridgeName).Return(bridge, nil).Once()
 				vid := uint16(testLogicalBridge.Spec.VlanId)
@@ -522,7 +525,7 @@ func Test_DeleteSvi(t *testing.T) {
 			errCode: codes.Unknown,
 			errMsg:  "Failed to call LinkSetDown",
 			missing: false,
-			on: func(mockNetlink *mocks.Netlink, errMsg string) {
+			on: func(mockNetlink *mocks.Netlink, mockFrr *mocks.Frr, errMsg string) {
 				bridge := &netlink.Bridge{LinkAttrs: netlink.LinkAttrs{Name: tenantbridgeName}}
 				mockNetlink.EXPECT().LinkByName(mock.Anything, tenantbridgeName).Return(bridge, nil).Once()
 				vid := uint16(testLogicalBridge.Spec.VlanId)
@@ -539,7 +542,7 @@ func Test_DeleteSvi(t *testing.T) {
 			errCode: codes.Unknown,
 			errMsg:  "Failed to call LinkDel",
 			missing: false,
-			on: func(mockNetlink *mocks.Netlink, errMsg string) {
+			on: func(mockNetlink *mocks.Netlink, mockFrr *mocks.Frr, errMsg string) {
 				bridge := &netlink.Bridge{LinkAttrs: netlink.LinkAttrs{Name: tenantbridgeName}}
 				mockNetlink.EXPECT().LinkByName(mock.Anything, tenantbridgeName).Return(bridge, nil).Once()
 				vid := uint16(testLogicalBridge.Spec.VlanId)
@@ -557,7 +560,7 @@ func Test_DeleteSvi(t *testing.T) {
 			errCode: codes.OK,
 			errMsg:  "",
 			missing: false,
-			on: func(mockNetlink *mocks.Netlink, errMsg string) {
+			on: func(mockNetlink *mocks.Netlink, mockFrr *mocks.Frr, errMsg string) {
 				bridge := &netlink.Bridge{LinkAttrs: netlink.LinkAttrs{Name: tenantbridgeName}}
 				mockNetlink.EXPECT().LinkByName(mock.Anything, tenantbridgeName).Return(bridge, nil).Once()
 				vid := uint16(testLogicalBridge.Spec.VlanId)
@@ -577,7 +580,8 @@ func Test_DeleteSvi(t *testing.T) {
 			// start GRPC mockup server
 			ctx := context.Background()
 			mockNetlink := mocks.NewNetlink(t)
-			opi := NewServerWithArgs(mockNetlink)
+			mockFrr := mocks.NewFrr(t)
+			opi := NewServerWithArgs(mockNetlink, mockFrr)
 			conn, err := grpc.DialContext(ctx,
 				"",
 				grpc.WithTransportCredentials(insecure.NewCredentials()),
@@ -598,7 +602,7 @@ func Test_DeleteSvi(t *testing.T) {
 			opi.Vrfs[testVrfName] = protoClone(&testVrfWithStatus)
 			opi.Bridges[testLogicalBridgeName] = protoClone(&testLogicalBridgeWithStatus)
 			if tt.on != nil {
-				tt.on(mockNetlink, tt.errMsg)
+				tt.on(mockNetlink, mockFrr, tt.errMsg)
 			}
 
 			request := &pb.DeleteSviRequest{Name: fname1, AllowMissing: tt.missing}
@@ -670,7 +674,8 @@ func Test_UpdateSvi(t *testing.T) {
 			// start GRPC mockup server
 			ctx := context.Background()
 			mockNetlink := mocks.NewNetlink(t)
-			opi := NewServerWithArgs(mockNetlink)
+			mockFrr := mocks.NewFrr(t)
+			opi := NewServerWithArgs(mockNetlink, mockFrr)
 			conn, err := grpc.DialContext(ctx,
 				"",
 				grpc.WithTransportCredentials(insecure.NewCredentials()),
@@ -750,7 +755,8 @@ func Test_GetSvi(t *testing.T) {
 			// start GRPC mockup server
 			ctx := context.Background()
 			mockNetlink := mocks.NewNetlink(t)
-			opi := NewServerWithArgs(mockNetlink)
+			mockFrr := mocks.NewFrr(t)
+			opi := NewServerWithArgs(mockNetlink, mockFrr)
 			conn, err := grpc.DialContext(ctx,
 				"",
 				grpc.WithTransportCredentials(insecure.NewCredentials()),
@@ -853,7 +859,8 @@ func Test_ListSvis(t *testing.T) {
 			// start GRPC mockup server
 			ctx := context.Background()
 			mockNetlink := mocks.NewNetlink(t)
-			opi := NewServerWithArgs(mockNetlink)
+			mockFrr := mocks.NewFrr(t)
+			opi := NewServerWithArgs(mockNetlink, mockFrr)
 			conn, err := grpc.DialContext(ctx,
 				"",
 				grpc.WithTransportCredentials(insecure.NewCredentials()),

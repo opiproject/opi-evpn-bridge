@@ -120,8 +120,7 @@ func (s *Server) CreateSvi(ctx context.Context, in *pb.CreateSviRequest) (*pb.Sv
 	}
 	// configure FRR
 	if err := s.frrCreateSviRequest(ctx, in, vrfName, vlanName); err != nil {
-		fmt.Printf("skip err check for now: %v", err)
-		// return nil, err
+		return nil, err
 	}
 	// save object to the database
 	response := protoClone(in.Svi)
@@ -189,8 +188,7 @@ func (s *Server) DeleteSvi(ctx context.Context, in *pb.DeleteSviRequest) (*empty
 	vrfName := path.Base(vrf.Name)
 	// delete from FRR
 	if err := s.frrDeleteSviRequest(ctx, obj, vrfName, vlanName); err != nil {
-		fmt.Printf("skip err check for now: %v", err)
-		// return nil, err
+		return nil, err
 	}
 	// remove from the Database
 	delete(s.Svis, obj.Name)
