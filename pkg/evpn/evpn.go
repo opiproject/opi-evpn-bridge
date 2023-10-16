@@ -45,12 +45,16 @@ type Server struct {
 // NewServer creates initialized instance of EVPN server
 func NewServer() *Server {
 	nLink := utils.NewNetlinkWrapper()
-	return NewServerWithArgs(nLink)
+	frr := utils.NewFrrWrapper()
+	return NewServerWithArgs(nLink, frr)
 }
 
 // NewServerWithArgs creates initialized instance of EVPN server
 // with externally created Netlink
-func NewServerWithArgs(nLink utils.Netlink) *Server {
+func NewServerWithArgs(nLink utils.Netlink, frr utils.Frr) *Server {
+	if frr == nil {
+		log.Panic("nil for Frr is not allowed")
+	}
 	if nLink == nil {
 		log.Panic("nil for Netlink is not allowed")
 	}
@@ -61,7 +65,7 @@ func NewServerWithArgs(nLink utils.Netlink) *Server {
 		Vrfs:       make(map[string]*pe.Vrf),
 		Pagination: make(map[string]int),
 		nLink:      nLink,
-		frr:        utils.NewFrrWrapper(),
+		frr:        frr,
 		tracer:     otel.Tracer(""),
 	}
 }

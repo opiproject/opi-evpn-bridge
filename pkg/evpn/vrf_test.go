@@ -75,7 +75,7 @@ func Test_CreateVrf(t *testing.T) {
 		errCode codes.Code
 		errMsg  string
 		exist   bool
-		on      func(mockNetlink *mocks.Netlink, errMsg string)
+		on      func(mockNetlink *mocks.Netlink, mockFrr *mocks.Frr, errMsg string)
 	}{
 		"illegal resource_id": {
 			id:      "CapitalLettersNotAllowed",
@@ -139,10 +139,12 @@ func Test_CreateVrf(t *testing.T) {
 			errCode: codes.OK,
 			errMsg:  "",
 			exist:   false,
-			on: func(mockNetlink *mocks.Netlink, errMsg string) {
+			on: func(mockNetlink *mocks.Netlink, mockFrr *mocks.Frr, errMsg string) {
 				vrf := &netlink.Vrf{LinkAttrs: netlink.LinkAttrs{Name: testVrfID}, Table: 1000}
 				mockNetlink.EXPECT().LinkAdd(mock.Anything, vrf).Return(nil).Once()
 				mockNetlink.EXPECT().LinkSetUp(mock.Anything, vrf).Return(nil).Once()
+				// frr
+				mockFrr.EXPECT().FrrZebraCmd(mock.Anything, mock.Anything).Return("", nil).Once()
 			},
 		},
 		"failed LinkAdd call": {
@@ -152,7 +154,7 @@ func Test_CreateVrf(t *testing.T) {
 			errCode: codes.Unknown,
 			errMsg:  "Failed to call LinkAdd",
 			exist:   false,
-			on: func(mockNetlink *mocks.Netlink, errMsg string) {
+			on: func(mockNetlink *mocks.Netlink, mockFrr *mocks.Frr, errMsg string) {
 				vrf := &netlink.Vrf{LinkAttrs: netlink.LinkAttrs{Name: testVrfID}, Table: 1001}
 				mockNetlink.EXPECT().LinkAdd(mock.Anything, vrf).Return(errors.New(errMsg)).Once()
 			},
@@ -164,7 +166,7 @@ func Test_CreateVrf(t *testing.T) {
 			errCode: codes.Unknown,
 			errMsg:  "Failed to call LinkSetUp",
 			exist:   false,
-			on: func(mockNetlink *mocks.Netlink, errMsg string) {
+			on: func(mockNetlink *mocks.Netlink, mockFrr *mocks.Frr, errMsg string) {
 				vrf := &netlink.Vrf{LinkAttrs: netlink.LinkAttrs{Name: testVrfID}, Table: 1001}
 				mockNetlink.EXPECT().LinkAdd(mock.Anything, vrf).Return(nil).Once()
 				mockNetlink.EXPECT().LinkSetUp(mock.Anything, vrf).Return(errors.New(errMsg)).Once()
@@ -177,7 +179,7 @@ func Test_CreateVrf(t *testing.T) {
 			errCode: codes.Unknown,
 			errMsg:  "Failed to call LinkAdd",
 			exist:   false,
-			on: func(mockNetlink *mocks.Netlink, errMsg string) {
+			on: func(mockNetlink *mocks.Netlink, mockFrr *mocks.Frr, errMsg string) {
 				bridgeName := fmt.Sprintf("br%d", *testVrf.Spec.Vni)
 				vrf := &netlink.Vrf{LinkAttrs: netlink.LinkAttrs{Name: testVrfID}, Table: 1001}
 				bridge := &netlink.Bridge{LinkAttrs: netlink.LinkAttrs{Name: bridgeName}}
@@ -193,7 +195,7 @@ func Test_CreateVrf(t *testing.T) {
 			errCode: codes.Unknown,
 			errMsg:  "Failed to call LinkSetMaster",
 			exist:   false,
-			on: func(mockNetlink *mocks.Netlink, errMsg string) {
+			on: func(mockNetlink *mocks.Netlink, mockFrr *mocks.Frr, errMsg string) {
 				bridgeName := fmt.Sprintf("br%d", *testVrf.Spec.Vni)
 				vrf := &netlink.Vrf{LinkAttrs: netlink.LinkAttrs{Name: testVrfID}, Table: 1001}
 				bridge := &netlink.Bridge{LinkAttrs: netlink.LinkAttrs{Name: bridgeName}}
@@ -210,7 +212,7 @@ func Test_CreateVrf(t *testing.T) {
 			errCode: codes.Unknown,
 			errMsg:  "Failed to call LinkSetHardwareAddr",
 			exist:   false,
-			on: func(mockNetlink *mocks.Netlink, errMsg string) {
+			on: func(mockNetlink *mocks.Netlink, mockFrr *mocks.Frr, errMsg string) {
 				bridgeName := fmt.Sprintf("br%d", *testVrf.Spec.Vni)
 				vrf := &netlink.Vrf{LinkAttrs: netlink.LinkAttrs{Name: testVrfID}, Table: 1001}
 				bridge := &netlink.Bridge{LinkAttrs: netlink.LinkAttrs{Name: bridgeName}}
@@ -228,7 +230,7 @@ func Test_CreateVrf(t *testing.T) {
 			errCode: codes.Unknown,
 			errMsg:  "Failed to call LinkSetUp",
 			exist:   false,
-			on: func(mockNetlink *mocks.Netlink, errMsg string) {
+			on: func(mockNetlink *mocks.Netlink, mockFrr *mocks.Frr, errMsg string) {
 				bridgeName := fmt.Sprintf("br%d", *testVrf.Spec.Vni)
 				vrf := &netlink.Vrf{LinkAttrs: netlink.LinkAttrs{Name: testVrfID}, Table: 1001}
 				bridge := &netlink.Bridge{LinkAttrs: netlink.LinkAttrs{Name: bridgeName}}
@@ -247,7 +249,7 @@ func Test_CreateVrf(t *testing.T) {
 			errCode: codes.Unknown,
 			errMsg:  "Failed to call LinkSetUp",
 			exist:   false,
-			on: func(mockNetlink *mocks.Netlink, errMsg string) {
+			on: func(mockNetlink *mocks.Netlink, mockFrr *mocks.Frr, errMsg string) {
 				bridgeName := fmt.Sprintf("br%d", *testVrf.Spec.Vni)
 				vrf := &netlink.Vrf{LinkAttrs: netlink.LinkAttrs{Name: testVrfID}, Table: 1001}
 				bridge := &netlink.Bridge{LinkAttrs: netlink.LinkAttrs{Name: bridgeName}}
@@ -271,7 +273,7 @@ func Test_CreateVrf(t *testing.T) {
 			errCode: codes.Unknown,
 			errMsg:  "Failed to call LinkSetMaster",
 			exist:   false,
-			on: func(mockNetlink *mocks.Netlink, errMsg string) {
+			on: func(mockNetlink *mocks.Netlink, mockFrr *mocks.Frr, errMsg string) {
 				bridgeName := fmt.Sprintf("br%d", *testVrf.Spec.Vni)
 				vrf := &netlink.Vrf{LinkAttrs: netlink.LinkAttrs{Name: testVrfID}, Table: 1001}
 				bridge := &netlink.Bridge{LinkAttrs: netlink.LinkAttrs{Name: bridgeName}}
@@ -296,7 +298,7 @@ func Test_CreateVrf(t *testing.T) {
 			errCode: codes.Unknown,
 			errMsg:  "Failed to call LinkSetUp",
 			exist:   false,
-			on: func(mockNetlink *mocks.Netlink, errMsg string) {
+			on: func(mockNetlink *mocks.Netlink, mockFrr *mocks.Frr, errMsg string) {
 				bridgeName := fmt.Sprintf("br%d", *testVrf.Spec.Vni)
 				vrf := &netlink.Vrf{LinkAttrs: netlink.LinkAttrs{Name: testVrfID}, Table: 1001}
 				bridge := &netlink.Bridge{LinkAttrs: netlink.LinkAttrs{Name: bridgeName}}
@@ -323,7 +325,8 @@ func Test_CreateVrf(t *testing.T) {
 			// start GRPC mockup server
 			ctx := context.Background()
 			mockNetlink := mocks.NewNetlink(t)
-			opi := NewServerWithArgs(mockNetlink)
+			mockFrr := mocks.NewFrr(t)
+			opi := NewServerWithArgs(mockNetlink, mockFrr)
 			conn, err := grpc.DialContext(ctx,
 				"",
 				grpc.WithTransportCredentials(insecure.NewCredentials()),
@@ -347,7 +350,7 @@ func Test_CreateVrf(t *testing.T) {
 				tt.out.Name = testVrfName
 			}
 			if tt.on != nil {
-				tt.on(mockNetlink, tt.errMsg)
+				tt.on(mockNetlink, mockFrr, tt.errMsg)
 			}
 
 			request := &pb.CreateVrfRequest{Vrf: tt.in, VrfId: tt.id}
@@ -381,7 +384,7 @@ func Test_DeleteVrf(t *testing.T) {
 		errCode codes.Code
 		errMsg  string
 		missing bool
-		on      func(mockNetlink *mocks.Netlink, errMsg string)
+		on      func(mockNetlink *mocks.Netlink, mockFrr *mocks.Frr, errMsg string)
 	}{
 		"valid request with unknown key": {
 			in:      "unknown-id",
@@ -413,7 +416,7 @@ func Test_DeleteVrf(t *testing.T) {
 			errCode: codes.NotFound,
 			errMsg:  fmt.Sprintf("unable to find key %v", "vni1000"),
 			missing: false,
-			on: func(mockNetlink *mocks.Netlink, errMsg string) {
+			on: func(mockNetlink *mocks.Netlink, mockFrr *mocks.Frr, errMsg string) {
 				vxlanName := fmt.Sprintf("vni%d", *testVrf.Spec.Vni)
 				mockNetlink.EXPECT().LinkByName(mock.Anything, vxlanName).Return(nil, errors.New(errMsg)).Once()
 			},
@@ -424,7 +427,7 @@ func Test_DeleteVrf(t *testing.T) {
 			errCode: codes.Unknown,
 			errMsg:  "Failed to call LinkSetDown",
 			missing: false,
-			on: func(mockNetlink *mocks.Netlink, errMsg string) {
+			on: func(mockNetlink *mocks.Netlink, mockFrr *mocks.Frr, errMsg string) {
 				myip := make(net.IP, 4)
 				binary.BigEndian.PutUint32(myip, 167772162)
 				vxlanName := fmt.Sprintf("vni%d", *testVrf.Spec.Vni)
@@ -439,7 +442,7 @@ func Test_DeleteVrf(t *testing.T) {
 			errCode: codes.Unknown,
 			errMsg:  "Failed to call LinkDel",
 			missing: false,
-			on: func(mockNetlink *mocks.Netlink, errMsg string) {
+			on: func(mockNetlink *mocks.Netlink, mockFrr *mocks.Frr, errMsg string) {
 				myip := make(net.IP, 4)
 				binary.BigEndian.PutUint32(myip, 167772162)
 				vxlanName := fmt.Sprintf("vni%d", *testVrf.Spec.Vni)
@@ -455,7 +458,7 @@ func Test_DeleteVrf(t *testing.T) {
 			errCode: codes.NotFound,
 			errMsg:  fmt.Sprintf("unable to find key %v", "br1000"),
 			missing: false,
-			on: func(mockNetlink *mocks.Netlink, errMsg string) {
+			on: func(mockNetlink *mocks.Netlink, mockFrr *mocks.Frr, errMsg string) {
 				myip := make(net.IP, 4)
 				binary.BigEndian.PutUint32(myip, 167772162)
 				vxlanName := fmt.Sprintf("vni%d", *testVrf.Spec.Vni)
@@ -473,7 +476,7 @@ func Test_DeleteVrf(t *testing.T) {
 			errCode: codes.Unknown,
 			errMsg:  "Failed to call LinkSetDown",
 			missing: false,
-			on: func(mockNetlink *mocks.Netlink, errMsg string) {
+			on: func(mockNetlink *mocks.Netlink, mockFrr *mocks.Frr, errMsg string) {
 				myip := make(net.IP, 4)
 				binary.BigEndian.PutUint32(myip, 167772162)
 				vxlanName := fmt.Sprintf("vni%d", *testVrf.Spec.Vni)
@@ -493,7 +496,7 @@ func Test_DeleteVrf(t *testing.T) {
 			errCode: codes.Unknown,
 			errMsg:  "Failed to call LinkDel",
 			missing: false,
-			on: func(mockNetlink *mocks.Netlink, errMsg string) {
+			on: func(mockNetlink *mocks.Netlink, mockFrr *mocks.Frr, errMsg string) {
 				myip := make(net.IP, 4)
 				binary.BigEndian.PutUint32(myip, 167772162)
 				vxlanName := fmt.Sprintf("vni%d", *testVrf.Spec.Vni)
@@ -514,7 +517,7 @@ func Test_DeleteVrf(t *testing.T) {
 			errCode: codes.NotFound,
 			errMsg:  fmt.Sprintf("unable to find key %v", testVrfID),
 			missing: false,
-			on: func(mockNetlink *mocks.Netlink, errMsg string) {
+			on: func(mockNetlink *mocks.Netlink, mockFrr *mocks.Frr, errMsg string) {
 				myip := make(net.IP, 4)
 				binary.BigEndian.PutUint32(myip, 167772162)
 				vxlanName := fmt.Sprintf("vni%d", *testVrf.Spec.Vni)
@@ -536,7 +539,7 @@ func Test_DeleteVrf(t *testing.T) {
 			errCode: codes.Unknown,
 			errMsg:  "Failed to call LinkSetDown",
 			missing: false,
-			on: func(mockNetlink *mocks.Netlink, errMsg string) {
+			on: func(mockNetlink *mocks.Netlink, mockFrr *mocks.Frr, errMsg string) {
 				myip := make(net.IP, 4)
 				binary.BigEndian.PutUint32(myip, 167772162)
 				vxlanName := fmt.Sprintf("vni%d", *testVrf.Spec.Vni)
@@ -560,7 +563,7 @@ func Test_DeleteVrf(t *testing.T) {
 			errCode: codes.Unknown,
 			errMsg:  "Failed to call LinkDel",
 			missing: false,
-			on: func(mockNetlink *mocks.Netlink, errMsg string) {
+			on: func(mockNetlink *mocks.Netlink, mockFrr *mocks.Frr, errMsg string) {
 				myip := make(net.IP, 4)
 				binary.BigEndian.PutUint32(myip, 167772162)
 				vxlanName := fmt.Sprintf("vni%d", *testVrf.Spec.Vni)
@@ -585,7 +588,7 @@ func Test_DeleteVrf(t *testing.T) {
 			errCode: codes.OK,
 			errMsg:  "",
 			missing: false,
-			on: func(mockNetlink *mocks.Netlink, errMsg string) {
+			on: func(mockNetlink *mocks.Netlink, mockFrr *mocks.Frr, errMsg string) {
 				myip := make(net.IP, 4)
 				binary.BigEndian.PutUint32(myip, 167772162)
 				vxlanName := fmt.Sprintf("vni%d", *testVrf.Spec.Vni)
@@ -602,6 +605,9 @@ func Test_DeleteVrf(t *testing.T) {
 				mockNetlink.EXPECT().LinkByName(mock.Anything, testVrfID).Return(vrf, nil).Once()
 				mockNetlink.EXPECT().LinkSetDown(mock.Anything, vrf).Return(nil).Once()
 				mockNetlink.EXPECT().LinkDel(mock.Anything, vrf).Return(nil).Once()
+				// frr
+				mockFrr.EXPECT().FrrBgpCmd(mock.Anything, mock.Anything).Return("", nil).Once()
+				mockFrr.EXPECT().FrrZebraCmd(mock.Anything, mock.Anything).Return("", nil).Once()
 			},
 		},
 	}
@@ -612,7 +618,8 @@ func Test_DeleteVrf(t *testing.T) {
 			// start GRPC mockup server
 			ctx := context.Background()
 			mockNetlink := mocks.NewNetlink(t)
-			opi := NewServerWithArgs(mockNetlink)
+			mockFrr := mocks.NewFrr(t)
+			opi := NewServerWithArgs(mockNetlink, mockFrr)
 			conn, err := grpc.DialContext(ctx,
 				"",
 				grpc.WithTransportCredentials(insecure.NewCredentials()),
@@ -631,7 +638,7 @@ func Test_DeleteVrf(t *testing.T) {
 			fname1 := resourceIDToFullName("vrfs", tt.in)
 			opi.Vrfs[testVrfName] = protoClone(&testVrfWithStatus)
 			if tt.on != nil {
-				tt.on(mockNetlink, tt.errMsg)
+				tt.on(mockNetlink, mockFrr, tt.errMsg)
 			}
 
 			request := &pb.DeleteVrfRequest{Name: fname1, AllowMissing: tt.missing}
@@ -703,7 +710,8 @@ func Test_UpdateVrf(t *testing.T) {
 			// start GRPC mockup server
 			ctx := context.Background()
 			mockNetlink := mocks.NewNetlink(t)
-			opi := NewServerWithArgs(mockNetlink)
+			mockFrr := mocks.NewFrr(t)
+			opi := NewServerWithArgs(mockNetlink, mockFrr)
 			conn, err := grpc.DialContext(ctx,
 				"",
 				grpc.WithTransportCredentials(insecure.NewCredentials()),
@@ -783,7 +791,8 @@ func Test_GetVrf(t *testing.T) {
 			// start GRPC mockup server
 			ctx := context.Background()
 			mockNetlink := mocks.NewNetlink(t)
-			opi := NewServerWithArgs(mockNetlink)
+			mockFrr := mocks.NewFrr(t)
+			opi := NewServerWithArgs(mockNetlink, mockFrr)
 			conn, err := grpc.DialContext(ctx,
 				"",
 				grpc.WithTransportCredentials(insecure.NewCredentials()),
@@ -886,7 +895,8 @@ func Test_ListVrfs(t *testing.T) {
 			// start GRPC mockup server
 			ctx := context.Background()
 			mockNetlink := mocks.NewNetlink(t)
-			opi := NewServerWithArgs(mockNetlink)
+			mockFrr := mocks.NewFrr(t)
+			opi := NewServerWithArgs(mockNetlink, mockFrr)
 			conn, err := grpc.DialContext(ctx,
 				"",
 				grpc.WithTransportCredentials(insecure.NewCredentials()),

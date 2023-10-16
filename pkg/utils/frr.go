@@ -106,7 +106,6 @@ func (n *FrrWrapper) FrrBgpCmd(ctx context.Context, command string) (string, err
 // TelnetDialAndCommunicate connects to telnet with password and runs command
 func (n *FrrWrapper) TelnetDialAndCommunicate(ctx context.Context, command string, port int) (string, error) {
 	_, childSpan := n.tracer.Start(ctx, "frr.Command")
-	childSpan.SetAttributes(attribute.String("command.name", command))
 	defer childSpan.End()
 
 	if childSpan.IsRecording() {

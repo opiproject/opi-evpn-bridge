@@ -57,7 +57,7 @@ func Test_CreateBridgePort(t *testing.T) {
 		errCode codes.Code
 		errMsg  string
 		exist   bool
-		on      func(mockNetlink *mocks.Netlink, errMsg string)
+		on      func(mockNetlink *mocks.Netlink, mockFrr *mocks.Frr, errMsg string)
 	}{
 		"illegal resource_id": {
 			id:      "CapitalLettersNotAllowed",
@@ -132,7 +132,7 @@ func Test_CreateBridgePort(t *testing.T) {
 			errCode: codes.NotFound,
 			errMsg:  fmt.Sprintf("unable to find key %v", tenantbridgeName),
 			exist:   false,
-			on: func(mockNetlink *mocks.Netlink, errMsg string) {
+			on: func(mockNetlink *mocks.Netlink, mockFrr *mocks.Frr, errMsg string) {
 				mockNetlink.EXPECT().LinkByName(mock.Anything, tenantbridgeName).Return(nil, errors.New(errMsg)).Once()
 			},
 		},
@@ -143,7 +143,7 @@ func Test_CreateBridgePort(t *testing.T) {
 			errCode: codes.NotFound,
 			errMsg:  fmt.Sprintf("unable to find key %v", testBridgePortID),
 			exist:   false,
-			on: func(mockNetlink *mocks.Netlink, errMsg string) {
+			on: func(mockNetlink *mocks.Netlink, mockFrr *mocks.Frr, errMsg string) {
 				bridge := &netlink.Bridge{LinkAttrs: netlink.LinkAttrs{Name: tenantbridgeName}}
 				mockNetlink.EXPECT().LinkByName(mock.Anything, tenantbridgeName).Return(bridge, nil).Once()
 				mockNetlink.EXPECT().LinkByName(mock.Anything, testBridgePortID).Return(nil, errors.New(errMsg)).Once()
@@ -156,7 +156,7 @@ func Test_CreateBridgePort(t *testing.T) {
 			errCode: codes.Unknown,
 			errMsg:  "Failed to call LinkSetHardwareAddr",
 			exist:   false,
-			on: func(mockNetlink *mocks.Netlink, errMsg string) {
+			on: func(mockNetlink *mocks.Netlink, mockFrr *mocks.Frr, errMsg string) {
 				bridge := &netlink.Bridge{LinkAttrs: netlink.LinkAttrs{Name: tenantbridgeName}}
 				mockNetlink.EXPECT().LinkByName(mock.Anything, tenantbridgeName).Return(bridge, nil).Once()
 				iface := &netlink.Dummy{LinkAttrs: netlink.LinkAttrs{Name: testBridgePortID}}
@@ -172,7 +172,7 @@ func Test_CreateBridgePort(t *testing.T) {
 			errCode: codes.Unknown,
 			errMsg:  "Failed to call LinkSetMaster",
 			exist:   false,
-			on: func(mockNetlink *mocks.Netlink, errMsg string) {
+			on: func(mockNetlink *mocks.Netlink, mockFrr *mocks.Frr, errMsg string) {
 				bridge := &netlink.Bridge{LinkAttrs: netlink.LinkAttrs{Name: tenantbridgeName}}
 				mockNetlink.EXPECT().LinkByName(mock.Anything, tenantbridgeName).Return(bridge, nil).Once()
 				iface := &netlink.Dummy{LinkAttrs: netlink.LinkAttrs{Name: testBridgePortID}}
@@ -195,7 +195,7 @@ func Test_CreateBridgePort(t *testing.T) {
 			errCode: codes.NotFound,
 			errMsg:  fmt.Sprintf("unable to find key %v", "Japan"),
 			exist:   false,
-			on: func(mockNetlink *mocks.Netlink, errMsg string) {
+			on: func(mockNetlink *mocks.Netlink, mockFrr *mocks.Frr, errMsg string) {
 				bridge := &netlink.Bridge{LinkAttrs: netlink.LinkAttrs{Name: tenantbridgeName}}
 				mockNetlink.EXPECT().LinkByName(mock.Anything, tenantbridgeName).Return(bridge, nil).Once()
 				iface := &netlink.Dummy{LinkAttrs: netlink.LinkAttrs{Name: testBridgePortID}}
@@ -212,7 +212,7 @@ func Test_CreateBridgePort(t *testing.T) {
 			errCode: codes.Unknown,
 			errMsg:  "Failed to call BridgeVlanAdd",
 			exist:   false,
-			on: func(mockNetlink *mocks.Netlink, errMsg string) {
+			on: func(mockNetlink *mocks.Netlink, mockFrr *mocks.Frr, errMsg string) {
 				bridge := &netlink.Bridge{LinkAttrs: netlink.LinkAttrs{Name: tenantbridgeName}}
 				mockNetlink.EXPECT().LinkByName(mock.Anything, tenantbridgeName).Return(bridge, nil).Once()
 				iface := &netlink.Dummy{LinkAttrs: netlink.LinkAttrs{Name: testBridgePortID}}
@@ -237,7 +237,7 @@ func Test_CreateBridgePort(t *testing.T) {
 			errCode: codes.Unknown,
 			errMsg:  "Failed to call BridgeVlanAdd",
 			exist:   false,
-			on: func(mockNetlink *mocks.Netlink, errMsg string) {
+			on: func(mockNetlink *mocks.Netlink, mockFrr *mocks.Frr, errMsg string) {
 				bridge := &netlink.Bridge{LinkAttrs: netlink.LinkAttrs{Name: tenantbridgeName}}
 				mockNetlink.EXPECT().LinkByName(mock.Anything, tenantbridgeName).Return(bridge, nil).Once()
 				iface := &netlink.Dummy{LinkAttrs: netlink.LinkAttrs{Name: testBridgePortID}}
@@ -256,7 +256,7 @@ func Test_CreateBridgePort(t *testing.T) {
 			errCode: codes.Unknown,
 			errMsg:  "Failed to call LinkSetUp",
 			exist:   false,
-			on: func(mockNetlink *mocks.Netlink, errMsg string) {
+			on: func(mockNetlink *mocks.Netlink, mockFrr *mocks.Frr, errMsg string) {
 				bridge := &netlink.Bridge{LinkAttrs: netlink.LinkAttrs{Name: tenantbridgeName}}
 				mockNetlink.EXPECT().LinkByName(mock.Anything, tenantbridgeName).Return(bridge, nil).Once()
 				iface := &netlink.Dummy{LinkAttrs: netlink.LinkAttrs{Name: testBridgePortID}}
@@ -276,7 +276,7 @@ func Test_CreateBridgePort(t *testing.T) {
 			errCode: codes.OK,
 			errMsg:  "",
 			exist:   false,
-			on: func(mockNetlink *mocks.Netlink, errMsg string) {
+			on: func(mockNetlink *mocks.Netlink, mockFrr *mocks.Frr, errMsg string) {
 				bridge := &netlink.Bridge{LinkAttrs: netlink.LinkAttrs{Name: tenantbridgeName}}
 				mockNetlink.EXPECT().LinkByName(mock.Anything, tenantbridgeName).Return(bridge, nil).Once()
 				iface := &netlink.Dummy{LinkAttrs: netlink.LinkAttrs{Name: testBridgePortID}}
@@ -297,7 +297,8 @@ func Test_CreateBridgePort(t *testing.T) {
 			// start GRPC mockup server
 			ctx := context.Background()
 			mockNetlink := mocks.NewNetlink(t)
-			opi := NewServerWithArgs(mockNetlink)
+			mockFrr := mocks.NewFrr(t)
+			opi := NewServerWithArgs(mockNetlink, mockFrr)
 			conn, err := grpc.DialContext(ctx,
 				"",
 				grpc.WithTransportCredentials(insecure.NewCredentials()),
@@ -322,7 +323,7 @@ func Test_CreateBridgePort(t *testing.T) {
 				tt.out.Name = testBridgePortName
 			}
 			if tt.on != nil {
-				tt.on(mockNetlink, tt.errMsg)
+				tt.on(mockNetlink, mockFrr, tt.errMsg)
 			}
 
 			request := &pb.CreateBridgePortRequest{BridgePort: tt.in, BridgePortId: tt.id}
@@ -352,7 +353,7 @@ func Test_DeleteBridgePort(t *testing.T) {
 		errCode codes.Code
 		errMsg  string
 		missing bool
-		on      func(mockNetlink *mocks.Netlink, errMsg string)
+		on      func(mockNetlink *mocks.Netlink, mockFrr *mocks.Frr, errMsg string)
 	}{
 		"valid request with unknown key": {
 			in:      "unknown-id",
@@ -384,7 +385,7 @@ func Test_DeleteBridgePort(t *testing.T) {
 			errCode: codes.NotFound,
 			errMsg:  fmt.Sprintf("unable to find key %v", testBridgePortID),
 			missing: false,
-			on: func(mockNetlink *mocks.Netlink, errMsg string) {
+			on: func(mockNetlink *mocks.Netlink, mockFrr *mocks.Frr, errMsg string) {
 				mockNetlink.EXPECT().LinkByName(mock.Anything, testBridgePortID).Return(nil, errors.New(errMsg)).Once()
 			},
 		},
@@ -394,7 +395,7 @@ func Test_DeleteBridgePort(t *testing.T) {
 			errCode: codes.Unknown,
 			errMsg:  "Failed to call LinkSetDown",
 			missing: false,
-			on: func(mockNetlink *mocks.Netlink, errMsg string) {
+			on: func(mockNetlink *mocks.Netlink, mockFrr *mocks.Frr, errMsg string) {
 				iface := &netlink.Dummy{LinkAttrs: netlink.LinkAttrs{Name: testBridgePortID}}
 				mockNetlink.EXPECT().LinkByName(mock.Anything, testBridgePortID).Return(iface, nil).Once()
 				mockNetlink.EXPECT().LinkSetDown(mock.Anything, iface).Return(errors.New(errMsg)).Once()
@@ -406,7 +407,7 @@ func Test_DeleteBridgePort(t *testing.T) {
 			errCode: codes.Unknown,
 			errMsg:  "Failed to call BridgeVlanDel",
 			missing: false,
-			on: func(mockNetlink *mocks.Netlink, errMsg string) {
+			on: func(mockNetlink *mocks.Netlink, mockFrr *mocks.Frr, errMsg string) {
 				iface := &netlink.Dummy{LinkAttrs: netlink.LinkAttrs{Name: testBridgePortID}}
 				mockNetlink.EXPECT().LinkByName(mock.Anything, testBridgePortID).Return(iface, nil).Once()
 				mockNetlink.EXPECT().LinkSetDown(mock.Anything, iface).Return(nil).Once()
@@ -420,7 +421,7 @@ func Test_DeleteBridgePort(t *testing.T) {
 			errCode: codes.Unknown,
 			errMsg:  "Failed to call LinkDel",
 			missing: false,
-			on: func(mockNetlink *mocks.Netlink, errMsg string) {
+			on: func(mockNetlink *mocks.Netlink, mockFrr *mocks.Frr, errMsg string) {
 				iface := &netlink.Dummy{LinkAttrs: netlink.LinkAttrs{Name: testBridgePortID}}
 				mockNetlink.EXPECT().LinkByName(mock.Anything, testBridgePortID).Return(iface, nil).Once()
 				mockNetlink.EXPECT().LinkSetDown(mock.Anything, iface).Return(nil).Once()
@@ -435,7 +436,7 @@ func Test_DeleteBridgePort(t *testing.T) {
 			errCode: codes.OK,
 			errMsg:  "",
 			missing: false,
-			on: func(mockNetlink *mocks.Netlink, errMsg string) {
+			on: func(mockNetlink *mocks.Netlink, mockFrr *mocks.Frr, errMsg string) {
 				iface := &netlink.Dummy{LinkAttrs: netlink.LinkAttrs{Name: testBridgePortID}}
 				mockNetlink.EXPECT().LinkByName(mock.Anything, testBridgePortID).Return(iface, nil).Once()
 				mockNetlink.EXPECT().LinkSetDown(mock.Anything, iface).Return(nil).Once()
@@ -452,7 +453,8 @@ func Test_DeleteBridgePort(t *testing.T) {
 			// start GRPC mockup server
 			ctx := context.Background()
 			mockNetlink := mocks.NewNetlink(t)
-			opi := NewServerWithArgs(mockNetlink)
+			mockFrr := mocks.NewFrr(t)
+			opi := NewServerWithArgs(mockNetlink, mockFrr)
 			conn, err := grpc.DialContext(ctx,
 				"",
 				grpc.WithTransportCredentials(insecure.NewCredentials()),
@@ -472,7 +474,7 @@ func Test_DeleteBridgePort(t *testing.T) {
 			opi.Ports[testBridgePortName] = protoClone(&testBridgePortWithStatus)
 			opi.Bridges[testLogicalBridgeName] = protoClone(&testLogicalBridgeWithStatus)
 			if tt.on != nil {
-				tt.on(mockNetlink, tt.errMsg)
+				tt.on(mockNetlink, mockFrr, tt.errMsg)
 			}
 
 			request := &pb.DeleteBridgePortRequest{Name: fname1, AllowMissing: tt.missing}
@@ -543,7 +545,8 @@ func Test_UpdateBridgePort(t *testing.T) {
 			// start GRPC mockup server
 			ctx := context.Background()
 			mockNetlink := mocks.NewNetlink(t)
-			opi := NewServerWithArgs(mockNetlink)
+			mockFrr := mocks.NewFrr(t)
+			opi := NewServerWithArgs(mockNetlink, mockFrr)
 			conn, err := grpc.DialContext(ctx,
 				"",
 				grpc.WithTransportCredentials(insecure.NewCredentials()),
@@ -623,7 +626,8 @@ func Test_GetBridgePort(t *testing.T) {
 			// start GRPC mockup server
 			ctx := context.Background()
 			mockNetlink := mocks.NewNetlink(t)
-			opi := NewServerWithArgs(mockNetlink)
+			mockFrr := mocks.NewFrr(t)
+			opi := NewServerWithArgs(mockNetlink, mockFrr)
 			conn, err := grpc.DialContext(ctx,
 				"",
 				grpc.WithTransportCredentials(insecure.NewCredentials()),
@@ -726,7 +730,8 @@ func Test_ListBridgePorts(t *testing.T) {
 			// start GRPC mockup server
 			ctx := context.Background()
 			mockNetlink := mocks.NewNetlink(t)
-			opi := NewServerWithArgs(mockNetlink)
+			mockFrr := mocks.NewFrr(t)
+			opi := NewServerWithArgs(mockNetlink, mockFrr)
 			conn, err := grpc.DialContext(ctx,
 				"",
 				grpc.WithTransportCredentials(insecure.NewCredentials()),
