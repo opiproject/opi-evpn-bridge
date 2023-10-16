@@ -18,7 +18,6 @@ import (
 	"github.com/vishvananda/netlink"
 
 	pb "github.com/opiproject/opi-api/network/evpn-gw/v1alpha1/gen/go"
-	"github.com/opiproject/opi-evpn-bridge/pkg/utils"
 
 	"go.einride.tech/aip/fieldbehavior"
 	"go.einride.tech/aip/resourceid"
@@ -103,7 +102,8 @@ func (s *Server) CreateSvi(ctx context.Context, in *pb.CreateSviRequest) (*pb.Sv
 		}
 	}
 	// get net device by name
-	vrfdev, err := s.nLink.LinkByName(ctx, path.Base(vrf.Name))
+	vrfName := path.Base(vrf.Name)
+	vrfdev, err := s.nLink.LinkByName(ctx, vrfName)
 	if err != nil {
 		err := status.Errorf(codes.NotFound, "unable to find key %s", vrf.Name)
 		return nil, err
@@ -119,8 +119,10 @@ func (s *Server) CreateSvi(ctx context.Context, in *pb.CreateSviRequest) (*pb.Sv
 		return nil, err
 	}
 	// configure FRR
-	data, err := utils.FrrZebraCmd(ctx, "show vrf "+path.Base(vrf.Name)+" vni")
-	fmt.Printf("FrrZebraCmd: %v:%v", data, err)
+	if err := s.frrCreateSviRequest(ctx, in, vrfName, vlanName); err != nil {
+		fmt.Printf("skip err check for now: %v", err)
+		// return nil, err
+	}
 	// save object to the database
 	response := protoClone(in.Svi)
 	response.Status = &pb.SviStatus{OperStatus: pb.SVIOperStatus_SVI_OPER_STATUS_UP}
@@ -177,6 +179,18 @@ func (s *Server) DeleteSvi(ctx context.Context, in *pb.DeleteSviRequest) (*empty
 	if err := s.nLink.LinkDel(ctx, vlandev); err != nil {
 		fmt.Printf("Failed to delete link: %v", err)
 		return nil, err
+	}
+	// fetch object from the database
+	vrf, ok := s.Vrfs[obj.Spec.Vrf]
+	if !ok {
+		err := status.Errorf(codes.NotFound, "unable to find key %s", obj.Spec.Vrf)
+		return nil, err
+	}
+	vrfName := path.Base(vrf.Name)
+	// delete from FRR
+	if err := s.frrDeleteSviRequest(ctx, obj, vrfName, vlanName); err != nil {
+		fmt.Printf("skip err check for now: %v", err)
+		// return nil, err
 	}
 	// remove from the Database
 	delete(s.Svis, obj.Name)
