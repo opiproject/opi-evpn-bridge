@@ -78,3 +78,36 @@ func (s *Server) netlinkCreateSvi(ctx context.Context, in *pb.CreateSviRequest, 
 	}
 	return nil
 }
+
+func (s *Server) netlinkDeleteSvi(ctx context.Context, _ *pb.DeleteSviRequest, bridgeObject *pb.LogicalBridge, _ *pb.Vrf) error {
+	// use netlink to find br-tenant
+	bridge, err := s.nLink.LinkByName(ctx, tenantbridgeName)
+	if err != nil {
+		err := status.Errorf(codes.NotFound, "unable to find key %s", tenantbridgeName)
+		return err
+	}
+	vid := uint16(bridgeObject.Spec.VlanId)
+	// Example: bridge vlan del dev br-tenant vid <vlan-id> self
+	if err := s.nLink.BridgeVlanDel(ctx, bridge, vid, false, false, true, false); err != nil {
+		fmt.Printf("Failed to del vlan to bridge: %v", err)
+		return err
+	}
+	vlanName := fmt.Sprintf("vlan%d", vid)
+	vlandev, err := s.nLink.LinkByName(ctx, vlanName)
+	if err != nil {
+		err := status.Errorf(codes.NotFound, "unable to find key %s", vlanName)
+		return err
+	}
+	log.Printf("Deleting VLAN %v", vlandev)
+	// bring link down
+	if err := s.nLink.LinkSetDown(ctx, vlandev); err != nil {
+		fmt.Printf("Failed to up link: %v", err)
+		return err
+	}
+	// use netlink to delete vlan
+	if err := s.nLink.LinkDel(ctx, vlandev); err != nil {
+		fmt.Printf("Failed to delete link: %v", err)
+		return err
+	}
+	return nil
+}

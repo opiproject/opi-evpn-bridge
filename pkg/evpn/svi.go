@@ -93,39 +93,10 @@ func (s *Server) DeleteSvi(ctx context.Context, in *pb.DeleteSviRequest) (*empty
 		err := status.Errorf(codes.NotFound, "unable to find key %s", in.Name)
 		return nil, err
 	}
-	// use netlink to find br-tenant
-	bridge, err := s.nLink.LinkByName(ctx, tenantbridgeName)
-	if err != nil {
-		err := status.Errorf(codes.NotFound, "unable to find key %s", tenantbridgeName)
-		return nil, err
-	}
-	// use netlink to find VlanId from LogicalBridge object
+	// fetch object from the database
 	bridgeObject, ok := s.Bridges[obj.Spec.LogicalBridge]
 	if !ok {
 		err := status.Errorf(codes.NotFound, "unable to find key %s", obj.Spec.LogicalBridge)
-		return nil, err
-	}
-	vid := uint16(bridgeObject.Spec.VlanId)
-	// Example: bridge vlan del dev br-tenant vid <vlan-id> self
-	if err := s.nLink.BridgeVlanDel(ctx, bridge, vid, false, false, true, false); err != nil {
-		fmt.Printf("Failed to del vlan to bridge: %v", err)
-		return nil, err
-	}
-	vlanName := fmt.Sprintf("vlan%d", vid)
-	vlandev, err := s.nLink.LinkByName(ctx, vlanName)
-	if err != nil {
-		err := status.Errorf(codes.NotFound, "unable to find key %s", vlanName)
-		return nil, err
-	}
-	log.Printf("Deleting VLAN %v", vlandev)
-	// bring link down
-	if err := s.nLink.LinkSetDown(ctx, vlandev); err != nil {
-		fmt.Printf("Failed to up link: %v", err)
-		return nil, err
-	}
-	// use netlink to delete vlan
-	if err := s.nLink.LinkDel(ctx, vlandev); err != nil {
-		fmt.Printf("Failed to delete link: %v", err)
 		return nil, err
 	}
 	// fetch object from the database
@@ -134,8 +105,14 @@ func (s *Server) DeleteSvi(ctx context.Context, in *pb.DeleteSviRequest) (*empty
 		err := status.Errorf(codes.NotFound, "unable to find key %s", obj.Spec.Vrf)
 		return nil, err
 	}
-	vrfName := path.Base(vrf.Name)
+	// configure netlink
+	if err := s.netlinkDeleteSvi(ctx, in, bridgeObject, vrf); err != nil {
+		return nil, err
+	}
 	// delete from FRR
+	vrfName := path.Base(vrf.Name)
+	vid := uint16(bridgeObject.Spec.VlanId)
+	vlanName := fmt.Sprintf("vlan%d", vid)
 	if err := s.frrDeleteSviRequest(ctx, obj, vrfName, vlanName); err != nil {
 		return nil, err
 	}
