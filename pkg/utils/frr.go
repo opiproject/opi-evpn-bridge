@@ -113,6 +113,25 @@ func (n *FrrWrapper) FrrBgpCmd(ctx context.Context, command string) (string, err
 	return n.TelnetDialAndCommunicate(ctx, command, bgpd)
 }
 
+// MultiLineCmd breaks command by lines, sends each and waits for output and returns combined output
+func (n *FrrWrapper) MultiLineCmd(conn *telnet.Conn, command string) (string, error) {
+	// multi-line command
+	scanner := bufio.NewScanner(strings.NewReader(command))
+	result := []byte{}
+	for scanner.Scan() {
+		_, err := conn.Write([]byte(scanner.Text() + "\n"))
+		if err != nil {
+			return string(result), err
+		}
+		data, err := conn.ReadBytes('#')
+		if err != nil {
+			return string(result), err
+		}
+		result = append(result, data...)
+	}
+	return string(result), nil
+}
+
 // TelnetDialAndCommunicate connects to telnet with password and runs command
 func (n *FrrWrapper) TelnetDialAndCommunicate(ctx context.Context, command string, port int) (string, error) {
 	_, childSpan := n.tracer.Start(ctx, "frr.Command")
@@ -151,19 +170,5 @@ func (n *FrrWrapper) TelnetDialAndCommunicate(ctx context.Context, command strin
 		return "", err
 	}
 
-	// multi-line command
-	scanner := bufio.NewScanner(strings.NewReader(command))
-	result := []byte{}
-	for scanner.Scan() {
-		_, err = conn.Write([]byte(scanner.Text() + "\n"))
-		if err != nil {
-			return "", err
-		}
-		data, err := conn.ReadBytes('#')
-		if err != nil {
-			return "", err
-		}
-		result = append(result, data...)
-	}
-	return string(result), nil
+	return n.MultiLineCmd(conn, command)
 }
