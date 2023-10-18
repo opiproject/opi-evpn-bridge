@@ -13,7 +13,7 @@ import (
 	"sort"
 
 	"github.com/google/uuid"
-	// "github.com/vishvananda/netlink"
+	"github.com/opiproject/opi-evpn-bridge/pkg/models"
 
 	pb "github.com/opiproject/opi-api/network/evpn-gw/v1alpha1/gen/go"
 
@@ -108,9 +108,11 @@ func (s *Server) CreateBridgePort(ctx context.Context, in *pb.CreateBridgePortRe
 		fmt.Printf("Failed to up iface link: %v", err)
 		return nil, err
 	}
-	// save object to the database
+	// translate object
 	response := protoClone(in.BridgePort)
 	response.Status = &pb.BridgePortStatus{OperStatus: pb.BPOperStatus_BP_OPER_STATUS_UP}
+	log.Printf("new object %v", models.NewPort(response))
+	// save object to the database
 	s.Ports[in.BridgePort.Name] = response
 	return response, nil
 }
