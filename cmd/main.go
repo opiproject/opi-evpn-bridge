@@ -21,7 +21,7 @@ import (
 	"github.com/opiproject/opi-smbios-bridge/pkg/inventory"
 
 	"github.com/philippgille/gokv"
-	"github.com/philippgille/gokv/gomap"
+	"github.com/philippgille/gokv/redis"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -46,9 +46,11 @@ func main() {
 	flag.Parse()
 
 	// Create KV store for persistence
-	options := gomap.DefaultOptions
-	// TODO: we can change to redis or badger at any given time
-	store := gomap.NewStore(options)
+	options := redis.DefaultOptions
+	store, err := redis.NewClient(options)
+	if err != nil {
+		log.Panic(err)
+	}
 	defer func(store gokv.Store) {
 		err := store.Close()
 		if err != nil {
