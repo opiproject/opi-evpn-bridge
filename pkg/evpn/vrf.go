@@ -14,6 +14,7 @@ import (
 	"sort"
 
 	"github.com/google/uuid"
+	"github.com/opiproject/opi-evpn-bridge/pkg/models"
 
 	pb "github.com/opiproject/opi-api/network/evpn-gw/v1alpha1/gen/go"
 
@@ -68,9 +69,11 @@ func (s *Server) CreateVrf(ctx context.Context, in *pb.CreateVrfRequest) (*pb.Vr
 	if err := s.frrCreateVrfRequest(ctx, in); err != nil {
 		return nil, err
 	}
-	// save object to the database
+	// translate object
 	response := protoClone(in.Vrf)
 	response.Status = &pb.VrfStatus{LocalAs: 4, RoutingTable: tableID, Rmac: mac}
+	log.Printf("new object %v", models.NewVrf(response))
+	// save object to the database
 	s.Vrfs[in.Vrf.Name] = response
 	return response, nil
 }
