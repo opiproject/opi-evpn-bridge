@@ -22,6 +22,7 @@ import (
 )
 
 func (s *Server) netlinkCreateSvi(ctx context.Context, in *pb.CreateSviRequest, bridgeObject *pb.LogicalBridge, vrf *pb.Vrf) error {
+	// use netlink to find br-tenant
 	bridge, err := s.nLink.LinkByName(ctx, tenantbridgeName)
 	if err != nil {
 		err := status.Errorf(codes.NotFound, "unable to find key %s", tenantbridgeName)
