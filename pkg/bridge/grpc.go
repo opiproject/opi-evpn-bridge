@@ -9,7 +9,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"sort"
 	"strings"
 
 	"github.com/google/uuid"
@@ -23,12 +22,6 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
-
-func sortLogicalBridges(bridges []*pb.LogicalBridge) {
-	sort.Slice(bridges, func(i int, j int) bool {
-		return bridges[i].Name < bridges[j].Name
-	})
-}
 
 // CreateLogicalBridge executes the creation of the LogicalBridge
 func (s *Server) CreateLogicalBridge(ctx context.Context, in *pb.CreateLogicalBridgeRequest) (*pb.LogicalBridge, error) {

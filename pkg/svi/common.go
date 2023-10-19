@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"sort"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -19,6 +20,12 @@ import (
 	pb "github.com/opiproject/opi-api/network/evpn-gw/v1alpha1/gen/go"
 	pc "github.com/opiproject/opi-api/network/opinetcommon/v1alpha1/gen/go"
 )
+
+func sortSvis(svis []*pb.Svi) {
+	sort.Slice(svis, func(i int, j int) bool {
+		return svis[i].Name < svis[j].Name
+	})
+}
 
 // TODO: move all of this to a common place
 const (

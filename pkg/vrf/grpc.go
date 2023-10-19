@@ -11,7 +11,6 @@ import (
 	"log"
 	"math"
 	"path"
-	"sort"
 	"strings"
 
 	"github.com/google/uuid"
@@ -25,12 +24,6 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
-
-func sortVrfs(vrfs []*pb.Vrf) {
-	sort.Slice(vrfs, func(i int, j int) bool {
-		return vrfs[i].Name < vrfs[j].Name
-	})
-}
 
 // CreateVrf executes the creation of the VRF
 func (s *Server) CreateVrf(ctx context.Context, in *pb.CreateVrfRequest) (*pb.Vrf, error) {

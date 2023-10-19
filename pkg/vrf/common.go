@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"sort"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -19,6 +20,12 @@ import (
 
 	pb "github.com/opiproject/opi-api/network/evpn-gw/v1alpha1/gen/go"
 )
+
+func sortVrfs(vrfs []*pb.Vrf) {
+	sort.Slice(vrfs, func(i int, j int) bool {
+		return vrfs[i].Name < vrfs[j].Name
+	})
+}
 
 // TODO: move all of this to a common place
 func resourceIDToFullName(_ string, resourceID string) string {

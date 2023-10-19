@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"log"
 	"path"
-	"sort"
 	"strings"
 
 	"github.com/google/uuid"
@@ -24,12 +23,6 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
-
-func sortSvis(svis []*pb.Svi) {
-	sort.Slice(svis, func(i int, j int) bool {
-		return svis[i].Name < svis[j].Name
-	})
-}
 
 // CreateSvi executes the creation of the VLAN
 func (s *Server) CreateSvi(ctx context.Context, in *pb.CreateSviRequest) (*pb.Svi, error) {
