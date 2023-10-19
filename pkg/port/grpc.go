@@ -172,7 +172,7 @@ func (s *Server) ListBridgePorts(_ context.Context, in *pb.ListBridgePortsReques
 		return nil, err
 	}
 	// fetch pagination from the database, calculate size and offset
-	size, offset, perr := extractPagination(in.PageSize, in.PageToken, s.Pagination)
+	size, offset, perr := utils.ExtractPagination(in.PageSize, in.PageToken, s.Pagination)
 	if perr != nil {
 		return nil, perr
 	}
@@ -197,7 +197,7 @@ func (s *Server) ListBridgePorts(_ context.Context, in *pb.ListBridgePortsReques
 	// sort is needed, since MAP is unsorted in golang, and we might get different results
 	sortBridgePorts(Blobarray)
 	log.Printf("Limiting result len(%d) to [%d:%d]", len(Blobarray), offset, size)
-	Blobarray, hasMoreElements := limitPagination(Blobarray, offset, size)
+	Blobarray, hasMoreElements := utils.LimitPagination(Blobarray, offset, size)
 	token := ""
 	if hasMoreElements {
 		token = uuid.New().String()
