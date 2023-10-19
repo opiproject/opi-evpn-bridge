@@ -23,6 +23,7 @@ import (
 func (s *Server) netlinkCreateLogicalBridge(ctx context.Context, in *pb.CreateLogicalBridgeRequest) error {
 	// create vxlan only if VNI is not empty
 	if in.LogicalBridge.Spec.Vni != nil {
+		// use netlink to find br-tenant
 		bridge, err := s.nLink.LinkByName(ctx, tenantbridgeName)
 		if err != nil {
 			err := status.Errorf(codes.NotFound, "unable to find key %s", tenantbridgeName)
