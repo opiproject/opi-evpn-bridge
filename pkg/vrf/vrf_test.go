@@ -349,7 +349,7 @@ func Test_CreateVrf(t *testing.T) {
 				_ = opi.store.Set(testVrfName, &testVrfWithStatus)
 			}
 			if tt.out != nil {
-				tt.out = protoClone(tt.out)
+				tt.out = utils.ProtoClone(tt.out)
 				tt.out.Name = testVrfName
 			}
 			if tt.on != nil {
@@ -736,7 +736,7 @@ func Test_UpdateVrf(t *testing.T) {
 				_ = opi.store.Set(testVrfName, &testVrfWithStatus)
 			}
 			if tt.out != nil {
-				tt.out = protoClone(tt.out)
+				tt.out = utils.ProtoClone(tt.out)
 				tt.out.Name = testVrfName
 			}
 
@@ -925,7 +925,7 @@ func Test_ListVrfs(t *testing.T) {
 
 			request := &pb.ListVrfsRequest{PageSize: tt.size, PageToken: tt.token}
 			response, err := client.ListVrfs(ctx, request)
-			if !equalProtoSlices(response.GetVrfs(), tt.out) {
+			if !utils.EqualProtoSlices(response.GetVrfs(), tt.out) {
 				t.Error("response: expected", tt.out, "received", response.GetVrfs())
 			}
 

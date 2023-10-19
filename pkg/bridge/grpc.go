@@ -13,6 +13,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/opiproject/opi-evpn-bridge/pkg/models"
+	"github.com/opiproject/opi-evpn-bridge/pkg/utils"
 
 	pb "github.com/opiproject/opi-api/network/evpn-gw/v1alpha1/gen/go"
 
@@ -52,7 +53,7 @@ func (s *Server) CreateLogicalBridge(ctx context.Context, in *pb.CreateLogicalBr
 		return nil, err
 	}
 	// translate object
-	response := protoClone(in.LogicalBridge)
+	response := utils.ProtoClone(in.LogicalBridge)
 	response.Status = &pb.LogicalBridgeStatus{OperStatus: pb.LBOperStatus_LB_OPER_STATUS_UP}
 	log.Printf("new object %v", models.NewBridge(response))
 	// save object to the database
@@ -130,7 +131,7 @@ func (s *Server) UpdateLogicalBridge(ctx context.Context, in *pb.UpdateLogicalBr
 			return nil, err
 		}
 	}
-	response := protoClone(in.LogicalBridge)
+	response := utils.ProtoClone(in.LogicalBridge)
 	response.Status = &pb.LogicalBridgeStatus{OperStatus: pb.LBOperStatus_LB_OPER_STATUS_UP}
 	err = s.store.Set(in.LogicalBridge.Name, response)
 	if err != nil {

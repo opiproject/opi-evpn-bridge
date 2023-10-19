@@ -322,7 +322,7 @@ func Test_CreateBridgePort(t *testing.T) {
 				_ = opi.store.Set(testBridgePortName, &testBridgePortWithStatus)
 			}
 			if tt.out != nil {
-				tt.out = protoClone(tt.out)
+				tt.out = utils.ProtoClone(tt.out)
 				tt.out.Name = testBridgePortName
 			}
 			if tt.on != nil {
@@ -571,7 +571,7 @@ func Test_UpdateBridgePort(t *testing.T) {
 				_ = opi.store.Set(testBridgePortName, &testBridgePortWithStatus)
 			}
 			if tt.out != nil {
-				tt.out = protoClone(tt.out)
+				tt.out = utils.ProtoClone(tt.out)
 				tt.out.Name = testBridgePortName
 			}
 
@@ -760,7 +760,7 @@ func Test_ListBridgePorts(t *testing.T) {
 
 			request := &pb.ListBridgePortsRequest{PageSize: tt.size, PageToken: tt.token}
 			response, err := client.ListBridgePorts(ctx, request)
-			if !equalProtoSlices(response.GetBridgePorts(), tt.out) {
+			if !utils.EqualProtoSlices(response.GetBridgePorts(), tt.out) {
 				t.Error("response: expected", tt.out, "received", response.GetBridgePorts())
 			}
 

@@ -280,7 +280,7 @@ func Test_CreateLogicalBridge(t *testing.T) {
 				_ = opi.store.Set(testLogicalBridgeName, &testLogicalBridgeWithStatus)
 			}
 			if tt.out != nil {
-				tt.out = protoClone(tt.out)
+				tt.out = utils.ProtoClone(tt.out)
 				tt.out.Name = testLogicalBridgeName
 			}
 			if tt.on != nil {
@@ -541,7 +541,7 @@ func Test_UpdateLogicalBridge(t *testing.T) {
 				_ = opi.store.Set(testLogicalBridgeName, &testLogicalBridgeWithStatus)
 			}
 			if tt.out != nil {
-				tt.out = protoClone(tt.out)
+				tt.out = utils.ProtoClone(tt.out)
 				tt.out.Name = testLogicalBridgeName
 			}
 
@@ -730,7 +730,7 @@ func Test_ListLogicalBridges(t *testing.T) {
 
 			request := &pb.ListLogicalBridgesRequest{PageSize: tt.size, PageToken: tt.token}
 			response, err := client.ListLogicalBridges(ctx, request)
-			if !equalProtoSlices(response.GetLogicalBridges(), tt.out) {
+			if !utils.EqualProtoSlices(response.GetLogicalBridges(), tt.out) {
 				t.Error("response: expected", tt.out, "received", response.GetLogicalBridges())
 			}
 

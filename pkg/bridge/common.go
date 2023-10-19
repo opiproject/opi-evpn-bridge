@@ -15,7 +15,6 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/grpc/test/bufconn"
-	"google.golang.org/protobuf/proto"
 
 	pb "github.com/opiproject/opi-api/network/evpn-gw/v1alpha1/gen/go"
 )
@@ -33,10 +32,6 @@ const (
 
 func resourceIDToFullName(_ string, resourceID string) string {
 	return fmt.Sprintf("//network.opiproject.org/bridges/%s", resourceID)
-}
-
-func protoClone[T proto.Message](protoStruct T) T {
-	return proto.Clone(protoStruct).(T)
 }
 
 func extractPagination(pageSize int32, pageToken string, pagination map[string]int) (size int, offset int, err error) {
@@ -93,18 +88,4 @@ func dialer(opi *Server) func(context.Context, string) (net.Conn, error) {
 	return func(context.Context, string) (net.Conn, error) {
 		return listener.Dial()
 	}
-}
-
-func equalProtoSlices[T proto.Message](x, y []T) bool {
-	if len(x) != len(y) {
-		return false
-	}
-
-	for i := 0; i < len(x); i++ {
-		if !proto.Equal(x[i], y[i]) {
-			return false
-		}
-	}
-
-	return true
 }
