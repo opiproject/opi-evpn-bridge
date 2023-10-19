@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"sort"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -19,6 +20,12 @@ import (
 	pb "github.com/opiproject/opi-api/network/evpn-gw/v1alpha1/gen/go"
 	pc "github.com/opiproject/opi-api/network/opinetcommon/v1alpha1/gen/go"
 )
+
+func sortBridgePorts(ports []*pb.BridgePort) {
+	sort.Slice(ports, func(i int, j int) bool {
+		return ports[i].Name < ports[j].Name
+	})
+}
 
 // TODO: move all of this to a common place
 const (

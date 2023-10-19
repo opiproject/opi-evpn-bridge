@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"log"
 	"path"
-	"sort"
 	"strings"
 
 	"github.com/google/uuid"
@@ -24,12 +23,6 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
-
-func sortBridgePorts(ports []*pb.BridgePort) {
-	sort.Slice(ports, func(i int, j int) bool {
-		return ports[i].Name < ports[j].Name
-	})
-}
 
 // CreateBridgePort executes the creation of the port
 func (s *Server) CreateBridgePort(ctx context.Context, in *pb.CreateBridgePortRequest) (*pb.BridgePort, error) {
