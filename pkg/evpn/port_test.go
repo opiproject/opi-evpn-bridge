@@ -755,6 +755,7 @@ func Test_ListBridgePorts(t *testing.T) {
 			client := pb.NewBridgePortServiceClient(conn)
 
 			opi.store.Set(testBridgePortName, &testBridgePortWithStatus)
+			opi.ListHelper[testBridgePortName] = false
 			opi.Pagination["existing-pagination-token"] = 1
 
 			request := &pb.ListBridgePortsRequest{PageSize: tt.size, PageToken: tt.token}

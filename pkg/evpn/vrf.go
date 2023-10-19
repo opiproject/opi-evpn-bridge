@@ -12,6 +12,7 @@ import (
 	"math"
 	"path"
 	"sort"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/opiproject/opi-evpn-bridge/pkg/models"
@@ -79,6 +80,7 @@ func (s *Server) CreateVrf(ctx context.Context, in *pb.CreateVrfRequest) (*pb.Vr
 	response.Status = &pb.VrfStatus{LocalAs: 4, RoutingTable: tableID, Rmac: mac}
 	log.Printf("new object %v", models.NewVrf(response))
 	// save object to the database
+	s.ListHelper[in.Vrf.Name] = false
 	err = s.store.Set(in.Vrf.Name, response)
 	if err != nil {
 		return nil, err
@@ -115,6 +117,7 @@ func (s *Server) DeleteVrf(ctx context.Context, in *pb.DeleteVrfRequest) (*empty
 		return nil, err
 	}
 	// remove from the Database
+	delete(s.ListHelper, obj.Name)
 	err = s.store.Delete(obj.Name)
 	if err != nil {
 		return nil, err
@@ -201,10 +204,21 @@ func (s *Server) ListVrfs(_ context.Context, in *pb.ListVrfsRequest) (*pb.ListVr
 	}
 	// fetch object from the database
 	Blobarray := []*pb.Vrf{}
-	for _, vrf := range s.Vrfs {
-		r := protoClone(vrf)
-		r.Status = &pb.VrfStatus{LocalAs: 4}
-		Blobarray = append(Blobarray, r)
+	for key := range s.ListHelper {
+		if !strings.HasPrefix(key, "//network.opiproject.org/vrfs") {
+			continue
+		}
+		vrf := new(pb.Vrf)
+		ok, err := s.store.Get(key, vrf)
+		if err != nil {
+			fmt.Printf("Failed to interact with store: %v", err)
+			return nil, err
+		}
+		if !ok {
+			err := status.Errorf(codes.NotFound, "unable to find key %s", key)
+			return nil, err
+		}
+		Blobarray = append(Blobarray, vrf)
 	}
 	// sort is needed, since MAP is unsorted in golang, and we might get different results
 	sortVrfs(Blobarray)

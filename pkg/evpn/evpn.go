@@ -35,6 +35,7 @@ type Server struct {
 	pb.UnimplementedLogicalBridgeServiceServer
 	pb.UnimplementedBridgePortServiceServer
 	Pagination map[string]int
+	ListHelper map[string]bool
 	nLink      utils.Netlink
 	frr        utils.Frr
 	tracer     trace.Tracer
@@ -61,6 +62,7 @@ func NewServerWithArgs(nLink utils.Netlink, frr utils.Frr, store gokv.Store) *Se
 		log.Panic("nil for Store is not allowed")
 	}
 	return &Server{
+		ListHelper: make(map[string]bool),
 		Pagination: make(map[string]int),
 		nLink:      nLink,
 		frr:        frr,

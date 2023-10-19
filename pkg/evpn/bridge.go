@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"log"
 	"sort"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/opiproject/opi-evpn-bridge/pkg/models"
@@ -62,6 +63,7 @@ func (s *Server) CreateLogicalBridge(ctx context.Context, in *pb.CreateLogicalBr
 	response.Status = &pb.LogicalBridgeStatus{OperStatus: pb.LBOperStatus_LB_OPER_STATUS_UP}
 	log.Printf("new object %v", models.NewBridge(response))
 	// save object to the database
+	s.ListHelper[in.LogicalBridge.Name] = false
 	err = s.store.Set(in.LogicalBridge.Name, response)
 	if err != nil {
 		return nil, err
@@ -94,6 +96,7 @@ func (s *Server) DeleteLogicalBridge(ctx context.Context, in *pb.DeleteLogicalBr
 		return nil, err
 	}
 	// remove from the Database
+	delete(s.ListHelper, obj.Name)
 	err = s.store.Delete(obj.Name)
 	if err != nil {
 		return nil, err
@@ -186,10 +189,21 @@ func (s *Server) ListLogicalBridges(_ context.Context, in *pb.ListLogicalBridges
 	}
 	// fetch object from the database
 	Blobarray := []*pb.LogicalBridge{}
-	for _, bridge := range s.Bridges {
-		r := protoClone(bridge)
-		r.Status = &pb.LogicalBridgeStatus{OperStatus: pb.LBOperStatus_LB_OPER_STATUS_UP}
-		Blobarray = append(Blobarray, r)
+	for key := range s.ListHelper {
+		if !strings.HasPrefix(key, "//network.opiproject.org/bridges") {
+			continue
+		}
+		bridge := new(pb.LogicalBridge)
+		ok, err := s.store.Get(key, bridge)
+		if err != nil {
+			fmt.Printf("Failed to interact with store: %v", err)
+			return nil, err
+		}
+		if !ok {
+			err := status.Errorf(codes.NotFound, "unable to find key %s", key)
+			return nil, err
+		}
+		Blobarray = append(Blobarray, bridge)
 	}
 	// sort is needed, since MAP is unsorted in golang, and we might get different results
 	sortLogicalBridges(Blobarray)

@@ -11,6 +11,7 @@ import (
 	"log"
 	"path"
 	"sort"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/opiproject/opi-evpn-bridge/pkg/models"
@@ -92,6 +93,7 @@ func (s *Server) CreateSvi(ctx context.Context, in *pb.CreateSviRequest) (*pb.Sv
 	response.Status = &pb.SviStatus{OperStatus: pb.SVIOperStatus_SVI_OPER_STATUS_UP}
 	log.Printf("new object %v", models.NewSvi(response))
 	// save object to the database
+	s.ListHelper[in.Svi.Name] = false
 	err = s.store.Set(in.Svi.Name, response)
 	if err != nil {
 		return nil, err
@@ -153,6 +155,7 @@ func (s *Server) DeleteSvi(ctx context.Context, in *pb.DeleteSviRequest) (*empty
 		return nil, err
 	}
 	// remove from the Database
+	delete(s.ListHelper, obj.Name)
 	err = s.store.Delete(obj.Name)
 	if err != nil {
 		return nil, err
@@ -261,10 +264,21 @@ func (s *Server) ListSvis(_ context.Context, in *pb.ListSvisRequest) (*pb.ListSv
 	}
 	// fetch object from the database
 	Blobarray := []*pb.Svi{}
-	for _, svi := range s.Svis {
-		r := protoClone(svi)
-		r.Status = &pb.SviStatus{OperStatus: pb.SVIOperStatus_SVI_OPER_STATUS_UP}
-		Blobarray = append(Blobarray, r)
+	for key := range s.ListHelper {
+		if !strings.HasPrefix(key, "//network.opiproject.org/svis") {
+			continue
+		}
+		svi := new(pb.Svi)
+		ok, err := s.store.Get(key, svi)
+		if err != nil {
+			fmt.Printf("Failed to interact with store: %v", err)
+			return nil, err
+		}
+		if !ok {
+			err := status.Errorf(codes.NotFound, "unable to find key %s", key)
+			return nil, err
+		}
+		Blobarray = append(Blobarray, svi)
 	}
 	// sort is needed, since MAP is unsorted in golang, and we might get different results
 	sortSvis(Blobarray)
