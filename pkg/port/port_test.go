@@ -34,7 +34,7 @@ import (
 
 var (
 	testBridgePortID   = "opi-port8"
-	testBridgePortName = resourceIDToFullName("ports", testBridgePortID)
+	testBridgePortName = resourceIDToFullName(testBridgePortID)
 	testBridgePort     = pb.BridgePort{
 		Spec: &pb.BridgePortSpec{
 			MacAddress:     []byte{0xCB, 0xB8, 0x33, 0x4C, 0x88, 0x4F},
@@ -362,7 +362,7 @@ func Test_DeleteBridgePort(t *testing.T) {
 			in:      "unknown-id",
 			out:     nil,
 			errCode: codes.NotFound,
-			errMsg:  fmt.Sprintf("unable to find key %v", resourceIDToFullName("ports", "unknown-id")),
+			errMsg:  fmt.Sprintf("unable to find key %v", resourceIDToFullName("unknown-id")),
 			missing: false,
 			on:      nil,
 		},
@@ -474,7 +474,7 @@ func Test_DeleteBridgePort(t *testing.T) {
 			}(conn)
 			client := pb.NewBridgePortServiceClient(conn)
 
-			fname1 := resourceIDToFullName("ports", tt.in)
+			fname1 := resourceIDToFullName(tt.in)
 			_ = opi.store.Set(testBridgePortName, &testBridgePortWithStatus)
 			_ = opi.store.Set(testLogicalBridgeName, &testLogicalBridgeWithStatus)
 			if tt.on != nil {
@@ -532,12 +532,12 @@ func Test_UpdateBridgePort(t *testing.T) {
 		"valid request with unknown key": {
 			mask: nil,
 			in: &pb.BridgePort{
-				Name: resourceIDToFullName("ports", "unknown-id"),
+				Name: resourceIDToFullName("unknown-id"),
 				Spec: spec,
 			},
 			out:     nil,
 			errCode: codes.NotFound,
-			errMsg:  fmt.Sprintf("unable to find key %v", resourceIDToFullName("ports", "unknown-id")),
+			errMsg:  fmt.Sprintf("unable to find key %v", resourceIDToFullName("unknown-id")),
 			start:   false,
 			exist:   true,
 		},

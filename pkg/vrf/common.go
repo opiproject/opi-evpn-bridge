@@ -26,8 +26,7 @@ func sortVrfs(vrfs []*pb.Vrf) {
 	})
 }
 
-// TODO: move all of this to a common place
-func resourceIDToFullName(_ string, resourceID string) string {
+func resourceIDToFullName(resourceID string) string {
 	return fmt.Sprintf("//network.opiproject.org/vrfs/%s", resourceID)
 }
 
@@ -42,6 +41,8 @@ func generateRandMAC() ([]byte, error) {
 
 	return buf, nil
 }
+
+// TODO: move all of this to a common place
 
 func extractPagination(pageSize int32, pageToken string, pagination map[string]int) (size int, offset int, err error) {
 	const (

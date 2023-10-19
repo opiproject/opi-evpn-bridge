@@ -36,7 +36,7 @@ func (s *Server) CreateLogicalBridge(ctx context.Context, in *pb.CreateLogicalBr
 		log.Printf("client provided the ID of a resource %v, ignoring the name field %v", in.LogicalBridgeId, in.LogicalBridge.Name)
 		resourceID = in.LogicalBridgeId
 	}
-	in.LogicalBridge.Name = resourceIDToFullName("bridges", resourceID)
+	in.LogicalBridge.Name = resourceIDToFullName(resourceID)
 	// idempotent API when called with same key, should return same object
 	obj := new(pb.LogicalBridge)
 	ok, err := s.store.Get(in.LogicalBridge.Name, obj)

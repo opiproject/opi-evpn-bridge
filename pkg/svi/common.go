@@ -27,6 +27,10 @@ func sortSvis(svis []*pb.Svi) {
 	})
 }
 
+func resourceIDToFullName(resourceID string) string {
+	return fmt.Sprintf("//network.opiproject.org/svis/%s", resourceID)
+}
+
 // TODO: move all of this to a common place
 const (
 	tenantbridgeName = "br-tenant"
@@ -34,7 +38,7 @@ const (
 
 var (
 	testLogicalBridgeID   = "opi-bridge9"
-	testLogicalBridgeName = resourceIDToFullName("bridges", testLogicalBridgeID)
+	testLogicalBridgeName = resourceIDToFullName(testLogicalBridgeID)
 	testLogicalBridge     = pb.LogicalBridge{
 		Spec: &pb.LogicalBridgeSpec{
 			Vni:    proto.Uint32(11),
@@ -59,7 +63,7 @@ var (
 	}
 
 	testVrfID   = "opi-vrf8"
-	testVrfName = resourceIDToFullName("vrfs", testVrfID)
+	testVrfName = resourceIDToFullName(testVrfID)
 	testVrf     = pb.Vrf{
 		Spec: &pb.VrfSpec{
 			Vni: proto.Uint32(1000),
@@ -91,10 +95,6 @@ var (
 		},
 	}
 )
-
-func resourceIDToFullName(_ string, resourceID string) string {
-	return fmt.Sprintf("//network.opiproject.org/svis/%s", resourceID)
-}
 
 func extractPagination(pageSize int32, pageToken string, pagination map[string]int) (size int, offset int, err error) {
 	const (

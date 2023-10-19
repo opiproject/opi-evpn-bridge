@@ -35,7 +35,7 @@ import (
 
 var (
 	testSviID   = "opi-svi8"
-	testSviName = resourceIDToFullName("svis", testSviID)
+	testSviName = resourceIDToFullName(testSviID)
 	testSvi     = pb.Svi{
 		Spec: &pb.SviSpec{
 			Vrf:           testVrfName,
@@ -464,7 +464,7 @@ func Test_DeleteSvi(t *testing.T) {
 			in:      "unknown-id",
 			out:     nil,
 			errCode: codes.NotFound,
-			errMsg:  fmt.Sprintf("unable to find key %v", resourceIDToFullName("svis", "unknown-id")),
+			errMsg:  fmt.Sprintf("unable to find key %v", resourceIDToFullName("unknown-id")),
 			missing: false,
 			on:      nil,
 		},
@@ -601,7 +601,7 @@ func Test_DeleteSvi(t *testing.T) {
 			}(conn)
 			client := pb.NewSviServiceClient(conn)
 
-			fname1 := resourceIDToFullName("svis", tt.in)
+			fname1 := resourceIDToFullName(tt.in)
 			_ = opi.store.Set(testSviName, &testSviWithStatus)
 			_ = opi.store.Set(testVrfName, &testVrfWithStatus)
 			_ = opi.store.Set(testLogicalBridgeName, &testLogicalBridgeWithStatus)
@@ -661,12 +661,12 @@ func Test_UpdateSvi(t *testing.T) {
 		"valid request with unknown key": {
 			mask: nil,
 			in: &pb.Svi{
-				Name: resourceIDToFullName("svis", "unknown-id"),
+				Name: resourceIDToFullName("unknown-id"),
 				Spec: spec,
 			},
 			out:     nil,
 			errCode: codes.NotFound,
-			errMsg:  fmt.Sprintf("unable to find key %v", resourceIDToFullName("svis", "unknown-id")),
+			errMsg:  fmt.Sprintf("unable to find key %v", resourceIDToFullName("unknown-id")),
 			start:   false,
 			exist:   true,
 		},

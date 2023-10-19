@@ -25,14 +25,14 @@ func sortLogicalBridges(bridges []*pb.LogicalBridge) {
 	})
 }
 
+func resourceIDToFullName(resourceID string) string {
+	return fmt.Sprintf("//network.opiproject.org/bridges/%s", resourceID)
+}
+
 // TODO: move all of this to a common place
 const (
 	tenantbridgeName = "br-tenant"
 )
-
-func resourceIDToFullName(_ string, resourceID string) string {
-	return fmt.Sprintf("//network.opiproject.org/bridges/%s", resourceID)
-}
 
 func extractPagination(pageSize int32, pageToken string, pagination map[string]int) (size int, offset int, err error) {
 	const (
