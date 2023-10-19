@@ -21,6 +21,9 @@ type Vrf struct {
 	MacAddress   net.HardwareAddr
 }
 
+// build time check that struct implements interface
+var _ EvpnObject[*pb.Vrf] = (*Vrf)(nil)
+
 // NewVrf creates new VRF object from protobuf message
 func NewVrf(in *pb.Vrf) *Vrf {
 	mac := net.HardwareAddr(in.Status.Rmac)

@@ -21,6 +21,9 @@ type Svi struct {
 	RemoteAs            uint32
 }
 
+// build time check that struct implements interface
+var _ EvpnObject[*pb.Svi] = (*Svi)(nil)
+
 // NewSvi creates new SVI object from protobuf message
 func NewSvi(in *pb.Svi) *Svi {
 	mac := net.HardwareAddr(in.Spec.MacAddress)

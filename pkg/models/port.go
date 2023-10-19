@@ -29,6 +29,9 @@ type Port struct {
 	LogicalBridgeRefKeys []string
 }
 
+// build time check that struct implements interface
+var _ EvpnObject[*pb.BridgePort] = (*Port)(nil)
+
 // NewPort creates new SVI object from protobuf message
 func NewPort(in *pb.BridgePort) *Port {
 	mac := net.HardwareAddr(in.Spec.MacAddress)
