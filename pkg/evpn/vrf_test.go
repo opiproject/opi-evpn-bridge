@@ -920,6 +920,7 @@ func Test_ListVrfs(t *testing.T) {
 			client := pb.NewVrfServiceClient(conn)
 
 			opi.store.Set(testVrfName, &testVrfWithStatus)
+			opi.ListHelper[testVrfName] = false
 			opi.Pagination["existing-pagination-token"] = 1
 
 			request := &pb.ListVrfsRequest{PageSize: tt.size, PageToken: tt.token}

@@ -884,6 +884,7 @@ func Test_ListSvis(t *testing.T) {
 			client := pb.NewSviServiceClient(conn)
 
 			opi.store.Set(testSviName, &testSviWithStatus)
+			opi.ListHelper[testSviName] = false
 			opi.Pagination["existing-pagination-token"] = 1
 
 			request := &pb.ListSvisRequest{PageSize: tt.size, PageToken: tt.token}

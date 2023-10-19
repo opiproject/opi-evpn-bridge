@@ -725,6 +725,7 @@ func Test_ListLogicalBridges(t *testing.T) {
 			client := pb.NewLogicalBridgeServiceClient(conn)
 
 			opi.store.Set(testLogicalBridgeName, &testLogicalBridgeWithStatus)
+			opi.ListHelper[testLogicalBridgeName] = false
 			opi.Pagination["existing-pagination-token"] = 1
 
 			request := &pb.ListLogicalBridgesRequest{PageSize: tt.size, PageToken: tt.token}
