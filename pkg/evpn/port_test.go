@@ -317,9 +317,9 @@ func Test_CreateBridgePort(t *testing.T) {
 			}(conn)
 			client := pb.NewBridgePortServiceClient(conn)
 
-			opi.store.Set(testLogicalBridgeName, &testLogicalBridgeWithStatus)
+			_ = opi.store.Set(testLogicalBridgeName, &testLogicalBridgeWithStatus)
 			if tt.exist {
-				opi.store.Set(testBridgePortName, &testBridgePortWithStatus)
+				_ = opi.store.Set(testBridgePortName, &testBridgePortWithStatus)
 			}
 			if tt.out != nil {
 				tt.out = protoClone(tt.out)
@@ -475,8 +475,8 @@ func Test_DeleteBridgePort(t *testing.T) {
 			client := pb.NewBridgePortServiceClient(conn)
 
 			fname1 := resourceIDToFullName("ports", tt.in)
-			opi.store.Set(testBridgePortName, &testBridgePortWithStatus)
-			opi.store.Set(testLogicalBridgeName, &testLogicalBridgeWithStatus)
+			_ = opi.store.Set(testBridgePortName, &testBridgePortWithStatus)
+			_ = opi.store.Set(testLogicalBridgeName, &testLogicalBridgeWithStatus)
 			if tt.on != nil {
 				tt.on(mockNetlink, mockFrr, tt.errMsg)
 			}
@@ -568,7 +568,7 @@ func Test_UpdateBridgePort(t *testing.T) {
 			client := pb.NewBridgePortServiceClient(conn)
 
 			if tt.exist {
-				opi.store.Set(testBridgePortName, &testBridgePortWithStatus)
+				_ = opi.store.Set(testBridgePortName, &testBridgePortWithStatus)
 			}
 			if tt.out != nil {
 				tt.out = protoClone(tt.out)
@@ -649,7 +649,7 @@ func Test_GetBridgePort(t *testing.T) {
 			}(conn)
 			client := pb.NewBridgePortServiceClient(conn)
 
-			opi.store.Set(testBridgePortName, &testBridgePortWithStatus)
+			_ = opi.store.Set(testBridgePortName, &testBridgePortWithStatus)
 
 			request := &pb.GetBridgePortRequest{Name: tt.in}
 			response, err := client.GetBridgePort(ctx, request)
@@ -754,7 +754,7 @@ func Test_ListBridgePorts(t *testing.T) {
 			}(conn)
 			client := pb.NewBridgePortServiceClient(conn)
 
-			opi.store.Set(testBridgePortName, &testBridgePortWithStatus)
+			_ = opi.store.Set(testBridgePortName, &testBridgePortWithStatus)
 			opi.ListHelper[testBridgePortName] = false
 			opi.Pagination["existing-pagination-token"] = 1
 

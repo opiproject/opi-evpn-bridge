@@ -346,7 +346,7 @@ func Test_CreateVrf(t *testing.T) {
 			client := pb.NewVrfServiceClient(conn)
 
 			if tt.exist {
-				opi.store.Set(testVrfName, &testVrfWithStatus)
+				_ = opi.store.Set(testVrfName, &testVrfWithStatus)
 			}
 			if tt.out != nil {
 				tt.out = protoClone(tt.out)
@@ -640,7 +640,7 @@ func Test_DeleteVrf(t *testing.T) {
 			client := pb.NewVrfServiceClient(conn)
 
 			fname1 := resourceIDToFullName("vrfs", tt.in)
-			opi.store.Set(testVrfName, &testVrfWithStatus)
+			_ = opi.store.Set(testVrfName, &testVrfWithStatus)
 			if tt.on != nil {
 				tt.on(mockNetlink, mockFrr, tt.errMsg)
 			}
@@ -733,7 +733,7 @@ func Test_UpdateVrf(t *testing.T) {
 			client := pb.NewVrfServiceClient(conn)
 
 			if tt.exist {
-				opi.store.Set(testVrfName, &testVrfWithStatus)
+				_ = opi.store.Set(testVrfName, &testVrfWithStatus)
 			}
 			if tt.out != nil {
 				tt.out = protoClone(tt.out)
@@ -814,7 +814,7 @@ func Test_GetVrf(t *testing.T) {
 			}(conn)
 			client := pb.NewVrfServiceClient(conn)
 
-			opi.store.Set(testVrfName, &testVrfWithStatus)
+			_ = opi.store.Set(testVrfName, &testVrfWithStatus)
 
 			request := &pb.GetVrfRequest{Name: tt.in}
 			response, err := client.GetVrf(ctx, request)
@@ -919,7 +919,7 @@ func Test_ListVrfs(t *testing.T) {
 			}(conn)
 			client := pb.NewVrfServiceClient(conn)
 
-			opi.store.Set(testVrfName, &testVrfWithStatus)
+			_ = opi.store.Set(testVrfName, &testVrfWithStatus)
 			opi.ListHelper[testVrfName] = false
 			opi.Pagination["existing-pagination-token"] = 1
 

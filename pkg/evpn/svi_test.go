@@ -419,7 +419,7 @@ func Test_CreateSvi(t *testing.T) {
 			client := pb.NewSviServiceClient(conn)
 
 			if tt.exist {
-				opi.store.Set(testSviName, &testSviWithStatus)
+				_ = opi.store.Set(testSviName, &testSviWithStatus)
 			}
 			if tt.out != nil {
 				tt.out = protoClone(tt.out)
@@ -428,8 +428,8 @@ func Test_CreateSvi(t *testing.T) {
 			if tt.on != nil {
 				tt.on(mockNetlink, mockFrr, tt.errMsg)
 			}
-			opi.store.Set(testVrfName, &testVrfWithStatus)
-			opi.store.Set(testLogicalBridgeName, &testLogicalBridgeWithStatus)
+			_ = opi.store.Set(testVrfName, &testVrfWithStatus)
+			_ = opi.store.Set(testLogicalBridgeName, &testLogicalBridgeWithStatus)
 
 			request := &pb.CreateSviRequest{Svi: tt.in, SviId: tt.id}
 			response, err := client.CreateSvi(ctx, request)
@@ -602,9 +602,9 @@ func Test_DeleteSvi(t *testing.T) {
 			client := pb.NewSviServiceClient(conn)
 
 			fname1 := resourceIDToFullName("svis", tt.in)
-			opi.store.Set(testSviName, &testSviWithStatus)
-			opi.store.Set(testVrfName, &testVrfWithStatus)
-			opi.store.Set(testLogicalBridgeName, &testLogicalBridgeWithStatus)
+			_ = opi.store.Set(testSviName, &testSviWithStatus)
+			_ = opi.store.Set(testVrfName, &testVrfWithStatus)
+			_ = opi.store.Set(testLogicalBridgeName, &testLogicalBridgeWithStatus)
 			if tt.on != nil {
 				tt.on(mockNetlink, mockFrr, tt.errMsg)
 			}
@@ -697,7 +697,7 @@ func Test_UpdateSvi(t *testing.T) {
 			client := pb.NewSviServiceClient(conn)
 
 			if tt.exist {
-				opi.store.Set(testSviName, &testSviWithStatus)
+				_ = opi.store.Set(testSviName, &testSviWithStatus)
 			}
 			if tt.out != nil {
 				tt.out = protoClone(tt.out)
@@ -778,7 +778,7 @@ func Test_GetSvi(t *testing.T) {
 			}(conn)
 			client := pb.NewSviServiceClient(conn)
 
-			opi.store.Set(testSviName, &testSviWithStatus)
+			_ = opi.store.Set(testSviName, &testSviWithStatus)
 
 			request := &pb.GetSviRequest{Name: tt.in}
 			response, err := client.GetSvi(ctx, request)
@@ -883,7 +883,7 @@ func Test_ListSvis(t *testing.T) {
 			}(conn)
 			client := pb.NewSviServiceClient(conn)
 
-			opi.store.Set(testSviName, &testSviWithStatus)
+			_ = opi.store.Set(testSviName, &testSviWithStatus)
 			opi.ListHelper[testSviName] = false
 			opi.Pagination["existing-pagination-token"] = 1
 
