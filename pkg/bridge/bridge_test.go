@@ -2,8 +2,8 @@
 // Copyright (c) 2022-2023 Intel Corporation, or its subsidiaries.
 // Copyright (c) 2022-2023 Dell Inc, or its subsidiaries.
 
-// Package evpn is the main package of the application
-package evpn
+// Package bridge is the main package of the application
+package bridge
 
 import (
 	"context"

@@ -16,8 +16,11 @@ import (
 
 	pc "github.com/opiproject/opi-api/inventory/v1/gen/go"
 	pe "github.com/opiproject/opi-api/network/evpn-gw/v1alpha1/gen/go"
-	"github.com/opiproject/opi-evpn-bridge/pkg/evpn"
+	"github.com/opiproject/opi-evpn-bridge/pkg/bridge"
+	"github.com/opiproject/opi-evpn-bridge/pkg/port"
+	"github.com/opiproject/opi-evpn-bridge/pkg/svi"
 	"github.com/opiproject/opi-evpn-bridge/pkg/utils"
+	"github.com/opiproject/opi-evpn-bridge/pkg/vrf"
 	"github.com/opiproject/opi-smbios-bridge/pkg/inventory"
 
 	"github.com/philippgille/gokv"
@@ -105,12 +108,15 @@ func runGrpcServer(grpcPort int, tlsFiles string, store gokv.Store) {
 	)
 	s := grpc.NewServer(serverOptions...)
 
-	opi := evpn.NewServer(store)
+	bridgeServer := bridge.NewServer(store)
+	portServer := port.NewServer(store)
+	vrfServer := vrf.NewServer(store)
+	sviServer := svi.NewServer(store)
 
-	pe.RegisterLogicalBridgeServiceServer(s, opi)
-	pe.RegisterBridgePortServiceServer(s, opi)
-	pe.RegisterVrfServiceServer(s, opi)
-	pe.RegisterSviServiceServer(s, opi)
+	pe.RegisterLogicalBridgeServiceServer(s, bridgeServer)
+	pe.RegisterBridgePortServiceServer(s, portServer)
+	pe.RegisterVrfServiceServer(s, vrfServer)
+	pe.RegisterSviServiceServer(s, sviServer)
 	pc.RegisterInventorySvcServer(s, &inventory.Server{})
 
 	reflection.Register(s)
