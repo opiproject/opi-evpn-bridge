@@ -18,6 +18,9 @@ type Bridge struct {
 	VtepIP net.IPNet
 }
 
+// build time check that struct implements interface
+var _ EvpnObject[*pb.LogicalBridge] = (*Bridge)(nil)
+
 // NewBridge creates new SVI object from protobuf message
 func NewBridge(in *pb.LogicalBridge) *Bridge {
 	// vtepip := make(net.IP, 4)
