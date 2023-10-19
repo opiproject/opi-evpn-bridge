@@ -38,7 +38,7 @@ func (s *Server) CreateVrf(ctx context.Context, in *pb.CreateVrfRequest) (*pb.Vr
 		log.Printf("client provided the ID of a resource %v, ignoring the name field %v", in.VrfId, in.Vrf.Name)
 		resourceID = in.VrfId
 	}
-	in.Vrf.Name = resourceIDToFullName("vrfs", resourceID)
+	in.Vrf.Name = resourceIDToFullName(resourceID)
 	// idempotent API when called with same key, should return same object
 	obj := new(pb.Vrf)
 	ok, err := s.store.Get(in.Vrf.Name, obj)

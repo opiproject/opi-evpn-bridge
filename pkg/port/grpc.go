@@ -37,7 +37,7 @@ func (s *Server) CreateBridgePort(ctx context.Context, in *pb.CreateBridgePortRe
 		log.Printf("client provided the ID of a resource %v, ignoring the name field %v", in.BridgePortId, in.BridgePort.Name)
 		resourceID = in.BridgePortId
 	}
-	in.BridgePort.Name = resourceIDToFullName("ports", resourceID)
+	in.BridgePort.Name = resourceIDToFullName(resourceID)
 	// idempotent API when called with same key, should return same object
 	obj := new(pb.BridgePort)
 	ok, err := s.store.Get(in.BridgePort.Name, obj)

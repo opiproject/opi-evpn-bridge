@@ -37,7 +37,7 @@ func (s *Server) CreateSvi(ctx context.Context, in *pb.CreateSviRequest) (*pb.Sv
 		log.Printf("client provided the ID of a resource %v, ignoring the name field %v", in.SviId, in.Svi.Name)
 		resourceID = in.SviId
 	}
-	in.Svi.Name = resourceIDToFullName("svis", resourceID)
+	in.Svi.Name = resourceIDToFullName(resourceID)
 	// idempotent API when called with same key, should return same object
 	obj := new(pb.Svi)
 	ok, err := s.store.Get(in.Svi.Name, obj)

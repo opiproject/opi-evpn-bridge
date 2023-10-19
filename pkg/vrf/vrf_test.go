@@ -36,7 +36,7 @@ import (
 
 var (
 	testVrfID   = "opi-vrf8"
-	testVrfName = resourceIDToFullName("vrfs", testVrfID)
+	testVrfName = resourceIDToFullName(testVrfID)
 	testVrf     = pb.Vrf{
 		Spec: &pb.VrfSpec{
 			Vni: proto.Uint32(1000),
@@ -393,7 +393,7 @@ func Test_DeleteVrf(t *testing.T) {
 			in:      "unknown-id",
 			out:     nil,
 			errCode: codes.NotFound,
-			errMsg:  fmt.Sprintf("unable to find key %v", resourceIDToFullName("vrfs", "unknown-id")),
+			errMsg:  fmt.Sprintf("unable to find key %v", resourceIDToFullName("unknown-id")),
 			missing: false,
 			on:      nil,
 		},
@@ -639,7 +639,7 @@ func Test_DeleteVrf(t *testing.T) {
 			}(conn)
 			client := pb.NewVrfServiceClient(conn)
 
-			fname1 := resourceIDToFullName("vrfs", tt.in)
+			fname1 := resourceIDToFullName(tt.in)
 			_ = opi.store.Set(testVrfName, &testVrfWithStatus)
 			if tt.on != nil {
 				tt.on(mockNetlink, mockFrr, tt.errMsg)
@@ -697,12 +697,12 @@ func Test_UpdateVrf(t *testing.T) {
 		"valid request with unknown key": {
 			mask: nil,
 			in: &pb.Vrf{
-				Name: resourceIDToFullName("vrfs", "unknown-id"),
+				Name: resourceIDToFullName("unknown-id"),
 				Spec: spec,
 			},
 			out:     nil,
 			errCode: codes.NotFound,
-			errMsg:  fmt.Sprintf("unable to find key %v", resourceIDToFullName("vrfs", "unknown-id")),
+			errMsg:  fmt.Sprintf("unable to find key %v", resourceIDToFullName("unknown-id")),
 			start:   false,
 			exist:   true,
 		},
