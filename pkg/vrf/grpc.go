@@ -192,7 +192,7 @@ func (s *Server) ListVrfs(_ context.Context, in *pb.ListVrfsRequest) (*pb.ListVr
 		return nil, err
 	}
 	// fetch pagination from the database, calculate size and offset
-	size, offset, perr := extractPagination(in.PageSize, in.PageToken, s.Pagination)
+	size, offset, perr := utils.ExtractPagination(in.PageSize, in.PageToken, s.Pagination)
 	if perr != nil {
 		return nil, perr
 	}
@@ -217,7 +217,7 @@ func (s *Server) ListVrfs(_ context.Context, in *pb.ListVrfsRequest) (*pb.ListVr
 	// sort is needed, since MAP is unsorted in golang, and we might get different results
 	sortVrfs(Blobarray)
 	log.Printf("Limiting result len(%d) to [%d:%d]", len(Blobarray), offset, size)
-	Blobarray, hasMoreElements := limitPagination(Blobarray, offset, size)
+	Blobarray, hasMoreElements := utils.LimitPagination(Blobarray, offset, size)
 	token := ""
 	if hasMoreElements {
 		token = uuid.New().String()
