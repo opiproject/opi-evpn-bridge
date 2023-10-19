@@ -19,7 +19,7 @@ import (
 
 	"github.com/philippgille/gokv"
 
-	pe "github.com/opiproject/opi-api/network/evpn-gw/v1alpha1/gen/go"
+	pb "github.com/opiproject/opi-api/network/evpn-gw/v1alpha1/gen/go"
 
 	"github.com/opiproject/opi-evpn-bridge/pkg/utils"
 )
@@ -30,14 +30,14 @@ const (
 
 // Server represents the Server object
 type Server struct {
-	pe.UnimplementedVrfServiceServer
-	pe.UnimplementedSviServiceServer
-	pe.UnimplementedLogicalBridgeServiceServer
-	pe.UnimplementedBridgePortServiceServer
-	Bridges    map[string]*pe.LogicalBridge
-	Ports      map[string]*pe.BridgePort
-	Svis       map[string]*pe.Svi
-	Vrfs       map[string]*pe.Vrf
+	pb.UnimplementedVrfServiceServer
+	pb.UnimplementedSviServiceServer
+	pb.UnimplementedLogicalBridgeServiceServer
+	pb.UnimplementedBridgePortServiceServer
+	Bridges    map[string]*pb.LogicalBridge
+	Ports      map[string]*pb.BridgePort
+	Svis       map[string]*pb.Svi
+	Vrfs       map[string]*pb.Vrf
 	Pagination map[string]int
 	nLink      utils.Netlink
 	frr        utils.Frr
@@ -65,10 +65,10 @@ func NewServerWithArgs(nLink utils.Netlink, frr utils.Frr, store gokv.Store) *Se
 		log.Panic("nil for Store is not allowed")
 	}
 	return &Server{
-		Bridges:    make(map[string]*pe.LogicalBridge),
-		Ports:      make(map[string]*pe.BridgePort),
-		Svis:       make(map[string]*pe.Svi),
-		Vrfs:       make(map[string]*pe.Vrf),
+		Bridges:    make(map[string]*pb.LogicalBridge),
+		Ports:      make(map[string]*pb.BridgePort),
+		Svis:       make(map[string]*pb.Svi),
+		Vrfs:       make(map[string]*pb.Vrf),
 		Pagination: make(map[string]int),
 		nLink:      nLink,
 		frr:        frr,
