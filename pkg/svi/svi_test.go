@@ -422,7 +422,7 @@ func Test_CreateSvi(t *testing.T) {
 				_ = opi.store.Set(testSviName, &testSviWithStatus)
 			}
 			if tt.out != nil {
-				tt.out = protoClone(tt.out)
+				tt.out = utils.ProtoClone(tt.out)
 				tt.out.Name = testSviName
 			}
 			if tt.on != nil {
@@ -700,7 +700,7 @@ func Test_UpdateSvi(t *testing.T) {
 				_ = opi.store.Set(testSviName, &testSviWithStatus)
 			}
 			if tt.out != nil {
-				tt.out = protoClone(tt.out)
+				tt.out = utils.ProtoClone(tt.out)
 				tt.out.Name = testSviName
 			}
 
@@ -889,7 +889,7 @@ func Test_ListSvis(t *testing.T) {
 
 			request := &pb.ListSvisRequest{PageSize: tt.size, PageToken: tt.token}
 			response, err := client.ListSvis(ctx, request)
-			if !equalProtoSlices(response.GetSvis(), tt.out) {
+			if !utils.EqualProtoSlices(response.GetSvis(), tt.out) {
 				t.Error("response: expected", tt.out, "received", response.GetSvis())
 			}
 

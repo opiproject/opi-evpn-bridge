@@ -14,6 +14,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/opiproject/opi-evpn-bridge/pkg/models"
+	"github.com/opiproject/opi-evpn-bridge/pkg/utils"
 
 	pb "github.com/opiproject/opi-api/network/evpn-gw/v1alpha1/gen/go"
 
@@ -53,7 +54,7 @@ func (s *Server) CreateBridgePort(ctx context.Context, in *pb.CreateBridgePortRe
 		return nil, err
 	}
 	// translate object
-	response := protoClone(in.BridgePort)
+	response := utils.ProtoClone(in.BridgePort)
 	response.Status = &pb.BridgePortStatus{OperStatus: pb.BPOperStatus_BP_OPER_STATUS_UP}
 	log.Printf("new object %v", models.NewPort(response))
 	// save object to the database
@@ -128,7 +129,7 @@ func (s *Server) UpdateBridgePort(ctx context.Context, in *pb.UpdateBridgePortRe
 		fmt.Printf("Failed to update link: %v", err)
 		return nil, err
 	}
-	response := protoClone(in.BridgePort)
+	response := utils.ProtoClone(in.BridgePort)
 	response.Status = &pb.BridgePortStatus{OperStatus: pb.BPOperStatus_BP_OPER_STATUS_UP}
 	err = s.store.Set(in.BridgePort.Name, response)
 	if err != nil {

@@ -16,7 +16,6 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/grpc/test/bufconn"
-	"google.golang.org/protobuf/proto"
 
 	pb "github.com/opiproject/opi-api/network/evpn-gw/v1alpha1/gen/go"
 )
@@ -30,10 +29,6 @@ func sortVrfs(vrfs []*pb.Vrf) {
 // TODO: move all of this to a common place
 func resourceIDToFullName(_ string, resourceID string) string {
 	return fmt.Sprintf("//network.opiproject.org/vrfs/%s", resourceID)
-}
-
-func protoClone[T proto.Message](protoStruct T) T {
-	return proto.Clone(protoStruct).(T)
 }
 
 func generateRandMAC() ([]byte, error) {
@@ -102,18 +97,4 @@ func dialer(opi *Server) func(context.Context, string) (net.Conn, error) {
 	return func(context.Context, string) (net.Conn, error) {
 		return listener.Dial()
 	}
-}
-
-func equalProtoSlices[T proto.Message](x, y []T) bool {
-	if len(x) != len(y) {
-		return false
-	}
-
-	for i := 0; i < len(x); i++ {
-		if !proto.Equal(x[i], y[i]) {
-			return false
-		}
-	}
-
-	return true
 }

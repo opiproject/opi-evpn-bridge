@@ -96,10 +96,6 @@ func resourceIDToFullName(_ string, resourceID string) string {
 	return fmt.Sprintf("//network.opiproject.org/svis/%s", resourceID)
 }
 
-func protoClone[T proto.Message](protoStruct T) T {
-	return proto.Clone(protoStruct).(T)
-}
-
 func extractPagination(pageSize int32, pageToken string, pagination map[string]int) (size int, offset int, err error) {
 	const (
 		maxPageSize     = 250
@@ -154,18 +150,4 @@ func dialer(opi *Server) func(context.Context, string) (net.Conn, error) {
 	return func(context.Context, string) (net.Conn, error) {
 		return listener.Dial()
 	}
-}
-
-func equalProtoSlices[T proto.Message](x, y []T) bool {
-	if len(x) != len(y) {
-		return false
-	}
-
-	for i := 0; i < len(x); i++ {
-		if !proto.Equal(x[i], y[i]) {
-			return false
-		}
-	}
-
-	return true
 }
