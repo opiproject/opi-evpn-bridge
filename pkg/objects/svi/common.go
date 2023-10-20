@@ -30,7 +30,6 @@ func resourceIDToFullName(resourceID string) string {
 }
 
 // TODO: move all of this to a common place
-
 var (
 	testLogicalBridgeID   = "opi-bridge9"
 	testLogicalBridgeName = resourceIDToFullName(testLogicalBridgeID)

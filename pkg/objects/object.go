@@ -52,9 +52,9 @@ func NewServerWithArgs(nLink utils.Netlink, frr utils.Frr, store gokv.Store) *Se
 	return &Server{
 		ListHelper: make(map[string]bool),
 		Pagination: make(map[string]int),
-		nLink:      nLink,
-		frr:        frr,
-		tracer:     otel.Tracer(""),
-		store:      store,
+		NLink:      nLink,
+		Frr:        frr,
+		Tracer:     otel.Tracer(""),
+		Store:      store,
 	}
 }

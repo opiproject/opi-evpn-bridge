@@ -13,6 +13,7 @@ import (
 
 // Bridge object, separate from protobuf for decoupling
 type Bridge struct {
+	Name   string
 	Vni    uint32
 	VlanID uint32
 	VtepIP net.IPNet

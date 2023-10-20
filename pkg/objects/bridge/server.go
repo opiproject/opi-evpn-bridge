@@ -6,6 +6,7 @@ package bridge
 
 import (
 	pb "github.com/opiproject/opi-api/network/evpn-gw/v1alpha1/gen/go"
+	"github.com/opiproject/opi-evpn-bridge/pkg/models"
 	"github.com/opiproject/opi-evpn-bridge/pkg/objects"
 	"github.com/philippgille/gokv"
 
@@ -19,7 +20,7 @@ type Server struct {
 }
 
 // NewServer creates initialized instance of EVPN server
-func NewServer(store gokv.Store) *Server {
+func NewServer(store gokv.Store) objects.ObjectFactory[*models.Bridge] {
 	return &Server{
 		Server: objects.NewServer(store),
 	}

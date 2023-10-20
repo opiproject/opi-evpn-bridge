@@ -41,7 +41,6 @@ func generateRandMAC() ([]byte, error) {
 }
 
 // TODO: move all of this to a common place
-
 func dialer(opi *Server) func(context.Context, string) (net.Conn, error) {
 	listener := bufconn.Listen(1024 * 1024)
 	server := grpc.NewServer()

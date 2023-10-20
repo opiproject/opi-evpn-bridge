@@ -7,6 +7,7 @@ package bridge
 import (
 	"context"
 	"fmt"
+	"github.com/opiproject/opi-evpn-bridge/pkg/models"
 	"log"
 	"net"
 	"sort"
@@ -17,7 +18,7 @@ import (
 	pb "github.com/opiproject/opi-api/network/evpn-gw/v1alpha1/gen/go"
 )
 
-func sortLogicalBridges(bridges []*pb.LogicalBridge) {
+func sortLogicalBridges(bridges []*models.Bridge) {
 	sort.Slice(bridges, func(i int, j int) bool {
 		return bridges[i].Name < bridges[j].Name
 	})
@@ -28,10 +29,6 @@ func resourceIDToFullName(resourceID string) string {
 }
 
 // TODO: move all of this to a common place
-const (
-	tenantbridgeName = "br-tenant"
-)
-
 func dialer(opi *Server) func(context.Context, string) (net.Conn, error) {
 	listener := bufconn.Listen(1024 * 1024)
 	server := grpc.NewServer()
