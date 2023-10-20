@@ -39,7 +39,7 @@ func (s *Server) CreateLogicalBridge(ctx context.Context, in *pb.CreateLogicalBr
 	in.LogicalBridge.Name = resourceIDToFullName(resourceID)
 	// idempotent API when called with same key, should return same object
 	obj := new(pb.LogicalBridge)
-	ok, err := s.store.Get(in.LogicalBridge.Name, obj)
+	ok, err := s.Store.Get(in.LogicalBridge.Name, obj)
 	if err != nil {
 		fmt.Printf("Failed to interact with store: %v", err)
 		return nil, err
@@ -58,7 +58,7 @@ func (s *Server) CreateLogicalBridge(ctx context.Context, in *pb.CreateLogicalBr
 	log.Printf("new object %v", models.NewBridge(response))
 	// save object to the database
 	s.ListHelper[in.LogicalBridge.Name] = false
-	err = s.store.Set(in.LogicalBridge.Name, response)
+	err = s.Store.Set(in.LogicalBridge.Name, response)
 	if err != nil {
 		return nil, err
 	}
@@ -73,7 +73,7 @@ func (s *Server) DeleteLogicalBridge(ctx context.Context, in *pb.DeleteLogicalBr
 	}
 	// fetch object from the database
 	obj := new(pb.LogicalBridge)
-	ok, err := s.store.Get(in.Name, obj)
+	ok, err := s.Store.Get(in.Name, obj)
 	if err != nil {
 		fmt.Printf("Failed to interact with store: %v", err)
 		return nil, err
@@ -91,7 +91,7 @@ func (s *Server) DeleteLogicalBridge(ctx context.Context, in *pb.DeleteLogicalBr
 	}
 	// remove from the Database
 	delete(s.ListHelper, obj.Name)
-	err = s.store.Delete(obj.Name)
+	err = s.Store.Delete(obj.Name)
 	if err != nil {
 		return nil, err
 	}
@@ -106,7 +106,7 @@ func (s *Server) UpdateLogicalBridge(ctx context.Context, in *pb.UpdateLogicalBr
 	}
 	// fetch object from the database
 	bridge := new(pb.LogicalBridge)
-	ok, err := s.store.Get(in.LogicalBridge.Name, bridge)
+	ok, err := s.Store.Get(in.LogicalBridge.Name, bridge)
 	if err != nil {
 		fmt.Printf("Failed to interact with store: %v", err)
 		return nil, err
@@ -119,21 +119,21 @@ func (s *Server) UpdateLogicalBridge(ctx context.Context, in *pb.UpdateLogicalBr
 	// only if VNI is not empty
 	if bridge.Spec.Vni != nil {
 		vxlanName := fmt.Sprintf("vni%d", *bridge.Spec.Vni)
-		iface, err := s.nLink.LinkByName(ctx, vxlanName)
+		iface, err := s.NLink.LinkByName(ctx, vxlanName)
 		if err != nil {
 			err := status.Errorf(codes.NotFound, "unable to find key %s", vxlanName)
 			return nil, err
 		}
 		// base := iface.Attrs()
 		// iface.MTU = 1500 // TODO: remove this, just an example
-		if err := s.nLink.LinkModify(ctx, iface); err != nil {
+		if err := s.NLink.LinkModify(ctx, iface); err != nil {
 			fmt.Printf("Failed to update link: %v", err)
 			return nil, err
 		}
 	}
 	response := utils.ProtoClone(in.LogicalBridge)
 	response.Status = &pb.LogicalBridgeStatus{OperStatus: pb.LBOperStatus_LB_OPER_STATUS_UP}
-	err = s.store.Set(in.LogicalBridge.Name, response)
+	err = s.Store.Set(in.LogicalBridge.Name, response)
 	if err != nil {
 		return nil, err
 	}
@@ -148,7 +148,7 @@ func (s *Server) GetLogicalBridge(ctx context.Context, in *pb.GetLogicalBridgeRe
 	}
 	// fetch object from the database
 	bridge := new(pb.LogicalBridge)
-	ok, err := s.store.Get(in.Name, bridge)
+	ok, err := s.Store.Get(in.Name, bridge)
 	if err != nil {
 		fmt.Printf("Failed to interact with store: %v", err)
 		return nil, err
@@ -160,7 +160,7 @@ func (s *Server) GetLogicalBridge(ctx context.Context, in *pb.GetLogicalBridgeRe
 	// only if VNI is not empty
 	if bridge.Spec.Vni != nil {
 		vxlanName := fmt.Sprintf("vni%d", *bridge.Spec.Vni)
-		_, err := s.nLink.LinkByName(ctx, vxlanName)
+		_, err := s.NLink.LinkByName(ctx, vxlanName)
 		if err != nil {
 			err := status.Errorf(codes.NotFound, "unable to find key %s", vxlanName)
 			return nil, err
@@ -188,7 +188,7 @@ func (s *Server) ListLogicalBridges(_ context.Context, in *pb.ListLogicalBridges
 			continue
 		}
 		bridge := new(pb.LogicalBridge)
-		ok, err := s.store.Get(key, bridge)
+		ok, err := s.Store.Get(key, bridge)
 		if err != nil {
 			fmt.Printf("Failed to interact with store: %v", err)
 			return nil, err

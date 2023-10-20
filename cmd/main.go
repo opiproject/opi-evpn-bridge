@@ -9,6 +9,10 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"github.com/opiproject/opi-evpn-bridge/pkg/objects/bridge"
+	"github.com/opiproject/opi-evpn-bridge/pkg/objects/port"
+	"github.com/opiproject/opi-evpn-bridge/pkg/objects/svi"
+	"github.com/opiproject/opi-evpn-bridge/pkg/objects/vrf"
 	"log"
 	"net"
 	"net/http"
@@ -16,11 +20,7 @@ import (
 
 	pc "github.com/opiproject/opi-api/inventory/v1/gen/go"
 	pe "github.com/opiproject/opi-api/network/evpn-gw/v1alpha1/gen/go"
-	"github.com/opiproject/opi-evpn-bridge/pkg/bridge"
-	"github.com/opiproject/opi-evpn-bridge/pkg/port"
-	"github.com/opiproject/opi-evpn-bridge/pkg/svi"
 	"github.com/opiproject/opi-evpn-bridge/pkg/utils"
-	"github.com/opiproject/opi-evpn-bridge/pkg/vrf"
 	"github.com/opiproject/opi-smbios-bridge/pkg/inventory"
 
 	"github.com/philippgille/gokv"

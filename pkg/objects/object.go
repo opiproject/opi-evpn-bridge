@@ -1,31 +1,33 @@
-// SPDX-License-Identifier: Apache-2.0
-// Copyright (c) 2022-2023 Dell Inc, or its subsidiaries.
-
-// Package bridge is the main package of the application
-package bridge
+package objects
 
 import (
-	"log"
-
+	"context"
+	"github.com/opiproject/opi-evpn-bridge/pkg/utils"
+	"github.com/philippgille/gokv"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/trace"
-
-	"github.com/philippgille/gokv"
-
-	pb "github.com/opiproject/opi-api/network/evpn-gw/v1alpha1/gen/go"
-
-	"github.com/opiproject/opi-evpn-bridge/pkg/utils"
+	"log"
 )
 
-// Server represents the Server object
+type ObjectFactory[T any] interface {
+	Create(ctx context.Context, in interface{}) (T, error)
+	Delete(ctx context.Context, in interface{}) error
+	Update(ctx context.Context, in interface{}) (T, error)
+	Get(ctx context.Context, in interface{}) (T, error)
+	List(ctx context.Context, in interface{}) ([]T, error)
+}
+
+const (
+	TenantbridgeName = "br-tenant"
+)
+
 type Server struct {
-	pb.UnimplementedLogicalBridgeServiceServer
 	Pagination map[string]int
 	ListHelper map[string]bool
-	nLink      utils.Netlink
-	frr        utils.Frr
-	tracer     trace.Tracer
-	store      gokv.Store
+	NLink      utils.Netlink
+	Frr        utils.Frr
+	Tracer     trace.Tracer
+	Store      gokv.Store
 }
 
 // NewServer creates initialized instance of EVPN server
