@@ -14,7 +14,7 @@ require (
 	github.com/philippgille/gokv/gomap v0.6.0
 	github.com/philippgille/gokv/redis v0.6.0
 	github.com/stretchr/testify v1.8.4
-	github.com/vektra/mockery/v2 v2.35.4
+	github.com/vektra/mockery/v2 v2.36.0
 	github.com/vishvananda/netlink v1.2.1-beta.2
 	github.com/ziutek/telnet v0.0.0-20180329124119-c3b780dc415b
 	go.einride.tech/aip v0.62.0
