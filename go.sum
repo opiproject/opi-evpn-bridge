@@ -449,6 +449,8 @@ github.com/opiproject/opi-api v0.0.0-20231016162146-d81cc5ee60d4 h1:q20p6Hg4Un2S
 github.com/opiproject/opi-api v0.0.0-20231016162146-d81cc5ee60d4/go.mod h1:92pv4ulvvPMuxCJ9ND3aYbmBfEMLx0VCjpkiR7ZTqPY=
 github.com/opiproject/opi-smbios-bridge v0.1.3-0.20231016193849-4f8fc2771276 h1:KVezy0VOr5PJEF7/c2ItpF70lbQ7Mev71vq7CYY7g3c=
 github.com/opiproject/opi-smbios-bridge v0.1.3-0.20231016193849-4f8fc2771276/go.mod h1:HGsIuqPzpfqO04IT4eB20cELf/SpJx42Dy2HFKE52XM=
+github.com/opiproject/opi-smbios-bridge v0.1.3-0.20231016193849-71ff9369659f h1:tyULK3JCXNh1eSNVhS7TtP+y4wINYqKDUZCkmtR5U4o=
+github.com/opiproject/opi-smbios-bridge v0.1.3-0.20231016193849-71ff9369659f/go.mod h1:Ix+f5kzFgrLoHB0JFs6Cck86/k4S+wrxZS54KDvChBo=
 github.com/otiai10/copy v1.2.0 h1:HvG945u96iNadPoG2/Ja2+AUJeW5YuFQMixq9yirC+k=
 github.com/otiai10/copy v1.2.0/go.mod h1:rrF5dJ5F0t/EWSYODDu4j9/vEeYHMkc8jt0zJChqQWw=
 github.com/otiai10/curr v0.0.0-20150429015615-9b4961190c95/go.mod h1:9qAhocn7zKJG+0mI8eUu6xqkFDYS2kb2saOteoSB3cE=

@@ -9,9 +9,10 @@ require (
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.18.0
 	github.com/onsi/ginkgo/v2 v2.13.0
 	github.com/opiproject/opi-api v0.0.0-20231016162146-d81cc5ee60d4
-	github.com/opiproject/opi-smbios-bridge v0.1.3-0.20231016193849-4f8fc2771276
+	github.com/opiproject/opi-smbios-bridge v0.1.3-0.20231016193849-71ff9369659f
 	github.com/philippgille/gokv v0.0.0-20191001201555-5ac9a20de634
 	github.com/philippgille/gokv/gomap v0.6.0
+	github.com/philippgille/gokv/redis v0.6.0
 	github.com/stretchr/testify v1.8.4
 	github.com/vektra/mockery/v2 v2.35.4
 	github.com/vishvananda/netlink v1.2.1-beta.2
@@ -149,7 +150,6 @@ require (
 	github.com/olekukonko/tablewriter v0.0.5 // indirect
 	github.com/pelletier/go-toml/v2 v2.0.6 // indirect
 	github.com/philippgille/gokv/encoding v0.6.0 // indirect
-	github.com/philippgille/gokv/redis v0.6.0 // indirect
 	github.com/philippgille/gokv/util v0.6.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
