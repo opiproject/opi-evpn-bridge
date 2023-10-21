@@ -10,7 +10,7 @@ require (
 	github.com/onsi/ginkgo/v2 v2.13.0
 	github.com/opiproject/opi-api v0.0.0-20231016162146-d81cc5ee60d4
 	github.com/opiproject/opi-smbios-bridge v0.1.3-0.20231016193849-71ff9369659f
-	github.com/philippgille/gokv v0.0.0-20191001201555-5ac9a20de634
+	github.com/philippgille/gokv v0.6.0
 	github.com/philippgille/gokv/gomap v0.6.0
 	github.com/philippgille/gokv/redis v0.6.0
 	github.com/stretchr/testify v1.8.4
