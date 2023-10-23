@@ -22,17 +22,18 @@ type Bridge struct {
 // build time check that struct implements interface
 var _ EvpnObject[*pb.LogicalBridge] = (*Bridge)(nil)
 
-// NewBridge creates new SVI object from protobuf message
-func NewBridge(in *pb.LogicalBridge) *Bridge {
-	// vtepip := make(net.IP, 4)
-	// binary.BigEndian.PutUint32(vtepip, in.Spec.VtepIpPrefix.Addr.GetV4Addr())
-	// vip := net.IPNet{IP: vtepip, Mask: net.CIDRMask(int(in.Spec.VtepIpPrefix.Len), 32)}
-	// TODO: Vni: *in.Spec.Vni
-	return &Bridge{VlanID: in.Spec.VlanId}
+func NewBridge(i *pb.LogicalBridge) EvpnObject[*pb.LogicalBridge] {
+	return &Bridge{
+		// vtepip := make(net.IP, 4)
+		// binary.BigEndian.PutUint32(vtepip, in.Spec.VtepIpPrefix.Addr.GetV4Addr())
+		// vip := net.IPNet{IP: vtepip, Mask: net.CIDRMask(int(in.Spec.VtepIpPrefix.Len), 32)}
+		// TODO: Vni: *in.Spec.Vni
+		VlanID: i.Spec.VlanId,
+	}
 }
 
 // ToPb transforms SVI object to protobuf message
-func (in *Bridge) ToPb() (*pb.LogicalBridge, error) {
+func (in *Bridge) ToPb() *pb.LogicalBridge {
 	bridge := &pb.LogicalBridge{
 		Spec: &pb.LogicalBridgeSpec{
 			Vni:    &in.Vni,
@@ -43,5 +44,9 @@ func (in *Bridge) ToPb() (*pb.LogicalBridge, error) {
 		},
 	}
 	// TODO: add VtepIpPrefix
-	return bridge, nil
+	return bridge
+}
+
+func (in *Bridge) GetName() string {
+	return in.Name
 }

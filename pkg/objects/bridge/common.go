@@ -6,27 +6,13 @@ package bridge
 
 import (
 	"context"
-	"fmt"
-	"github.com/opiproject/opi-evpn-bridge/pkg/models"
-	"log"
-	"net"
-	"sort"
-
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/test/bufconn"
+	"log"
+	"net"
 
 	pb "github.com/opiproject/opi-api/network/evpn-gw/v1alpha1/gen/go"
 )
-
-func sortLogicalBridges(bridges []*models.Bridge) {
-	sort.Slice(bridges, func(i int, j int) bool {
-		return bridges[i].Name < bridges[j].Name
-	})
-}
-
-func resourceIDToFullName(resourceID string) string {
-	return fmt.Sprintf("//network.opiproject.org/bridges/%s", resourceID)
-}
 
 // TODO: move all of this to a common place
 func dialer(opi *Server) func(context.Context, string) (net.Conn, error) {

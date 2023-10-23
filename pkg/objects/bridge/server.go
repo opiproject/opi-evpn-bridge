@@ -13,16 +13,20 @@ import (
 	"github.com/opiproject/opi-evpn-bridge/pkg/utils"
 )
 
+const (
+	Prefix = "//network.opiproject.org/bridges"
+)
+
 // Server represents the Server object
 type Server struct {
 	pb.UnimplementedLogicalBridgeServiceServer
-	*objects.Server
+	*objects.Server[*pb.LogicalBridge]
 }
 
 // NewServer creates initialized instance of EVPN server
-func NewServer(store gokv.Store) objects.ObjectFactory[*models.Bridge] {
+func NewServer(store gokv.Store) objects.ObjectOps[*models.Bridge] {
 	return &Server{
-		Server: objects.NewServer(store),
+		Server: objects.NewServer[*pb.LogicalBridge](store),
 	}
 }
 
@@ -30,6 +34,6 @@ func NewServer(store gokv.Store) objects.ObjectFactory[*models.Bridge] {
 // with externally created Netlink
 func NewServerWithArgs(nLink utils.Netlink, frr utils.Frr, store gokv.Store) *Server {
 	return &Server{
-		Server: objects.NewServerWithArgs(nLink, frr, store),
+		Server: objects.NewServerWithArgs[*pb.LogicalBridge](nLink, frr, store),
 	}
 }
