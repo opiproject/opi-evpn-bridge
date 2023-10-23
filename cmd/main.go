@@ -46,10 +46,14 @@ func main() {
 	var tlsFiles string
 	flag.StringVar(&tlsFiles, "tls", "", "TLS files in server_cert:server_key:ca_cert format.")
 
+	var redisAddress string
+	flag.StringVar(&redisAddress, "redis_addr", "127.0.0.1:6379", "Redis address in ip_address:port format")
+
 	flag.Parse()
 
 	// Create KV store for persistence
 	options := redis.DefaultOptions
+	options.Address = redisAddress
 	options.Codec = utils.ProtoCodec{}
 	store, err := redis.NewClient(options)
 	if err != nil {
