@@ -10,18 +10,14 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"log"
 	"net"
 	"reflect"
 	"testing"
 
-	"github.com/philippgille/gokv/gomap"
 	"github.com/stretchr/testify/mock"
 	"github.com/vishvananda/netlink"
 
-	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -255,36 +251,20 @@ func Test_CreateLogicalBridge(t *testing.T) {
 	// run tests
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			// start GRPC mockup server
 			ctx := context.Background()
-			mockNetlink := mocks.NewNetlink(t)
-			mockFrr := mocks.NewFrr(t)
-			store := gomap.NewStore(gomap.Options{Codec: utils.ProtoCodec{}})
-			opi := NewServerWithArgs(mockNetlink, mockFrr, store)
-			conn, err := grpc.DialContext(ctx,
-				"",
-				grpc.WithTransportCredentials(insecure.NewCredentials()),
-				grpc.WithContextDialer(dialer(opi)))
-			if err != nil {
-				log.Fatal(err)
-			}
-			defer func(conn *grpc.ClientConn) {
-				err := conn.Close()
-				if err != nil {
-					log.Fatal(err)
-				}
-			}(conn)
-			client := pb.NewLogicalBridgeServiceClient(conn)
+			env := newTestEnv(ctx, t)
+			defer env.Close()
+			client := pb.NewLogicalBridgeServiceClient(env.conn)
 
 			if tt.exist {
-				_ = opi.store.Set(testLogicalBridgeName, &testLogicalBridgeWithStatus)
+				_ = env.opi.store.Set(testLogicalBridgeName, &testLogicalBridgeWithStatus)
 			}
 			if tt.out != nil {
 				tt.out = utils.ProtoClone(tt.out)
 				tt.out.Name = testLogicalBridgeName
 			}
 			if tt.on != nil {
-				tt.on(mockNetlink, mockFrr, tt.errMsg)
+				tt.on(env.mockNetlink, env.mockFrr, tt.errMsg)
 			}
 
 			request := &pb.CreateLogicalBridgeRequest{LogicalBridge: tt.in, LogicalBridgeId: tt.id}
@@ -424,32 +404,16 @@ func Test_DeleteLogicalBridge(t *testing.T) {
 	// run tests
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			// start GRPC mockup server
 			ctx := context.Background()
-			mockNetlink := mocks.NewNetlink(t)
-			mockFrr := mocks.NewFrr(t)
-			store := gomap.NewStore(gomap.Options{Codec: utils.ProtoCodec{}})
-			opi := NewServerWithArgs(mockNetlink, mockFrr, store)
-			conn, err := grpc.DialContext(ctx,
-				"",
-				grpc.WithTransportCredentials(insecure.NewCredentials()),
-				grpc.WithContextDialer(dialer(opi)))
-			if err != nil {
-				log.Fatal(err)
-			}
-			defer func(conn *grpc.ClientConn) {
-				err := conn.Close()
-				if err != nil {
-					log.Fatal(err)
-				}
-			}(conn)
-			client := pb.NewLogicalBridgeServiceClient(conn)
+			env := newTestEnv(ctx, t)
+			defer env.Close()
+			client := pb.NewLogicalBridgeServiceClient(env.conn)
 
 			fname1 := resourceIDToFullName(tt.in)
-			_ = opi.store.Set(testLogicalBridgeName, &testLogicalBridgeWithStatus)
+			_ = env.opi.store.Set(testLogicalBridgeName, &testLogicalBridgeWithStatus)
 
 			if tt.on != nil {
-				tt.on(mockNetlink, mockFrr, tt.errMsg)
+				tt.on(env.mockNetlink, env.mockFrr, tt.errMsg)
 			}
 
 			request := &pb.DeleteLogicalBridgeRequest{Name: fname1, AllowMissing: tt.missing}
@@ -516,29 +480,13 @@ func Test_UpdateLogicalBridge(t *testing.T) {
 	// run tests
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			// start GRPC mockup server
 			ctx := context.Background()
-			mockNetlink := mocks.NewNetlink(t)
-			mockFrr := mocks.NewFrr(t)
-			store := gomap.NewStore(gomap.Options{Codec: utils.ProtoCodec{}})
-			opi := NewServerWithArgs(mockNetlink, mockFrr, store)
-			conn, err := grpc.DialContext(ctx,
-				"",
-				grpc.WithTransportCredentials(insecure.NewCredentials()),
-				grpc.WithContextDialer(dialer(opi)))
-			if err != nil {
-				log.Fatal(err)
-			}
-			defer func(conn *grpc.ClientConn) {
-				err := conn.Close()
-				if err != nil {
-					log.Fatal(err)
-				}
-			}(conn)
-			client := pb.NewLogicalBridgeServiceClient(conn)
+			env := newTestEnv(ctx, t)
+			defer env.Close()
+			client := pb.NewLogicalBridgeServiceClient(env.conn)
 
 			if tt.exist {
-				_ = opi.store.Set(testLogicalBridgeName, &testLogicalBridgeWithStatus)
+				_ = env.opi.store.Set(testLogicalBridgeName, &testLogicalBridgeWithStatus)
 			}
 			if tt.out != nil {
 				tt.out = utils.ProtoClone(tt.out)
@@ -598,28 +546,12 @@ func Test_GetLogicalBridge(t *testing.T) {
 	// run tests
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			// start GRPC mockup server
 			ctx := context.Background()
-			mockNetlink := mocks.NewNetlink(t)
-			mockFrr := mocks.NewFrr(t)
-			store := gomap.NewStore(gomap.Options{Codec: utils.ProtoCodec{}})
-			opi := NewServerWithArgs(mockNetlink, mockFrr, store)
-			conn, err := grpc.DialContext(ctx,
-				"",
-				grpc.WithTransportCredentials(insecure.NewCredentials()),
-				grpc.WithContextDialer(dialer(opi)))
-			if err != nil {
-				log.Fatal(err)
-			}
-			defer func(conn *grpc.ClientConn) {
-				err := conn.Close()
-				if err != nil {
-					log.Fatal(err)
-				}
-			}(conn)
-			client := pb.NewLogicalBridgeServiceClient(conn)
+			env := newTestEnv(ctx, t)
+			defer env.Close()
+			client := pb.NewLogicalBridgeServiceClient(env.conn)
 
-			_ = opi.store.Set(testLogicalBridgeName, &testLogicalBridgeWithStatus)
+			_ = env.opi.store.Set(testLogicalBridgeName, &testLogicalBridgeWithStatus)
 
 			request := &pb.GetLogicalBridgeRequest{Name: tt.in}
 			response, err := client.GetLogicalBridge(ctx, request)
@@ -703,30 +635,14 @@ func Test_ListLogicalBridges(t *testing.T) {
 	// run tests
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			// start GRPC mockup server
 			ctx := context.Background()
-			mockNetlink := mocks.NewNetlink(t)
-			mockFrr := mocks.NewFrr(t)
-			store := gomap.NewStore(gomap.Options{Codec: utils.ProtoCodec{}})
-			opi := NewServerWithArgs(mockNetlink, mockFrr, store)
-			conn, err := grpc.DialContext(ctx,
-				"",
-				grpc.WithTransportCredentials(insecure.NewCredentials()),
-				grpc.WithContextDialer(dialer(opi)))
-			if err != nil {
-				log.Fatal(err)
-			}
-			defer func(conn *grpc.ClientConn) {
-				err := conn.Close()
-				if err != nil {
-					log.Fatal(err)
-				}
-			}(conn)
-			client := pb.NewLogicalBridgeServiceClient(conn)
+			env := newTestEnv(ctx, t)
+			defer env.Close()
+			client := pb.NewLogicalBridgeServiceClient(env.conn)
 
-			_ = opi.store.Set(testLogicalBridgeName, &testLogicalBridgeWithStatus)
-			opi.ListHelper[testLogicalBridgeName] = false
-			opi.Pagination["existing-pagination-token"] = 1
+			_ = env.opi.store.Set(testLogicalBridgeName, &testLogicalBridgeWithStatus)
+			env.opi.ListHelper[testLogicalBridgeName] = false
+			env.opi.Pagination["existing-pagination-token"] = 1
 
 			request := &pb.ListLogicalBridgesRequest{PageSize: tt.size, PageToken: tt.token}
 			response, err := client.ListLogicalBridges(ctx, request)
