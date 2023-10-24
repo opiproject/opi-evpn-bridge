@@ -24,6 +24,7 @@ const (
 
 // Port object, separate from protobuf for decoupling
 type Port struct {
+	Name                 string
 	Ptype                BridgePortType
 	MacAddress           net.HardwareAddr
 	LogicalBridgeRefKeys []string
@@ -52,4 +53,9 @@ func (in *Port) ToPb() (*pb.BridgePort, error) {
 	}
 	// TODO: add VtepIpPrefix
 	return port, nil
+}
+
+// GetName returns object unique name
+func (in *Port) GetName() string {
+	return in.Name
 }

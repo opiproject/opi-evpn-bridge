@@ -13,6 +13,7 @@ import (
 
 // Vrf object, separate from protobuf for decoupling
 type Vrf struct {
+	Name         string
 	Vni          uint32
 	LoopbackIP   net.IPNet
 	VtepIP       net.IPNet
@@ -48,4 +49,9 @@ func (in *Vrf) ToPb() (*pb.Vrf, error) {
 	}
 	// TODO: add LocalAs, LoopbackIP, VtepIP
 	return vrf, nil
+}
+
+// GetName returns object unique name
+func (in *Vrf) GetName() string {
+	return in.Name
 }

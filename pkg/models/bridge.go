@@ -13,6 +13,7 @@ import (
 
 // Bridge object, separate from protobuf for decoupling
 type Bridge struct {
+	Name   string
 	Vni    uint32
 	VlanID uint32
 	VtepIP net.IPNet
@@ -43,4 +44,9 @@ func (in *Bridge) ToPb() (*pb.LogicalBridge, error) {
 	}
 	// TODO: add VtepIpPrefix
 	return bridge, nil
+}
+
+// GetName returns object unique name
+func (in *Bridge) GetName() string {
+	return in.Name
 }

@@ -13,6 +13,7 @@ import (
 
 // Svi object, separate from protobuf for decoupling
 type Svi struct {
+	Name                string
 	VrfRefKey           string
 	LogicalBridgeRefKey string
 	MacAddress          net.HardwareAddr
@@ -61,4 +62,9 @@ func (in *Svi) ToPb() (*pb.Svi, error) {
 	}
 	// TODO: add GwIpPrefix
 	return svi, nil
+}
+
+// GetName returns object unique name
+func (in *Svi) GetName() string {
+	return in.Name
 }
