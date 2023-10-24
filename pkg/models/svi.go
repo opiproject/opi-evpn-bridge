@@ -7,6 +7,7 @@ package models
 import (
 	"encoding/binary"
 	"net"
+	"time"
 
 	pb "github.com/opiproject/opi-api/network/evpn-gw/v1alpha1/gen/go"
 )
@@ -20,6 +21,8 @@ type Svi struct {
 	GwIP                []net.IPNet
 	EnableBgp           bool
 	RemoteAs            uint32
+	CreatedAt           time.Time
+	UpdatedAt           time.Time
 }
 
 // build time check that struct implements interface
@@ -42,6 +45,7 @@ func NewSvi(in *pb.Svi) *Svi {
 		GwIP:                gwIPList,
 		EnableBgp:           in.Spec.EnableBgp,
 		RemoteAs:            in.Spec.RemoteAs,
+		CreatedAt:           time.Now(),
 	}
 	return svi
 }

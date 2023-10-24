@@ -7,16 +7,19 @@ package models
 import (
 	// "encoding/binary"
 	"net"
+	"time"
 
 	pb "github.com/opiproject/opi-api/network/evpn-gw/v1alpha1/gen/go"
 )
 
 // Bridge object, separate from protobuf for decoupling
 type Bridge struct {
-	Name   string
-	Vni    uint32
-	VlanID uint32
-	VtepIP net.IPNet
+	Name      string
+	Vni       uint32
+	VlanID    uint32
+	VtepIP    net.IPNet
+	CreatedAt time.Time
+	UpdatedAt time.Time
 }
 
 // build time check that struct implements interface
@@ -28,7 +31,7 @@ func NewBridge(in *pb.LogicalBridge) *Bridge {
 	// binary.BigEndian.PutUint32(vtepip, in.Spec.VtepIpPrefix.Addr.GetV4Addr())
 	// vip := net.IPNet{IP: vtepip, Mask: net.CIDRMask(int(in.Spec.VtepIpPrefix.Len), 32)}
 	// TODO: Vni: *in.Spec.Vni
-	return &Bridge{VlanID: in.Spec.VlanId}
+	return &Bridge{VlanID: in.Spec.VlanId, CreatedAt: time.Now()}
 }
 
 // ToPb transforms SVI object to protobuf message
