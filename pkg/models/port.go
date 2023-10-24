@@ -6,6 +6,7 @@ package models
 
 import (
 	"net"
+	"time"
 
 	pb "github.com/opiproject/opi-api/network/evpn-gw/v1alpha1/gen/go"
 )
@@ -28,6 +29,8 @@ type Port struct {
 	Ptype                BridgePortType
 	MacAddress           net.HardwareAddr
 	LogicalBridgeRefKeys []string
+	CreatedAt            time.Time
+	UpdatedAt            time.Time
 }
 
 // build time check that struct implements interface
@@ -36,7 +39,12 @@ var _ EvpnObject[*pb.BridgePort] = (*Port)(nil)
 // NewPort creates new SVI object from protobuf message
 func NewPort(in *pb.BridgePort) *Port {
 	mac := net.HardwareAddr(in.Spec.MacAddress)
-	return &Port{Ptype: BridgePortType(in.Spec.Ptype), MacAddress: mac, LogicalBridgeRefKeys: in.Spec.LogicalBridges}
+	return &Port{
+		Ptype:                BridgePortType(in.Spec.Ptype),
+		MacAddress:           mac,
+		LogicalBridgeRefKeys: in.Spec.LogicalBridges,
+		CreatedAt:            time.Now(),
+	}
 }
 
 // ToPb transforms SVI object to protobuf message

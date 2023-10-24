@@ -7,6 +7,7 @@ package models
 import (
 	"encoding/binary"
 	"net"
+	"time"
 
 	pb "github.com/opiproject/opi-api/network/evpn-gw/v1alpha1/gen/go"
 )
@@ -20,6 +21,8 @@ type Vrf struct {
 	LocalAs      int
 	RoutingTable uint32
 	MacAddress   net.HardwareAddr
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
 }
 
 // build time check that struct implements interface
@@ -34,7 +37,7 @@ func NewVrf(in *pb.Vrf) *Vrf {
 	// vtepip := make(net.IP, 4)
 	// binary.BigEndian.PutUint32(vtepip, in.Spec.VtepIpPrefix.Addr.GetV4Addr())
 	// vip := net.IPNet{IP: vtepip, Mask: net.CIDRMask(int(in.Spec.VtepIpPrefix.Len), 32)}
-	return &Vrf{LoopbackIP: lip, MacAddress: mac, RoutingTable: in.Status.RoutingTable}
+	return &Vrf{LoopbackIP: lip, MacAddress: mac, RoutingTable: in.Status.RoutingTable, CreatedAt: time.Now()}
 }
 
 // ToPb transforms VRF object to protobuf message
