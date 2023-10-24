@@ -6,5 +6,6 @@ package models
 
 // EvpnObject is an interface for all domain objects in evpn-gw
 type EvpnObject[T any] interface {
-	ToPb() (T, error)
+	ToPb() T
+	GetName() string
 }
