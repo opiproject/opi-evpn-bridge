@@ -12,6 +12,8 @@ import (
 	"fmt"
 	"net"
 	"reflect"
+	"strconv"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/mock"
@@ -667,4 +669,74 @@ func Test_ListLogicalBridges(t *testing.T) {
 			}
 		})
 	}
+}
+
+func InteractWithLogicalBridge(ctx context.Context, client pb.LogicalBridgeServiceClient, idx string, t *testing.T, waitGroup *sync.WaitGroup) {
+	defer waitGroup.Done()
+
+	resourceID := "opi-concurrent-" + idx
+	fullname := resourceIDToFullName(resourceID)
+
+	// Get
+	_, err := client.GetLogicalBridge(ctx, &pb.GetLogicalBridgeRequest{Name: fullname})
+	if err != nil {
+		t.Error(err)
+	}
+	// Create
+	_, err = client.CreateLogicalBridge(ctx, &pb.CreateLogicalBridgeRequest{LogicalBridge: &testLogicalBridge, LogicalBridgeId: resourceID})
+	if err != nil {
+		t.Error(err)
+	}
+	// Get
+	_, err = client.GetLogicalBridge(ctx, &pb.GetLogicalBridgeRequest{Name: fullname})
+	if err != nil {
+		t.Error(err)
+	}
+	// Delete
+	_, err = client.DeleteLogicalBridge(ctx, &pb.DeleteLogicalBridgeRequest{Name: fullname})
+	if err != nil {
+		t.Error(err)
+	}
+	// Get
+	_, err = client.GetLogicalBridge(ctx, &pb.GetLogicalBridgeRequest{Name: fullname})
+	if err != nil {
+		t.Error(err)
+	}
+}
+
+func Test_LogicalBridge_Concurrent(t *testing.T) {
+	ctx := context.Background()
+	env := newTestEnv(ctx, t)
+	defer env.Close()
+	client := pb.NewLogicalBridgeServiceClient(env.conn)
+
+	goroutineCount := 1000
+	waitGroup := sync.WaitGroup{}
+	waitGroup.Add(goroutineCount) // Must be called before any goroutine is started
+	for i := 0; i < goroutineCount; i++ {
+		go InteractWithLogicalBridge(ctx, client, strconv.Itoa(i), t, &waitGroup)
+	}
+	waitGroup.Wait()
+
+	// Now make sure that all values are in the store
+
+	// expected := Foo{}
+	// for i := 0; i < goroutineCount; i++ {
+	// 	actualPtr := new(Foo)
+	// 	found, err := store.Get(strconv.Itoa(i), actualPtr)
+	// 	if err != nil {
+	// 		t.Errorf("An error occurred during the test: %v", err)
+	// 	}
+	// 	if !found {
+	// 		t.Error("No value was found, but should have been")
+	// 	}
+	// 	actual := *actualPtr
+	// 	if actual != expected {
+	// 		t.Errorf("Expected: %v, but was: %v", expected, actual)
+	// 	}
+	// }
+
+	// if !proto.Equal(tt.out, response) {
+	// 	t.Error("response: expected", tt.out, "received", response)
+	// }
 }
