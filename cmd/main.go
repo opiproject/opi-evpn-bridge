@@ -49,6 +49,9 @@ func main() {
 	var redisAddress string
 	flag.StringVar(&redisAddress, "redis_addr", "127.0.0.1:6379", "Redis address in ip_address:port format")
 
+	var frrAddress string
+	flag.StringVar(&frrAddress, "frr_addr", "127.0.0.1", "Frr address in ip_address format, no port")
+
 	flag.Parse()
 
 	// Create KV store for persistence
@@ -67,10 +70,10 @@ func main() {
 	}(store)
 
 	go runGatewayServer(grpcPort, httpPort)
-	runGrpcServer(grpcPort, tlsFiles, store)
+	runGrpcServer(grpcPort, tlsFiles, frrAddress, store)
 }
 
-func runGrpcServer(grpcPort int, tlsFiles string, store gokv.Store) {
+func runGrpcServer(grpcPort int, tlsFiles, frrAddress string, store gokv.Store) {
 	tp := utils.InitTracerProvider("opi-evpn-bridge")
 	defer func() {
 		if err := tp.Shutdown(context.Background()); err != nil {
@@ -112,10 +115,13 @@ func runGrpcServer(grpcPort int, tlsFiles string, store gokv.Store) {
 	)
 	s := grpc.NewServer(serverOptions...)
 
-	bridgeServer := bridge.NewServer(store)
-	portServer := port.NewServer(store)
-	vrfServer := vrf.NewServer(store)
-	sviServer := svi.NewServer(store)
+	nLink := utils.NewNetlinkWrapper()
+	frr := utils.NewFrrWrapperWithArgs(frrAddress)
+
+	bridgeServer := bridge.NewServerWithArgs(nLink, frr, store)
+	portServer := port.NewServerWithArgs(nLink, frr, store)
+	vrfServer := vrf.NewServerWithArgs(nLink, frr, store)
+	sviServer := svi.NewServerWithArgs(nLink, frr, store)
 
 	pe.RegisterLogicalBridgeServiceServer(s, bridgeServer)
 	pe.RegisterBridgePortServiceServer(s, portServer)
