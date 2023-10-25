@@ -19,10 +19,10 @@ import (
 )
 
 const (
-	network  = "tcp"
-	password = "opi"
-	address  = "localhost"
-	timeout  = 10 * time.Second
+	network        = "tcp"
+	password       = "opi"
+	defaultAddress = "localhost"
+	timeout        = 10 * time.Second
 )
 
 // Ports defined here https://docs.frrouting.org/en/latest/setup.html#servicess
@@ -58,13 +58,19 @@ type Frr interface {
 
 // FrrWrapper wrapper for Frr package
 type FrrWrapper struct {
-	tracer trace.Tracer
+	address string
+	tracer  trace.Tracer
 }
 
-// NewFrrWrapper creates initialized instance of FrrWrapper
+// NewFrrWrapper creates initialized instance of FrrWrapper with default address
 func NewFrrWrapper() *FrrWrapper {
+	return NewFrrWrapperWithArgs(defaultAddress)
+}
+
+// NewFrrWrapperWithArgs creates initialized instance of FrrWrapper
+func NewFrrWrapperWithArgs(address string) *FrrWrapper {
 	// default tracer name is good for now
-	return &FrrWrapper{tracer: otel.Tracer("")}
+	return &FrrWrapper{address: address, tracer: otel.Tracer("")}
 }
 
 // build time check that struct implements interface
@@ -141,13 +147,13 @@ func (n *FrrWrapper) TelnetDialAndCommunicate(ctx context.Context, command strin
 		childSpan.SetAttributes(
 			attribute.Int("frr.port", port),
 			attribute.String("frr.name", command),
-			attribute.String("frr.address", address),
+			attribute.String("frr.address", n.address),
 			attribute.String("frr.network", network),
 		)
 	}
 
 	// new connection every time
-	conn, err := telnet.DialTimeout(network, fmt.Sprintf("%s:%d", address, port), timeout)
+	conn, err := telnet.DialTimeout(network, fmt.Sprintf("%s:%d", n.address, port), timeout)
 	if err != nil {
 		return "", err
 	}
