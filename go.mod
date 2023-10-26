@@ -10,6 +10,7 @@ require (
 	github.com/onsi/ginkgo/v2 v2.12.0
 	github.com/opiproject/opi-api v0.0.0-20230911203412-3b18c0431f46
 	github.com/opiproject/opi-smbios-bridge v0.1.3-0.20230912011601-0ed114954e97
+	github.com/redis/go-redis/v9 v9.1.0
 	github.com/stretchr/testify v1.8.4
 	github.com/vektra/mockery v1.1.2
 	github.com/vishvananda/netlink v1.2.1-beta.2
@@ -54,6 +55,7 @@ require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/denis-tingaikin/go-header v0.4.3 // indirect
 	github.com/dgraph-io/ristretto v0.1.1 // indirect
+	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/dustin/go-humanize v1.0.0 // indirect
 	github.com/esimonov/ifshort v1.0.4 // indirect
 	github.com/ettle/strcase v0.1.1 // indirect

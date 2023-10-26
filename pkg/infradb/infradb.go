@@ -4,16 +4,14 @@
 package infradb
 
 import (
+	//badger "github.com/dgraph-io/badger/v4"
 	"context"
 	"encoding/json"
-	"log"
-	"os"
-	"time"
 
-	badger "github.com/dgraph-io/badger/v4"
+	"github.com/redis/go-redis/v9"
 )
 
-const (
+/*const (
 	// discardRatio. It represents the discard ratio for the GC.
 	//
 	// Ref: https://godoc.org/github.com/dgraph-io/badger#DB.RunValueLogGC
@@ -145,4 +143,44 @@ func (d *InfraDB) deleteVrf(resourceName string) error {
 	}
 
 	return nil
+}*/
+
+var idb *InfraDB
+
+type InfraDB struct {
+	db  *redis.Client
+	ctx context.Context
+}
+
+func NewInfraDB() {
+	client := redis.NewClient(&redis.Options{
+		Addr:     "localhost:6379",
+		Password: "", // no password set
+		DB:       0,  // use default DB
+	})
+
+	idb = &InfraDB{
+		db: client,
+	}
+
+	idb.ctx = context.Background()
+}
+
+func GetVrf(resourceName string) (*Vrf, error) {
+	return idb.getVrf(resourceName)
+}
+
+func (d *InfraDB) getVrf(resourceName string) (*Vrf, error) {
+	vrf := &Vrf{}
+	value, err := d.db.Get(d.ctx, resourceName).Result()
+	if err != nil {
+		return nil, err
+	}
+
+	err = json.Unmarshal([]byte(value), vrf)
+	if err != nil {
+		return nil, err
+	}
+
+	return vrf, nil
 }
