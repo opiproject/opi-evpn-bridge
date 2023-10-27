@@ -1,0 +1,59 @@
+@startuml
+actor User as User
+participant GrpcServer as GrpcServer
+participant InfraDB as InfraDB
+participant InfraDBTaskManager as InfraDBTaskManager
+queue TaskQueue as TaskQueue
+participant StorageLib as StorageLib
+database DB as DB
+participant FrrModule as FrrModule
+participant Frr as Frr
+
+User -> GrpcServer:pb.CreateBridgePort(pb.BPobj)
+GrpcServer -> GrpcServer:Parameter check
+
+alt  Parameters valid
+    GrpcServer -> GrpcServer: Convert to infraDB model
+else Paramaters invalid
+    User <-- GrpcServer: Parameters invalid
+end
+
+GrpcServer -> InfraDB: infraDB.CreateBP(infraDB.BPobj)
+
+group #F5DEB3 Under global lock
+    InfraDB -> InfraDB: Validate Refs (e.g. LB exists ?)
+
+    alt  Refs valid
+        InfraDB -> InfraDB: Update Refs Obj (infraDB.UpdateLB())
+    else Refs invalid
+        GrpcServer <-- InfraDB: Refs invalid
+        User <-- GrpcServer: Refs invalid
+    end
+
+    InfraDB -> StorageLib: storage.Set(infraDB.BP)
+    StorageLib -> DB: Store BP intent (what if fails ?)
+    GrpcServer --> User: BP created
+end
+
+StorageLib -> InfraDBTaskManager: Notify that BP Intent created
+InfraDBTaskManager -> TaskQueue: Push Tasks into Queue
+InfraDBTaskManager <- TaskQueue: Read Frr task from queue
+InfraDBTaskManager -> FrrModule: Notify Frr module (priority 1)
+FrrModule -> StorageLib: infraBD.GetBP()
+StorageLib --> FrrModule: infraDB.BP obj
+FrrModule -> Frr: ApplyFrrConf()
+alt ApplyFrrConf success
+    FrrModule -> InfraDB: InfraDB.UpdateBPStatus(Frr->Done)
+else ApplyFrrConf failure
+    loop Retry every 1s
+        FrrModule -> Frr: ApplyFrrConf()
+    end
+    FrrModule -> InfraDB: Give up and InfraDB.UpdateBPStatus(Frr->Error)
+    StorageLib -> InfraDBTaskManager: Notify to remove all the related BP tasks from Queue
+end
+
+
+
+
+
+@enduml
