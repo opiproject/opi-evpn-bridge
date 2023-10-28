@@ -14,6 +14,7 @@ import (
 	"testing"
 
 	"github.com/philippgille/gokv/gomap"
+	"go.einride.tech/aip/resourcename"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/test/bufconn"
@@ -30,7 +31,10 @@ func sortVrfs(vrfs []*pb.Vrf) {
 }
 
 func resourceIDToFullName(resourceID string) string {
-	return fmt.Sprintf("//network.opiproject.org/vrfs/%s", resourceID)
+	return resourcename.Join(
+		"//network.opiproject.org/",
+		"vrfs", resourceID,
+	)
 }
 
 func generateRandMAC() ([]byte, error) {

@@ -6,13 +6,13 @@ package bridge
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"net"
 	"sort"
 	"testing"
 
 	"github.com/philippgille/gokv/gomap"
+	"go.einride.tech/aip/resourcename"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/test/bufconn"
@@ -29,7 +29,10 @@ func sortLogicalBridges(bridges []*pb.LogicalBridge) {
 }
 
 func resourceIDToFullName(resourceID string) string {
-	return fmt.Sprintf("//network.opiproject.org/bridges/%s", resourceID)
+	return resourcename.Join(
+		"//network.opiproject.org/",
+		"bridges", resourceID,
+	)
 }
 
 // TODO: move all of this to a common place
