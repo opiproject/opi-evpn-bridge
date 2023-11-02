@@ -127,7 +127,7 @@ func runGrpcServer(grpcPort int, tlsFiles, frrAddress string, store gokv.Store) 
 	pe.RegisterBridgePortServiceServer(s, portServer)
 	pe.RegisterVrfServiceServer(s, vrfServer)
 	pe.RegisterSviServiceServer(s, sviServer)
-	pc.RegisterInventorySvcServer(s, &inventory.Server{})
+	pc.RegisterInventoryServiceServer(s, &inventory.Server{})
 
 	reflection.Register(s)
 
@@ -148,7 +148,7 @@ func runGatewayServer(grpcPort int, httpPort int) {
 	opts := []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}
 
 	// TODO: add/replace with more/less registrations, once opi-api compiler fixed
-	err := pc.RegisterInventorySvcHandlerFromEndpoint(ctx, mux, fmt.Sprintf(":%d", grpcPort), opts)
+	err := pc.RegisterInventoryServiceHandlerFromEndpoint(ctx, mux, fmt.Sprintf(":%d", grpcPort), opts)
 	if err != nil {
 		log.Panic("cannot register handler server")
 	}
