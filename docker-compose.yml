@@ -394,6 +394,8 @@ services:
         condition: service_started
       testgrpc:
         condition: service_completed_successfully
+      opi-gw-test:
+        condition: service_completed_successfully
       opi-jaeger-test:
         condition: service_completed_successfully
     # HOST1
