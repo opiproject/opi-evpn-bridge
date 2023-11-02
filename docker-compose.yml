@@ -384,7 +384,6 @@ services:
       - host2-leaf2
       - host3-leaf2
       - host4-leaf2
-      - opi-evpn-bridge
       - testgrpc
       - opi-jaeger-test
     # HOST1
