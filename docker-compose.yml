@@ -252,7 +252,8 @@ services:
     image: curlimages/curl:8.4.0
     network_mode: service:leaf1
     depends_on:
-      - testgrpc
+      testgrpc:
+        condition: service_completed_successfully # to get at least one operation registered in jaeger
     command: sh -c 'curl -s "http://localhost:16686/api/traces?service=opi-evpn-bridge&lookback=20m&prettyPrint=true&limit=10" | grep operationName'
 
   testgrpc:
@@ -377,15 +378,24 @@ services:
       n2htoleaf1:
       n6h1tol1y:
     depends_on:
-      - spine1
-      - leaf1
-      - leaf2
-      - bleaf
-      - host2-leaf2
-      - host3-leaf2
-      - host4-leaf2
-      - testgrpc
-      - opi-jaeger-test
+      spine1:
+        condition: service_started
+      leaf1:
+        condition: service_started
+      leaf2:
+        condition: service_started
+      bleaf:
+        condition: service_started
+      host2-leaf2:
+        condition: service_started
+      host3-leaf2:
+        condition: service_started
+      host4-leaf2:
+        condition: service_started
+      testgrpc:
+        condition: service_completed_successfully
+      opi-jaeger-test:
+        condition: service_completed_successfully
     # HOST1
     # L2 VXLAN - VLAN10 stretched with VNI10 to leaf2 from leaf1, ping Host2 IP from Host1
     # L3VXLAN Asymmetric IRB:
