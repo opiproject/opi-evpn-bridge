@@ -235,7 +235,7 @@ services:
       timeout: 10s
 
   redis:
-    image: redis:7.2.2-alpine3.18
+    image: redis:7.2.3-alpine3.18
     network_mode: service:leaf1
     healthcheck:
       test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
