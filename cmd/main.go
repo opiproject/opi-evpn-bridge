@@ -102,16 +102,17 @@ func runGrpcServer(grpcPort int, tlsFiles, frrAddress string, store gokv.Store) 
 		}
 		serverOptions = append(serverOptions, option)
 	}
-	serverOptions = append(serverOptions, grpc.ChainUnaryInterceptor(
-		otelgrpc.UnaryServerInterceptor(),
-		logging.UnaryServerInterceptor(utils.InterceptorLogger(log.Default()),
-			logging.WithLogOnEvents(
-				logging.StartCall,
-				logging.FinishCall,
-				logging.PayloadReceived,
-				logging.PayloadSent,
-			),
-		)),
+	serverOptions = append(serverOptions,
+		grpc.StatsHandler(otelgrpc.NewServerHandler()),
+		grpc.UnaryInterceptor(
+			logging.UnaryServerInterceptor(utils.InterceptorLogger(log.Default()),
+				logging.WithLogOnEvents(
+					logging.StartCall,
+					logging.FinishCall,
+					logging.PayloadReceived,
+					logging.PayloadSent,
+				),
+			)),
 	)
 	s := grpc.NewServer(serverOptions...)
 
