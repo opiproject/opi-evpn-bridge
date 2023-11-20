@@ -18,7 +18,7 @@ require (
 	github.com/vishvananda/netlink v1.2.1-beta.2
 	github.com/ziutek/telnet v0.0.0-20180329124119-c3b780dc415b
 	go.einride.tech/aip v0.65.0
-	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.46.0
+	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.46.1
 	go.opentelemetry.io/otel v1.21.0
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.21.0
 	go.opentelemetry.io/otel/sdk v1.21.0
