@@ -333,7 +333,7 @@ services:
       echo done'
 
   host2-leaf2:
-    image: docker.io/library/alpine:3.18
+    image: docker.io/library/alpine:3.19
     cap_add:
       - NET_ADMIN
     networks:
@@ -346,7 +346,7 @@ services:
                 ip addr add 10.10.10.11/24 dev eth0.10 && sleep infinity'
 
   host3-leaf2:
-    image: docker.io/library/alpine:3.18
+    image: docker.io/library/alpine:3.19
     cap_add:
       - NET_ADMIN
     networks:
@@ -358,7 +358,7 @@ services:
                 ip addr add 30.30.30.31/24 dev eth0.30 &&
                 ip route replace default via 30.30.30.1 && sleep infinity'
   host4-leaf2:
-    image: docker.io/library/alpine:3.18
+    image: docker.io/library/alpine:3.19
     cap_add:
       - NET_ADMIN
     networks:
@@ -371,7 +371,7 @@ services:
                 ip route replace default via 40.40.40.1 && sleep infinity'
 
   opi-test:
-    image: docker.io/library/alpine:3.18
+    image: docker.io/library/alpine:3.19
     cap_add:
       - NET_ADMIN
     networks:
