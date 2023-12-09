@@ -241,7 +241,7 @@ services:
       test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
 
   opi-gw-test:
-    image: curlimages/curl:8.4.0
+    image: curlimages/curl:8.5.0
     network_mode: service:leaf1
     depends_on:
       opi-evpn-bridge:
@@ -249,7 +249,7 @@ services:
     command: curl -qkL http://localhost:8082/v1/inventory/1/inventory/2
 
   opi-jaeger-test:
-    image: curlimages/curl:8.4.0
+    image: curlimages/curl:8.5.0
     network_mode: service:leaf1
     depends_on:
       testgrpc:
