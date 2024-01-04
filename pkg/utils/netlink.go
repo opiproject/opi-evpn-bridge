@@ -1,14 +1,20 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2022-2023 Dell Inc, or its subsidiaries.
+// Copyright (c) 2022-2023 Intel Corporation, or its subsidiaries.
+// Copyright (C) 2023 Nordix Foundation.
 
 // Package utils has some utility functions and interfaces
 package utils
 
 import (
 	"context"
+	"fmt"
 	"net"
+	"os/exec"
 
 	"github.com/vishvananda/netlink"
+
+	"errors"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -22,6 +28,7 @@ type Netlink interface {
 	LinkSetHardwareAddr(context.Context, netlink.Link, net.HardwareAddr) error
 	AddrAdd(context.Context, netlink.Link, *netlink.Addr) error
 	AddrDel(context.Context, netlink.Link, *netlink.Addr) error
+	AddrList(context.Context, netlink.Link, int) ([]netlink.Addr, error)
 	LinkAdd(context.Context, netlink.Link) error
 	LinkDel(context.Context, netlink.Link) error
 	LinkSetUp(context.Context, netlink.Link) error
@@ -30,6 +37,33 @@ type Netlink interface {
 	LinkSetNoMaster(context.Context, netlink.Link) error
 	BridgeVlanAdd(context.Context, netlink.Link, uint16, bool, bool, bool, bool) error
 	BridgeVlanDel(context.Context, netlink.Link, uint16, bool, bool, bool, bool) error
+	LinkSetMTU(context.Context, netlink.Link, int) error
+	BridgeFdbAdd(context.Context, string, string) error
+	RouteAdd(context.Context, *netlink.Route) error
+	RouteListFiltered(context.Context, int, *netlink.Route, uint64) ([]netlink.Route, error)
+	RouteFlushTable(context.Context, string) error
+	RouteListIPTable(context.Context, string) bool
+	LinkSetBrNeighSuppress(context.Context, netlink.Link, bool) error
+	ReadNeigh(context.Context, string) (string, error)
+	ReadRoute(context.Context, string) (string, error)
+	ReadFDB(context.Context) (string, error)
+	RouteLookup(context.Context, string, string) (string, error)
+}
+
+// run function run the commands
+func run(cmd []string, _ bool) (string, int) {
+	var out []byte
+	var err error
+	out, err = exec.Command(cmd[0], cmd[1:]...).CombinedOutput() //nolint:gosec
+	if err != nil {
+		/*if flag {
+			// panic(fmt.Sprintf("Command %s': exit code %s;", out, err.Error()))
+		}
+		// fmt.Printf("Command %s': exit code %s;\n", out, err)*/
+		return "Error in running command", -1
+	}
+	output := string(out)
+	return output, 0
 }
 
 // NetlinkWrapper wrapper for netlink package
@@ -50,6 +84,7 @@ func (n *NetlinkWrapper) LinkByName(ctx context.Context, name string) (netlink.L
 	_, childSpan := n.tracer.Start(ctx, "netlink.LinkByName")
 	childSpan.SetAttributes(attribute.String("link.name", name))
 	defer childSpan.End()
+
 	return netlink.LinkByName(name)
 }
 
@@ -85,6 +120,14 @@ func (n *NetlinkWrapper) AddrDel(ctx context.Context, link netlink.Link, addr *n
 	return netlink.AddrDel(link, addr)
 }
 
+// AddrList is a wrapper for netlink.AddrList
+func (n *NetlinkWrapper) AddrList(ctx context.Context, link netlink.Link, family int) ([]netlink.Addr, error) {
+	_, childSpan := n.tracer.Start(ctx, "netlink.AddrList")
+	childSpan.SetAttributes(attribute.String("link.name", link.Attrs().Name))
+	defer childSpan.End()
+	return netlink.AddrList(link, family)
+}
+
 // LinkAdd is a wrapper for netlink.LinkAdd
 func (n *NetlinkWrapper) LinkAdd(ctx context.Context, link netlink.Link) error {
 	_, childSpan := n.tracer.Start(ctx, "netlink.LinkAdd")
@@ -107,6 +150,14 @@ func (n *NetlinkWrapper) LinkSetUp(ctx context.Context, link netlink.Link) error
 	childSpan.SetAttributes(attribute.String("link.name", link.Attrs().Name))
 	defer childSpan.End()
 	return netlink.LinkSetUp(link)
+}
+
+// LinkSetMTU is a wrapper for netlink.LinkSetUp
+func (n *NetlinkWrapper) LinkSetMTU(ctx context.Context, link netlink.Link, mtu int) error {
+	_, childSpan := n.tracer.Start(ctx, "netlink.LinkSetMTU")
+	childSpan.SetAttributes(attribute.String("link.name", link.Attrs().Name))
+	defer childSpan.End()
+	return netlink.LinkSetMTU(link, mtu)
 }
 
 // LinkSetDown is a wrapper for netlink.LinkSetDown
@@ -147,4 +198,102 @@ func (n *NetlinkWrapper) BridgeVlanDel(ctx context.Context, link netlink.Link, v
 	childSpan.SetAttributes(attribute.String("link.name", link.Attrs().Name))
 	defer childSpan.End()
 	return netlink.BridgeVlanDel(link, vid, pvid, untagged, self, master)
+}
+
+// RouteListFiltered is a wrapper for netlink.RouteListFiltered
+func (n *NetlinkWrapper) RouteListFiltered(ctx context.Context, family int, route *netlink.Route, filter uint64) ([]netlink.Route, error) {
+	_, childSpan := n.tracer.Start(ctx, "netlink.RouteListFiltered")
+	//	link,_:=netlink.LinkByIndex(route.LinkIndex)
+	childSpan.SetAttributes(attribute.String("route.LinkIndex", string(rune(route.LinkIndex))))
+	defer childSpan.End()
+	return netlink.RouteListFiltered(family, route, filter)
+}
+
+// RouteAdd is a wrapper for netlink.RouteAdd
+func (n *NetlinkWrapper) RouteAdd(ctx context.Context, route *netlink.Route) error {
+	_, childSpan := n.tracer.Start(ctx, "netlink.RouteAdd")
+	_, _ = netlink.LinkByIndex(route.LinkIndex)
+	childSpan.SetAttributes(attribute.String("route.LinkIndex", string(rune(route.LinkIndex))))
+	defer childSpan.End()
+	return netlink.RouteAdd(route)
+}
+
+// RouteFlushTable is a wrapper for netlink.RouteFlushTable
+func (n *NetlinkWrapper) RouteFlushTable(_ context.Context, routingTable string) error {
+	_, err := run([]string{"ip", "route", "flush", "table", routingTable}, false)
+	if err != 0 {
+		return fmt.Errorf("lgm: Error in executing command ip route flush table %s", routingTable)
+	}
+	return nil
+}
+
+// RouteListIPTable is a wrapper for netlink.RouteListIPTable
+func (n *NetlinkWrapper) RouteListIPTable(_ context.Context, vtip string) bool {
+	_, err := run([]string{"ip", "route", "list", "exact", vtip, "table", "local"}, false)
+	return err == 0
+}
+
+// BridgeFdbAdd is a wrapper for netlink.BridgeFdbAdd
+func (n *NetlinkWrapper) BridgeFdbAdd(_ context.Context, link string, macAddress string) error {
+	_, err := run([]string{"bridge", "fdb", "add", macAddress, "dev", link, "master", "static", "extern_learn"}, false)
+	if err != 0 {
+		return errors.New("failed to add fdb entry")
+	}
+	return nil
+}
+
+// ReadNeigh is a wrapper for netlink.ReadNeigh
+func (n *NetlinkWrapper) ReadNeigh(_ context.Context, link string) (string, error) {
+	var out string
+	var err int
+	if link == "" {
+		out, err = run([]string{"ip", "-j", "-d", "neighbor", "show"}, false)
+	} else {
+		out, err = run([]string{"ip", "-j", "-d", "neighbor", "show", "vrf", link}, false)
+	}
+	if err != 0 {
+		return "", errors.New("failed routelookup")
+	}
+	return out, nil
+}
+
+// ReadRoute is a wrapper for netlink.ReadRoute
+func (n *NetlinkWrapper) ReadRoute(_ context.Context, table string) (string, error) {
+	out, err := run([]string{"ip", "-j", "-d", "route", "show", "table", table}, false)
+	if err != 0 {
+		return "", errors.New("failed to read route")
+	}
+	return out, nil
+}
+
+// ReadFDB is a wrapper for netlink.ReadFDB
+func (n *NetlinkWrapper) ReadFDB(_ context.Context) (string, error) {
+	out, err := run([]string{"bridge", "-d", "-j", "fdb", "show", "br", "br-tenant", "dynamic"}, false)
+	if err != 0 {
+		return "", errors.New("failed to read fdb")
+	}
+	return out, nil
+}
+
+// RouteLookup is a wrapper for netlink.RouteLookup
+func (n *NetlinkWrapper) RouteLookup(_ context.Context, dst string, link string) (string, error) {
+	var out string
+	var err int
+	if link == "" {
+		out, err = run([]string{"ip", "-j", "route", "get", dst, "fibmatch"}, false)
+	} else {
+		out, err = run([]string{"ip", "-j", "route", "get", dst, "vrf", link, "fibmatch"}, false)
+	}
+	if err != 0 {
+		return "", errors.New("failed routelookup")
+	}
+	return out, nil
+}
+
+// LinkSetBrNeighSuppress is a wrapper for netlink.LinkSetBrNeighSuppress
+func (n *NetlinkWrapper) LinkSetBrNeighSuppress(ctx context.Context, link netlink.Link, neighSuppress bool) error {
+	_, childSpan := n.tracer.Start(ctx, "netlink.LinkSetBrNeighSuppress")
+	childSpan.SetAttributes(attribute.String("link.name", link.Attrs().Name))
+	defer childSpan.End()
+	return netlink.LinkSetBrNeighSuppress(link, neighSuppress)
 }

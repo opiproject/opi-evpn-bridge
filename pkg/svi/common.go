@@ -1,17 +1,19 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2022-2023 Dell Inc, or its subsidiaries.
+// Copyright (c) 2022-2023 Intel Corporation, or its subsidiaries.
+// Copyright (C) 2023 Nordix Foundation.
 
 // Package svi is the main package of the application
 package svi
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net"
 	"sort"
 	"testing"
 
-	"github.com/philippgille/gokv/gomap"
 	"go.einride.tech/aip/resourcename"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -20,14 +22,76 @@ import (
 
 	pb "github.com/opiproject/opi-api/network/evpn-gw/v1alpha1/gen/go"
 	pc "github.com/opiproject/opi-api/network/opinetcommon/v1alpha1/gen/go"
-	"github.com/opiproject/opi-evpn-bridge/pkg/utils"
+
+	"github.com/opiproject/opi-evpn-bridge/pkg/bridge"
+	"github.com/opiproject/opi-evpn-bridge/pkg/infradb"
 	"github.com/opiproject/opi-evpn-bridge/pkg/utils/mocks"
+	"github.com/opiproject/opi-evpn-bridge/pkg/vrf"
 )
 
 func sortSvis(svis []*pb.Svi) {
 	sort.Slice(svis, func(i int, j int) bool {
 		return svis[i].Name < svis[j].Name
 	})
+}
+
+func (s *Server) createSvi(svi *pb.Svi) (*pb.Svi, error) {
+	// check parameters
+	if err := s.validateSviSpec(svi); err != nil {
+		return nil, err
+	}
+
+	// translation of pb to domain object
+	domainSvi := infradb.NewSvi(svi)
+	// Note: The status of the object will be generated in infraDB operation not here
+	if err := infradb.CreateSvi(domainSvi); err != nil {
+		return nil, err
+	}
+	return domainSvi.ToPb(), nil
+}
+
+func (s *Server) deleteSvi(name string) error {
+	// Note: The status of the object will be generated in infraDB operation not here
+	if err := infradb.DeleteSvi(name); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *Server) getSvi(name string) (*pb.Svi, error) {
+	domainSvi, err := infradb.GetSvi(name)
+	if err != nil {
+		return nil, err
+	}
+	return domainSvi.ToPb(), nil
+}
+
+func (s *Server) getAllSvis() ([]*pb.Svi, error) {
+	svis := []*pb.Svi{}
+	domainSvis, err := infradb.GetAllSvis()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, domainSvi := range domainSvis {
+		svis = append(svis, domainSvi.ToPb())
+	}
+	return svis, nil
+}
+
+func (s *Server) updateSvi(svi *pb.Svi) (*pb.Svi, error) {
+	// check parameters
+	if err := s.validateSviSpec(svi); err != nil {
+		return nil, err
+	}
+
+	// translation of pb to domain object
+	domainSvi := infradb.NewSvi(svi)
+	// Note: The status of the object will be generated in infraDB operation not here
+	if err := infradb.UpdateSvi(domainSvi); err != nil {
+		return nil, err
+	}
+	return domainSvi.ToPb(), nil
 }
 
 func resourceIDToFullName(resourceID string) string {
@@ -37,10 +101,15 @@ func resourceIDToFullName(resourceID string) string {
 	)
 }
 
+func checkTobeDeletedStatus(svi *pb.Svi) error {
+	if svi.Status.OperStatus == pb.SVIOperStatus_SVI_OPER_STATUS_TO_BE_DELETED {
+		return fmt.Errorf("SVI %s in to be deleted status", svi.Name)
+	}
+
+	return nil
+}
+
 // TODO: move all of this to a common place
-const (
-	tenantbridgeName = "br-tenant"
-)
 
 var (
 	testLogicalBridgeID   = "opi-bridge9"
@@ -60,14 +129,6 @@ var (
 			},
 		},
 	}
-	testLogicalBridgeWithStatus = pb.LogicalBridge{
-		Name: testLogicalBridgeName,
-		Spec: testLogicalBridge.Spec,
-		Status: &pb.LogicalBridgeStatus{
-			OperStatus: pb.LBOperStatus_LB_OPER_STATUS_UP,
-		},
-	}
-
 	testVrfID   = "opi-vrf8"
 	testVrfName = resourceIDToFullName(testVrfID)
 	testVrf     = pb.Vrf{
@@ -93,19 +154,14 @@ var (
 			},
 		},
 	}
-	testVrfWithStatus = pb.Vrf{
-		Name: testVrfName,
-		Spec: testVrf.Spec,
-		Status: &pb.VrfStatus{
-			LocalAs: 4,
-		},
-	}
 )
 
 type testEnv struct {
 	mockNetlink *mocks.Netlink
 	mockFrr     *mocks.Frr
 	opi         *Server
+	lbServer    *bridge.Server
+	vrfServer   *vrf.Server
 	conn        *grpc.ClientConn
 }
 
@@ -117,11 +173,13 @@ func (e *testEnv) Close() {
 }
 
 func newTestEnv(ctx context.Context, t *testing.T) *testEnv {
-	store := gomap.NewStore(gomap.Options{Codec: utils.ProtoCodec{}})
 	env := &testEnv{}
 	env.mockNetlink = mocks.NewNetlink(t)
 	env.mockFrr = mocks.NewFrr(t)
-	env.opi = NewServerWithArgs(env.mockNetlink, env.mockFrr, store)
+	env.opi = NewServer()
+	env.lbServer = bridge.NewServer()
+	env.vrfServer = vrf.NewServer()
+	_ = infradb.NewInfraDB("", "gomap")
 	conn, err := grpc.DialContext(ctx,
 		"",
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
