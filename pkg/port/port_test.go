@@ -1,20 +1,16 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright (c) 2022-2023 Intel Corporation, or its subsidiaries.
 // Copyright (c) 2022-2023 Dell Inc, or its subsidiaries.
+// Copyright (c) 2022-2023 Intel Corporation, or its subsidiaries.
+// Copyright (C) 2023 Nordix Foundation.
 
 // Package port is the main package of the application
 package port
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"net"
 	"reflect"
 	"testing"
-
-	"github.com/stretchr/testify/mock"
-	"github.com/vishvananda/netlink"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -23,7 +19,6 @@ import (
 	"google.golang.org/protobuf/types/known/fieldmaskpb"
 
 	pb "github.com/opiproject/opi-api/network/evpn-gw/v1alpha1/gen/go"
-
 	"github.com/opiproject/opi-evpn-bridge/pkg/utils"
 	"github.com/opiproject/opi-evpn-bridge/pkg/utils/mocks"
 )
@@ -42,7 +37,7 @@ var (
 		Name: testBridgePortName,
 		Spec: testBridgePort.Spec,
 		Status: &pb.BridgePortStatus{
-			OperStatus: pb.BPOperStatus_BP_OPER_STATUS_UP,
+			OperStatus: pb.BPOperStatus_BP_OPER_STATUS_DOWN,
 		},
 	}
 )
@@ -123,63 +118,6 @@ func Test_CreateBridgePort(t *testing.T) {
 			exist:   false,
 			on:      nil,
 		},
-		"failed LinkByName bridge call": {
-			id:      testBridgePortID,
-			in:      &testBridgePort,
-			out:     nil,
-			errCode: codes.NotFound,
-			errMsg:  fmt.Sprintf("unable to find key %v", tenantbridgeName),
-			exist:   false,
-			on: func(mockNetlink *mocks.Netlink, mockFrr *mocks.Frr, errMsg string) {
-				mockNetlink.EXPECT().LinkByName(mock.Anything, tenantbridgeName).Return(nil, errors.New(errMsg)).Once()
-			},
-		},
-		"failed LinkByName port call": {
-			id:      testBridgePortID,
-			in:      &testBridgePort,
-			out:     nil,
-			errCode: codes.NotFound,
-			errMsg:  fmt.Sprintf("unable to find key %v", testBridgePortID),
-			exist:   false,
-			on: func(mockNetlink *mocks.Netlink, mockFrr *mocks.Frr, errMsg string) {
-				bridge := &netlink.Bridge{LinkAttrs: netlink.LinkAttrs{Name: tenantbridgeName}}
-				mockNetlink.EXPECT().LinkByName(mock.Anything, tenantbridgeName).Return(bridge, nil).Once()
-				mockNetlink.EXPECT().LinkByName(mock.Anything, testBridgePortID).Return(nil, errors.New(errMsg)).Once()
-			},
-		},
-		"failed LinkSetHardwareAddr call": {
-			id:      testBridgePortID,
-			in:      &testBridgePort,
-			out:     nil,
-			errCode: codes.Unknown,
-			errMsg:  "Failed to call LinkSetHardwareAddr",
-			exist:   false,
-			on: func(mockNetlink *mocks.Netlink, mockFrr *mocks.Frr, errMsg string) {
-				bridge := &netlink.Bridge{LinkAttrs: netlink.LinkAttrs{Name: tenantbridgeName}}
-				mockNetlink.EXPECT().LinkByName(mock.Anything, tenantbridgeName).Return(bridge, nil).Once()
-				iface := &netlink.Dummy{LinkAttrs: netlink.LinkAttrs{Name: testBridgePortID}}
-				mockNetlink.EXPECT().LinkByName(mock.Anything, testBridgePortID).Return(iface, nil).Once()
-				mac := net.HardwareAddr(testBridgePort.Spec.MacAddress[:])
-				mockNetlink.EXPECT().LinkSetHardwareAddr(mock.Anything, iface, mac).Return(errors.New(errMsg)).Once()
-			},
-		},
-		"failed bridge LinkSetMaster call": {
-			id:      testBridgePortID,
-			in:      &testBridgePort,
-			out:     nil,
-			errCode: codes.Unknown,
-			errMsg:  "Failed to call LinkSetMaster",
-			exist:   false,
-			on: func(mockNetlink *mocks.Netlink, mockFrr *mocks.Frr, errMsg string) {
-				bridge := &netlink.Bridge{LinkAttrs: netlink.LinkAttrs{Name: tenantbridgeName}}
-				mockNetlink.EXPECT().LinkByName(mock.Anything, tenantbridgeName).Return(bridge, nil).Once()
-				iface := &netlink.Dummy{LinkAttrs: netlink.LinkAttrs{Name: testBridgePortID}}
-				mockNetlink.EXPECT().LinkByName(mock.Anything, testBridgePortID).Return(iface, nil).Once()
-				mac := net.HardwareAddr(testBridgePort.Spec.MacAddress[:])
-				mockNetlink.EXPECT().LinkSetHardwareAddr(mock.Anything, iface, mac).Return(nil).Once()
-				mockNetlink.EXPECT().LinkSetMaster(mock.Anything, mock.Anything, mock.Anything).Return(errors.New(errMsg)).Once()
-			},
-		},
 		"missing bridges": {
 			id: testBridgePortID,
 			in: &pb.BridgePort{
@@ -190,82 +128,10 @@ func Test_CreateBridgePort(t *testing.T) {
 				},
 			},
 			out:     nil,
-			errCode: codes.NotFound,
-			errMsg:  fmt.Sprintf("unable to find key %v", "Japan"),
-			exist:   false,
-			on: func(mockNetlink *mocks.Netlink, mockFrr *mocks.Frr, errMsg string) {
-				bridge := &netlink.Bridge{LinkAttrs: netlink.LinkAttrs{Name: tenantbridgeName}}
-				mockNetlink.EXPECT().LinkByName(mock.Anything, tenantbridgeName).Return(bridge, nil).Once()
-				iface := &netlink.Dummy{LinkAttrs: netlink.LinkAttrs{Name: testBridgePortID}}
-				mockNetlink.EXPECT().LinkByName(mock.Anything, testBridgePortID).Return(iface, nil).Once()
-				mac := net.HardwareAddr(testBridgePort.Spec.MacAddress[:])
-				mockNetlink.EXPECT().LinkSetHardwareAddr(mock.Anything, iface, mac).Return(nil).Once()
-				mockNetlink.EXPECT().LinkSetMaster(mock.Anything, iface, bridge).Return(nil).Once()
-			},
-		},
-		"failed BridgeVlanAdd TRUNK call": {
-			id:      testBridgePortID,
-			in:      &testBridgePort,
-			out:     nil,
 			errCode: codes.Unknown,
-			errMsg:  "Failed to call BridgeVlanAdd",
+			errMsg:  "the referenced Logical Bridge has not been found",
 			exist:   false,
-			on: func(mockNetlink *mocks.Netlink, mockFrr *mocks.Frr, errMsg string) {
-				bridge := &netlink.Bridge{LinkAttrs: netlink.LinkAttrs{Name: tenantbridgeName}}
-				mockNetlink.EXPECT().LinkByName(mock.Anything, tenantbridgeName).Return(bridge, nil).Once()
-				iface := &netlink.Dummy{LinkAttrs: netlink.LinkAttrs{Name: testBridgePortID}}
-				mockNetlink.EXPECT().LinkByName(mock.Anything, testBridgePortID).Return(iface, nil).Once()
-				mac := net.HardwareAddr(testBridgePort.Spec.MacAddress[:])
-				mockNetlink.EXPECT().LinkSetHardwareAddr(mock.Anything, iface, mac).Return(nil).Once()
-				mockNetlink.EXPECT().LinkSetMaster(mock.Anything, iface, bridge).Return(nil).Once()
-				vid := uint16(testLogicalBridge.Spec.VlanId)
-				mockNetlink.EXPECT().BridgeVlanAdd(mock.Anything, iface, vid, false, false, false, false).Return(errors.New(errMsg)).Once()
-			},
-		},
-		"failed BridgeVlanAdd ACCESS call": {
-			id: testBridgePortID,
-			in: &pb.BridgePort{
-				Spec: &pb.BridgePortSpec{
-					MacAddress:     []byte{0xCB, 0xB8, 0x33, 0x4C, 0x88, 0x4F},
-					Ptype:          pb.BridgePortType_BRIDGE_PORT_TYPE_ACCESS,
-					LogicalBridges: []string{testLogicalBridgeName},
-				},
-			},
-			out:     nil,
-			errCode: codes.Unknown,
-			errMsg:  "Failed to call BridgeVlanAdd",
-			exist:   false,
-			on: func(mockNetlink *mocks.Netlink, mockFrr *mocks.Frr, errMsg string) {
-				bridge := &netlink.Bridge{LinkAttrs: netlink.LinkAttrs{Name: tenantbridgeName}}
-				mockNetlink.EXPECT().LinkByName(mock.Anything, tenantbridgeName).Return(bridge, nil).Once()
-				iface := &netlink.Dummy{LinkAttrs: netlink.LinkAttrs{Name: testBridgePortID}}
-				mockNetlink.EXPECT().LinkByName(mock.Anything, testBridgePortID).Return(iface, nil).Once()
-				mac := net.HardwareAddr(testBridgePort.Spec.MacAddress[:])
-				mockNetlink.EXPECT().LinkSetHardwareAddr(mock.Anything, iface, mac).Return(nil).Once()
-				mockNetlink.EXPECT().LinkSetMaster(mock.Anything, iface, bridge).Return(nil).Once()
-				vid := uint16(testLogicalBridge.Spec.VlanId)
-				mockNetlink.EXPECT().BridgeVlanAdd(mock.Anything, iface, vid, true, true, false, false).Return(errors.New(errMsg)).Once()
-			},
-		},
-		"failed LinkSetUp call": {
-			id:      testBridgePortID,
-			in:      &testBridgePort,
-			out:     nil,
-			errCode: codes.Unknown,
-			errMsg:  "Failed to call LinkSetUp",
-			exist:   false,
-			on: func(mockNetlink *mocks.Netlink, mockFrr *mocks.Frr, errMsg string) {
-				bridge := &netlink.Bridge{LinkAttrs: netlink.LinkAttrs{Name: tenantbridgeName}}
-				mockNetlink.EXPECT().LinkByName(mock.Anything, tenantbridgeName).Return(bridge, nil).Once()
-				iface := &netlink.Dummy{LinkAttrs: netlink.LinkAttrs{Name: testBridgePortID}}
-				mockNetlink.EXPECT().LinkByName(mock.Anything, testBridgePortID).Return(iface, nil).Once()
-				mac := net.HardwareAddr(testBridgePort.Spec.MacAddress[:])
-				mockNetlink.EXPECT().LinkSetHardwareAddr(mock.Anything, iface, mac).Return(nil).Once()
-				mockNetlink.EXPECT().LinkSetMaster(mock.Anything, iface, bridge).Return(nil).Once()
-				vid := uint16(testLogicalBridge.Spec.VlanId)
-				mockNetlink.EXPECT().BridgeVlanAdd(mock.Anything, iface, vid, false, false, false, false).Return(nil).Once()
-				mockNetlink.EXPECT().LinkSetUp(mock.Anything, iface).Return(errors.New(errMsg)).Once()
-			},
+			on:      nil,
 		},
 		"successful call": {
 			id:      testBridgePortID,
@@ -274,18 +140,7 @@ func Test_CreateBridgePort(t *testing.T) {
 			errCode: codes.OK,
 			errMsg:  "",
 			exist:   false,
-			on: func(mockNetlink *mocks.Netlink, mockFrr *mocks.Frr, errMsg string) {
-				bridge := &netlink.Bridge{LinkAttrs: netlink.LinkAttrs{Name: tenantbridgeName}}
-				mockNetlink.EXPECT().LinkByName(mock.Anything, tenantbridgeName).Return(bridge, nil).Once()
-				iface := &netlink.Dummy{LinkAttrs: netlink.LinkAttrs{Name: testBridgePortID}}
-				mockNetlink.EXPECT().LinkByName(mock.Anything, testBridgePortID).Return(iface, nil).Once()
-				mac := net.HardwareAddr(testBridgePort.Spec.MacAddress[:])
-				mockNetlink.EXPECT().LinkSetHardwareAddr(mock.Anything, iface, mac).Return(nil).Once()
-				mockNetlink.EXPECT().LinkSetMaster(mock.Anything, iface, bridge).Return(nil).Once()
-				vid := uint16(testLogicalBridge.Spec.VlanId)
-				mockNetlink.EXPECT().BridgeVlanAdd(mock.Anything, iface, vid, false, false, false, false).Return(nil).Once()
-				mockNetlink.EXPECT().LinkSetUp(mock.Anything, iface).Return(nil).Once()
-			},
+			on:      nil,
 		},
 	}
 
@@ -297,9 +152,18 @@ func Test_CreateBridgePort(t *testing.T) {
 			defer env.Close()
 			client := pb.NewBridgePortServiceClient(env.conn)
 
-			_ = env.opi.store.Set(testLogicalBridgeName, &testLogicalBridgeWithStatus)
+			testLogicalBridgeFull := pb.LogicalBridge{
+				Name: testLogicalBridgeName,
+				Spec: testLogicalBridge.Spec,
+			}
+			_, _ = env.lbServer.TestCreateLogicalBridge(&testLogicalBridgeFull)
+
 			if tt.exist {
-				_ = env.opi.store.Set(testBridgePortName, &testBridgePortWithStatus)
+				testBridgePortFull := pb.BridgePort{
+					Name: testBridgePortName,
+					Spec: testBridgePort.Spec,
+				}
+				_, _ = env.opi.createBridgePort(&testBridgePortFull)
 			}
 			if tt.out != nil {
 				tt.out = utils.ProtoClone(tt.out)
@@ -362,71 +226,13 @@ func Test_DeleteBridgePort(t *testing.T) {
 			missing: false,
 			on:      nil,
 		},
-		"failed LinkByName call": {
-			in:      testBridgePortID,
-			out:     &emptypb.Empty{},
-			errCode: codes.NotFound,
-			errMsg:  fmt.Sprintf("unable to find key %v", testBridgePortID),
-			missing: false,
-			on: func(mockNetlink *mocks.Netlink, mockFrr *mocks.Frr, errMsg string) {
-				mockNetlink.EXPECT().LinkByName(mock.Anything, testBridgePortID).Return(nil, errors.New(errMsg)).Once()
-			},
-		},
-		"failed LinkSetDown call": {
-			in:      testBridgePortID,
-			out:     &emptypb.Empty{},
-			errCode: codes.Unknown,
-			errMsg:  "Failed to call LinkSetDown",
-			missing: false,
-			on: func(mockNetlink *mocks.Netlink, mockFrr *mocks.Frr, errMsg string) {
-				iface := &netlink.Dummy{LinkAttrs: netlink.LinkAttrs{Name: testBridgePortID}}
-				mockNetlink.EXPECT().LinkByName(mock.Anything, testBridgePortID).Return(iface, nil).Once()
-				mockNetlink.EXPECT().LinkSetDown(mock.Anything, iface).Return(errors.New(errMsg)).Once()
-			},
-		},
-		"failed BridgeVlanDel call": {
-			in:      testBridgePortID,
-			out:     &emptypb.Empty{},
-			errCode: codes.Unknown,
-			errMsg:  "Failed to call BridgeVlanDel",
-			missing: false,
-			on: func(mockNetlink *mocks.Netlink, mockFrr *mocks.Frr, errMsg string) {
-				iface := &netlink.Dummy{LinkAttrs: netlink.LinkAttrs{Name: testBridgePortID}}
-				mockNetlink.EXPECT().LinkByName(mock.Anything, testBridgePortID).Return(iface, nil).Once()
-				mockNetlink.EXPECT().LinkSetDown(mock.Anything, iface).Return(nil).Once()
-				vid := uint16(testLogicalBridge.Spec.VlanId)
-				mockNetlink.EXPECT().BridgeVlanDel(mock.Anything, iface, vid, true, true, false, false).Return(errors.New(errMsg)).Once()
-			},
-		},
-		"failed LinkDel call": {
-			in:      testBridgePortID,
-			out:     &emptypb.Empty{},
-			errCode: codes.Unknown,
-			errMsg:  "Failed to call LinkDel",
-			missing: false,
-			on: func(mockNetlink *mocks.Netlink, mockFrr *mocks.Frr, errMsg string) {
-				iface := &netlink.Dummy{LinkAttrs: netlink.LinkAttrs{Name: testBridgePortID}}
-				mockNetlink.EXPECT().LinkByName(mock.Anything, testBridgePortID).Return(iface, nil).Once()
-				mockNetlink.EXPECT().LinkSetDown(mock.Anything, iface).Return(nil).Once()
-				vid := uint16(testLogicalBridge.Spec.VlanId)
-				mockNetlink.EXPECT().BridgeVlanDel(mock.Anything, iface, vid, true, true, false, false).Return(nil).Once()
-				mockNetlink.EXPECT().LinkDel(mock.Anything, iface).Return(errors.New(errMsg)).Once()
-			},
-		},
 		"successful call": {
 			in:      testBridgePortID,
 			out:     &emptypb.Empty{},
 			errCode: codes.OK,
 			errMsg:  "",
 			missing: false,
-			on: func(mockNetlink *mocks.Netlink, mockFrr *mocks.Frr, errMsg string) {
-				iface := &netlink.Dummy{LinkAttrs: netlink.LinkAttrs{Name: testBridgePortID}}
-				mockNetlink.EXPECT().LinkByName(mock.Anything, testBridgePortID).Return(iface, nil).Once()
-				mockNetlink.EXPECT().LinkSetDown(mock.Anything, iface).Return(nil).Once()
-				vid := uint16(testLogicalBridge.Spec.VlanId)
-				mockNetlink.EXPECT().BridgeVlanDel(mock.Anything, iface, vid, true, true, false, false).Return(nil).Once()
-				mockNetlink.EXPECT().LinkDel(mock.Anything, iface).Return(nil).Once()
-			},
+			on:      nil,
 		},
 	}
 
@@ -439,8 +245,17 @@ func Test_DeleteBridgePort(t *testing.T) {
 			client := pb.NewBridgePortServiceClient(env.conn)
 
 			fname1 := resourceIDToFullName(tt.in)
-			_ = env.opi.store.Set(testBridgePortName, &testBridgePortWithStatus)
-			_ = env.opi.store.Set(testLogicalBridgeName, &testLogicalBridgeWithStatus)
+
+			testLogicalBridgeFull := pb.LogicalBridge{
+				Name: testLogicalBridgeName,
+				Spec: testLogicalBridge.Spec,
+			}
+			_, _ = env.lbServer.TestCreateLogicalBridge(&testLogicalBridgeFull)
+			testBridgePortFull := pb.BridgePort{
+				Name: testBridgePortName,
+				Spec: testBridgePort.Spec,
+			}
+			_, _ = env.opi.createBridgePort(&testBridgePortFull)
 			if tt.on != nil {
 				tt.on(env.mockNetlink, env.mockFrr, tt.errMsg)
 			}
@@ -516,7 +331,16 @@ func Test_UpdateBridgePort(t *testing.T) {
 			client := pb.NewBridgePortServiceClient(env.conn)
 
 			if tt.exist {
-				_ = env.opi.store.Set(testBridgePortName, &testBridgePortWithStatus)
+				testLogicalBridgeFull := pb.LogicalBridge{
+					Name: testLogicalBridgeName,
+					Spec: testLogicalBridge.Spec,
+				}
+				_, _ = env.lbServer.TestCreateLogicalBridge(&testLogicalBridgeFull)
+				testBridgePortFull := pb.BridgePort{
+					Name: testBridgePortName,
+					Spec: testBridgePort.Spec,
+				}
+				_, _ = env.opi.createBridgePort(&testBridgePortFull)
 			}
 			if tt.out != nil {
 				tt.out = utils.ProtoClone(tt.out)
@@ -581,7 +405,16 @@ func Test_GetBridgePort(t *testing.T) {
 			defer env.Close()
 			client := pb.NewBridgePortServiceClient(env.conn)
 
-			_ = env.opi.store.Set(testBridgePortName, &testBridgePortWithStatus)
+			testLogicalBridgeFull := pb.LogicalBridge{
+				Name: testLogicalBridgeName,
+				Spec: testLogicalBridge.Spec,
+			}
+			_, _ = env.lbServer.TestCreateLogicalBridge(&testLogicalBridgeFull)
+			testBridgePortFull := pb.BridgePort{
+				Name: testBridgePortName,
+				Spec: testBridgePort.Spec,
+			}
+			_, _ = env.opi.createBridgePort(&testBridgePortFull)
 
 			request := &pb.GetBridgePortRequest{Name: tt.in}
 			response, err := client.GetBridgePort(ctx, request)
@@ -670,8 +503,17 @@ func Test_ListBridgePorts(t *testing.T) {
 			defer env.Close()
 			client := pb.NewBridgePortServiceClient(env.conn)
 
-			_ = env.opi.store.Set(testBridgePortName, &testBridgePortWithStatus)
-			env.opi.ListHelper[testBridgePortName] = false
+			testLogicalBridgeFull := pb.LogicalBridge{
+				Name: testLogicalBridgeName,
+				Spec: testLogicalBridge.Spec,
+			}
+			_, _ = env.lbServer.TestCreateLogicalBridge(&testLogicalBridgeFull)
+
+			testBridgePortFull := pb.BridgePort{
+				Name: testBridgePortName,
+				Spec: testBridgePort.Spec,
+			}
+			_, _ = env.opi.createBridgePort(&testBridgePortFull)
 			env.opi.Pagination["existing-pagination-token"] = 1
 
 			request := &pb.ListBridgePortsRequest{PageSize: tt.size, PageToken: tt.token}

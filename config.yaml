@@ -1,0 +1,27 @@
+grpcport: 50151
+httpport: 8082
+tlsfiles:
+database: redis
+dbaddress: 127.0.0.1:6379
+frraddress: 127.0.0.1
+buildenv: ci
+subscribers:
+ - name: "lgm"
+   priority: 1
+   events: ["vrf", "svi", "logical-bridge"]
+ - name: "frr"
+   priority: 3
+   events: ["vrf", "svi"]
+ - name: "lci"
+   priority: 2
+   events: ["bridge-port"]
+grpc:
+    server_addresses:
+      - 0.0.0.0
+    server_port: 51703
+    num_threads: 10
+    static_external_macs: []
+linuxfrr:
+    enabled: true
+    defaultvtep: "vxlan-vtep"
+    ipmtu: 1500
