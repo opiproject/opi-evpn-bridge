@@ -13,6 +13,10 @@ build:
 	@echo "  >  Building binaries..."
 	@CGO_ENABLED=0 go build -o ${PROJECTNAME} ./cmd/...
 
+build-arm:
+	@echo "  >  Building binaries..."
+	@CGO_ENABLED=0 env GOOS=linux GOARCH=arm64 go build -o ${PROJECTNAME} ./cmd/...
+
 get:
 	@echo "  >  Checking if there are any missing dependencies..."
 	@CGO_ENABLED=0 go get ./...

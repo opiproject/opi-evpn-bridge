@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2022-2023 Dell Inc, or its subsidiaries.
+// Copyright (c) 2022-2023 Intel Corporation, or its subsidiaries.
+// Copyright (C) 2023 Nordix Foundation.
 
 // Package bridge is the main package of the application
 package bridge
@@ -23,18 +25,30 @@ func (s *Server) validateCreateLogicalBridgeRequest(in *pb.CreateLogicalBridgeRe
 	if err := fieldbehavior.ValidateRequiredFields(in); err != nil {
 		return err
 	}
-	// check vlan id is in range
-	if in.LogicalBridge.Spec.VlanId > 4095 {
-		msg := fmt.Sprintf("VlanId value (%d) have to be between 1 and 4095", in.LogicalBridge.Spec.VlanId)
-		return status.Errorf(codes.InvalidArgument, msg)
-	}
+
 	// see https://google.aip.dev/133#user-specified-ids
 	if in.LogicalBridgeId != "" {
 		if err := resourceid.ValidateUserSettable(in.LogicalBridgeId); err != nil {
 			return err
 		}
 	}
-	// TODO: check in.LogicalBridge.Spec.Vni validity
+	return nil
+}
+
+func (s *Server) validateLogicalBridgeSpec(lb *pb.LogicalBridge) error {
+	// check vlan id is in range
+	if lb.Spec.VlanId < 1 || lb.Spec.VlanId > 4095 {
+		msg := fmt.Sprintf("VlanId value (%d) have to be between 1 and 4095", lb.Spec.VlanId)
+		return status.Errorf(codes.InvalidArgument, msg)
+	}
+
+	// check vni is in range
+	if (lb.Spec.Vni != nil) && (*lb.Spec.Vni < 1 || *lb.Spec.Vni > 16777215) {
+		msg := fmt.Sprintf("Vni value (%d) have to be between 1 and 16777215", *lb.Spec.Vni)
+		return status.Errorf(codes.InvalidArgument, msg)
+	}
+
+	// Dimitris: Should I validate the vtep_ip_prefix ?
 	return nil
 }
 
@@ -52,10 +66,12 @@ func (s *Server) validateUpdateLogicalBridgeRequest(in *pb.UpdateLogicalBridgeRe
 	if err := fieldbehavior.ValidateRequiredFields(in); err != nil {
 		return err
 	}
+
 	// update_mask = 2
 	if err := fieldmask.Validate(in.UpdateMask, in.LogicalBridge); err != nil {
 		return err
 	}
+
 	// Validate that a resource name conforms to the restrictions outlined in AIP-122.
 	return resourcename.Validate(in.LogicalBridge.Name)
 }
@@ -67,4 +83,12 @@ func (s *Server) validateGetLogicalBridgeRequest(in *pb.GetLogicalBridgeRequest)
 	}
 	// Validate that a resource name conforms to the restrictions outlined in AIP-122.
 	return resourcename.Validate(in.Name)
+}
+
+func (s *Server) validateListLogicalBridgesRequest(in *pb.ListLogicalBridgesRequest) error {
+	// check required fields
+	if err := fieldbehavior.ValidateRequiredFields(in); err != nil {
+		return err
+	}
+	return nil
 }

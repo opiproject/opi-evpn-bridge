@@ -1,278 +1,195 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright (c) 2022-2023 Intel Corporation, or its subsidiaries.
 // Copyright (c) 2022-2023 Dell Inc, or its subsidiaries.
+// Copyright (c) 2022-2023 Intel Corporation, or its subsidiaries.
+// Copyright (C) 2023 Nordix Foundation.
 
 // Package svi is the main package of the application
 package svi
 
 import (
 	"context"
-	"fmt"
 	"log"
-	"path"
-	"strings"
+	"reflect"
 
 	"github.com/google/uuid"
-	"github.com/opiproject/opi-evpn-bridge/pkg/models"
+	"github.com/opiproject/opi-evpn-bridge/pkg/infradb"
 	"github.com/opiproject/opi-evpn-bridge/pkg/utils"
 
 	pb "github.com/opiproject/opi-api/network/evpn-gw/v1alpha1/gen/go"
-
-	"go.einride.tech/aip/fieldbehavior"
 	"go.einride.tech/aip/resourceid"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
-// CreateSvi executes the creation of the VLAN
-func (s *Server) CreateSvi(ctx context.Context, in *pb.CreateSviRequest) (*pb.Svi, error) {
+// CreateSvi executes the creation of the Svi
+func (s *Server) CreateSvi(_ context.Context, in *pb.CreateSviRequest) (*pb.Svi, error) {
 	// check input correctness
 	if err := s.validateCreateSviRequest(in); err != nil {
+		log.Printf("CreateSvi(): validation failure: %v", err)
 		return nil, err
 	}
 	// see https://google.aip.dev/133#user-specified-ids
 	resourceID := resourceid.NewSystemGenerated()
 	if in.SviId != "" {
-		log.Printf("client provided the ID of a resource %v, ignoring the name field %v", in.SviId, in.Svi.Name)
+		log.Printf("CreateSvi(): client provided the ID of a resource %v, ignoring the name field %v", in.SviId, in.Svi.Name)
 		resourceID = in.SviId
 	}
 	in.Svi.Name = resourceIDToFullName(resourceID)
 	// idempotent API when called with same key, should return same object
-	obj := new(pb.Svi)
-	ok, err := s.store.Get(in.Svi.Name, obj)
+	sviObj, err := s.getSvi(in.Svi.Name)
 	if err != nil {
-		fmt.Printf("Failed to interact with store: %v", err)
-		return nil, err
+		if err != infradb.ErrKeyNotFound {
+			log.Printf("CreateSvi(): Failed to interact with store: %v", err)
+			return nil, err
+		}
+	} else {
+		log.Printf("CreateSvi(): Already existing Svi with id %v", in.Svi.Name)
+		return sviObj, nil
 	}
-	if ok {
-		log.Printf("Already existing Svi with id %v", in.Svi.Name)
-		return obj, nil
-	}
-	// now get LogicalBridge object to fetch VID field
-	bridgeObject := new(pb.LogicalBridge)
-	ok, err = s.store.Get(in.Svi.Spec.LogicalBridge, bridgeObject)
+
+	// Store the domain object into DB
+	response, err := s.createSvi(in.Svi)
 	if err != nil {
-		fmt.Printf("Failed to interact with store: %v", err)
-		return nil, err
-	}
-	if !ok {
-		err := status.Errorf(codes.NotFound, "unable to find key %s", in.Svi.Spec.LogicalBridge)
-		return nil, err
-	}
-	// now get Vrf to plug this vlandev into
-	vrf := new(pb.Vrf)
-	ok, err = s.store.Get(in.Svi.Spec.Vrf, vrf)
-	if err != nil {
-		fmt.Printf("Failed to interact with store: %v", err)
-		return nil, err
-	}
-	if !ok {
-		err := status.Errorf(codes.NotFound, "unable to find key %s", in.Svi.Spec.Vrf)
-		return nil, err
-	}
-	// configure netlink
-	if err := s.netlinkCreateSvi(ctx, in, bridgeObject, vrf); err != nil {
-		return nil, err
-	}
-	// configure FRR
-	vid := uint16(bridgeObject.Spec.VlanId)
-	vlanName := fmt.Sprintf("vlan%d", vid)
-	vrfName := path.Base(vrf.Name)
-	if err := s.frrCreateSviRequest(ctx, in, vrfName, vlanName); err != nil {
-		return nil, err
-	}
-	// translate object
-	response := utils.ProtoClone(in.Svi)
-	response.Status = &pb.SviStatus{OperStatus: pb.SVIOperStatus_SVI_OPER_STATUS_UP}
-	log.Printf("new object %v", models.NewSvi(response))
-	// save object to the database
-	s.ListHelper[in.Svi.Name] = false
-	err = s.store.Set(in.Svi.Name, response)
-	if err != nil {
+		log.Printf("CreateSvi(): Svi with id %v, Create Svi to DB failure: %v", in.Svi.Name, err)
 		return nil, err
 	}
 	return response, nil
 }
 
-// DeleteSvi deletes a VLAN
-func (s *Server) DeleteSvi(ctx context.Context, in *pb.DeleteSviRequest) (*emptypb.Empty, error) {
+// DeleteSvi deletes a Svi
+func (s *Server) DeleteSvi(_ context.Context, in *pb.DeleteSviRequest) (*emptypb.Empty, error) {
 	// check input correctness
 	if err := s.validateDeleteSviRequest(in); err != nil {
+		log.Printf("DeleteSvi(): validation failure: %v", err)
 		return nil, err
 	}
 	// fetch object from the database
-	obj := new(pb.Svi)
-	ok, err := s.store.Get(in.Name, obj)
+	_, err := s.getSvi(in.Name)
 	if err != nil {
-		fmt.Printf("Failed to interact with store: %v", err)
-		return nil, err
-	}
-	if !ok {
-		if in.AllowMissing {
-			return &emptypb.Empty{}, nil
+		if err != infradb.ErrKeyNotFound {
+			log.Printf("Failed to interact with store: %v", err)
+			return nil, err
 		}
-		err := status.Errorf(codes.NotFound, "unable to find key %s", in.Name)
+		if !in.AllowMissing {
+			err = status.Errorf(codes.NotFound, "unable to find key %s", in.Name)
+			log.Printf("DeleteSvi(): Svi with id %v: Not Found %v", in.Name, err)
+			return nil, err
+		}
+		return &emptypb.Empty{}, nil
+	}
+
+	if err := s.deleteSvi(in.Name); err != nil {
+		log.Printf("DeleteSvi(): Svi with id %v, Delete Svi from DB failure: %v", in.Name, err)
 		return nil, err
 	}
-	// fetch object from the database
-	bridgeObject := new(pb.LogicalBridge)
-	ok, err = s.store.Get(obj.Spec.LogicalBridge, bridgeObject)
-	if err != nil {
-		fmt.Printf("Failed to interact with store: %v", err)
-		return nil, err
-	}
-	if !ok {
-		err := status.Errorf(codes.NotFound, "unable to find key %s", obj.Spec.LogicalBridge)
-		return nil, err
-	}
-	// fetch object from the database
-	vrf := new(pb.Vrf)
-	ok, err = s.store.Get(obj.Spec.Vrf, vrf)
-	if err != nil {
-		fmt.Printf("Failed to interact with store: %v", err)
-		return nil, err
-	}
-	if !ok {
-		err := status.Errorf(codes.NotFound, "unable to find key %s", obj.Spec.Vrf)
-		return nil, err
-	}
-	// configure netlink
-	if err := s.netlinkDeleteSvi(ctx, in, bridgeObject, vrf); err != nil {
-		return nil, err
-	}
-	// delete from FRR
-	vrfName := path.Base(vrf.Name)
-	vid := uint16(bridgeObject.Spec.VlanId)
-	vlanName := fmt.Sprintf("vlan%d", vid)
-	if err := s.frrDeleteSviRequest(ctx, obj, vrfName, vlanName); err != nil {
-		return nil, err
-	}
-	// remove from the Database
-	delete(s.ListHelper, obj.Name)
-	err = s.store.Delete(obj.Name)
-	if err != nil {
-		return nil, err
-	}
+
 	return &emptypb.Empty{}, nil
 }
 
-// UpdateSvi updates an VLAN
-func (s *Server) UpdateSvi(ctx context.Context, in *pb.UpdateSviRequest) (*pb.Svi, error) {
+// UpdateSvi updates a Svi
+func (s *Server) UpdateSvi(_ context.Context, in *pb.UpdateSviRequest) (*pb.Svi, error) {
 	// check input correctness
 	if err := s.validateUpdateSviRequest(in); err != nil {
+		log.Printf("UpdateSvi(): validation failure: %v", err)
 		return nil, err
 	}
 	// fetch object from the database
-	svi := new(pb.Svi)
-	ok, err := s.store.Get(in.Svi.Name, svi)
+	sviObj, err := s.getSvi(in.Svi.Name)
 	if err != nil {
-		fmt.Printf("Failed to interact with store: %v", err)
+		if err != infradb.ErrKeyNotFound {
+			log.Printf("UpdateSvi(): Failed to interact with store: %v", err)
+			return nil, err
+		}
+		if !in.AllowMissing {
+			err = status.Errorf(codes.NotFound, "unable to find key %s", in.Svi.Name)
+			log.Printf("UpdateSvi(): Svi with id %v: Not Found %v", in.Svi.Name, err)
+			return nil, err
+		}
+
+		log.Printf("UpdateSvi(): Svi with id %v is not found so it will be created", in.Svi.Name)
+
+		// Store the domain object into DB
+		response, err := s.createSvi(in.Svi)
+		if err != nil {
+			log.Printf("UpdateSvi(): Svi with id %v, Create Svi to DB failure: %v", in.Svi.Name, err)
+			return nil, err
+		}
+		return response, nil
+	}
+
+	// Check if the object for update is currently in TO_BE_DELETED status
+	if err := checkTobeDeletedStatus(sviObj); err != nil {
+		log.Printf("UpdateSvi(): SVI with id %v, Error: %v", in.Svi.Name, err)
 		return nil, err
 	}
-	if !ok {
-		// TODO: introduce "in.AllowMissing" field. In case "true", create a new resource, don't return error
-		err := status.Errorf(codes.NotFound, "unable to find key %s", in.Svi.Name)
-		return nil, err
+
+	// We do that because we need to see if the object before and after the application of the mask is equal.
+	// If it is the we just return the old object.
+	updatedsviObj := utils.ProtoClone(sviObj)
+
+	// Apply updateMask to the current Pb object
+	utils.ApplyMaskToStoredPbObject(in.UpdateMask, updatedsviObj, in.Svi)
+
+	// Check if the object before the application of the field mask
+	// is different with the one after the application of the field mask
+	if reflect.DeepEqual(sviObj, updatedsviObj) {
+		return sviObj, nil
 	}
-	// use netlink to find VlanId from LogicalBridge object
-	bridgeObject := new(pb.LogicalBridge)
-	ok, err = s.store.Get(svi.Spec.LogicalBridge, bridgeObject)
+
+	response, err := s.updateSvi(updatedsviObj)
 	if err != nil {
-		fmt.Printf("Failed to interact with store: %v", err)
+		log.Printf("UpdateSvi(): Svi with id %v, Update Svi to DB failure: %v", in.Svi.Name, err)
 		return nil, err
 	}
-	if !ok {
-		err := status.Errorf(codes.NotFound, "unable to find key %s", svi.Spec.LogicalBridge)
-		return nil, err
-	}
-	vlanName := fmt.Sprintf("vlan%d", bridgeObject.Spec.VlanId)
-	iface, err := s.nLink.LinkByName(ctx, vlanName)
-	if err != nil {
-		err := status.Errorf(codes.NotFound, "unable to find key %s", vlanName)
-		return nil, err
-	}
-	// base := iface.Attrs()
-	// iface.MTU = 1500 // TODO: remove this, just an example
-	if err := s.nLink.LinkModify(ctx, iface); err != nil {
-		fmt.Printf("Failed to update link: %v", err)
-		return nil, err
-	}
-	response := utils.ProtoClone(in.Svi)
-	response.Status = &pb.SviStatus{OperStatus: pb.SVIOperStatus_SVI_OPER_STATUS_UP}
-	err = s.store.Set(in.Svi.Name, response)
-	if err != nil {
-		return nil, err
-	}
+
 	return response, nil
 }
 
-// GetSvi gets an VLAN
-func (s *Server) GetSvi(ctx context.Context, in *pb.GetSviRequest) (*pb.Svi, error) {
+// GetSvi gets a Svi
+func (s *Server) GetSvi(_ context.Context, in *pb.GetSviRequest) (*pb.Svi, error) {
 	// check input correctness
 	if err := s.validateGetSviRequest(in); err != nil {
+		log.Printf("GetSvi(): validation failure: %v", err)
 		return nil, err
 	}
 	// fetch object from the database
-	obj := new(pb.Svi)
-	ok, err := s.store.Get(in.Name, obj)
+	sviObj, err := s.getSvi(in.Name)
 	if err != nil {
-		fmt.Printf("Failed to interact with store: %v", err)
+		if err != infradb.ErrKeyNotFound {
+			log.Printf("Failed to interact with store: %v", err)
+			return nil, err
+		}
+		err = status.Errorf(codes.NotFound, "unable to find key %s", in.Name)
+		log.Printf("GetSvi(): Svi with id %v: Not Found %v", in.Name, err)
 		return nil, err
 	}
-	if !ok {
-		err := status.Errorf(codes.NotFound, "unable to find key %s", in.Name)
-		return nil, err
-	}
-	// use netlink to find VlanId from LogicalBridge object
-	bridgeObject := new(pb.LogicalBridge)
-	ok, err = s.store.Get(obj.Spec.LogicalBridge, bridgeObject)
-	if err != nil {
-		fmt.Printf("Failed to interact with store: %v", err)
-		return nil, err
-	}
-	if !ok {
-		err := status.Errorf(codes.NotFound, "unable to find key %s", obj.Spec.LogicalBridge)
-		return nil, err
-	}
-	vlanName := fmt.Sprintf("vlan%d", bridgeObject.Spec.VlanId)
-	_, err = s.nLink.LinkByName(ctx, vlanName)
-	if err != nil {
-		err := status.Errorf(codes.NotFound, "unable to find key %s", vlanName)
-		return nil, err
-	}
-	// TODO
-	return &pb.Svi{Name: in.Name, Spec: &pb.SviSpec{MacAddress: obj.Spec.MacAddress, EnableBgp: obj.Spec.EnableBgp, RemoteAs: obj.Spec.RemoteAs}, Status: &pb.SviStatus{OperStatus: pb.SVIOperStatus_SVI_OPER_STATUS_UP}}, nil
+
+	return sviObj, nil
 }
 
 // ListSvis lists logical bridges
 func (s *Server) ListSvis(_ context.Context, in *pb.ListSvisRequest) (*pb.ListSvisResponse, error) {
 	// check required fields
-	if err := fieldbehavior.ValidateRequiredFields(in); err != nil {
+	if err := s.validateListSvisRequest(in); err != nil {
+		log.Printf("ListSvis(): validation failure: %v", err)
 		return nil, err
 	}
 	// fetch pagination from the database, calculate size and offset
-	size, offset, perr := utils.ExtractPagination(in.PageSize, in.PageToken, s.Pagination)
-	if perr != nil {
-		return nil, perr
+	size, offset, err := utils.ExtractPagination(in.PageSize, in.PageToken, s.Pagination)
+	if err != nil {
+		return nil, err
 	}
 	// fetch object from the database
-	Blobarray := []*pb.Svi{}
-	for key := range s.ListHelper {
-		if !strings.HasPrefix(key, "//network.opiproject.org/svis") {
-			continue
-		}
-		svi := new(pb.Svi)
-		ok, err := s.store.Get(key, svi)
-		if err != nil {
-			fmt.Printf("Failed to interact with store: %v", err)
+	Blobarray, err := s.getAllSvis()
+	if err != nil {
+		if err != infradb.ErrKeyNotFound {
+			log.Printf("Failed to interact with store: %v", err)
 			return nil, err
 		}
-		if !ok {
-			err := status.Errorf(codes.NotFound, "unable to find key %s", key)
-			return nil, err
-		}
-		Blobarray = append(Blobarray, svi)
+		err := status.Errorf(codes.NotFound, "Error: %v", err)
+		log.Printf("ListSvis(): %v", err)
+		return nil, err
 	}
 	// sort is needed, since MAP is unsorted in golang, and we might get different results
 	sortSvis(Blobarray)

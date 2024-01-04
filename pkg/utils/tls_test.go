@@ -160,9 +160,9 @@ func TestServer_SetupTLSCredentials(t *testing.T) {
 				ServerCertPath: "a",
 				ServerKeyPath:  "b",
 				CaCertPath:     "c",
-			}, func(s1, s2 string) (tls.Certificate, error) {
+			}, func(_, _ string) (tls.Certificate, error) {
 				return tls.Certificate{}, tt.loadKeyErr
-			}, func(s string) ([]byte, error) {
+			}, func(_ string) ([]byte, error) {
 				return caCert, tt.readFileErr
 			})
 
