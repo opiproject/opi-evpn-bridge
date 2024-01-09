@@ -25,7 +25,7 @@ func (s *Server) validateCreateBridgePortRequest(in *pb.CreateBridgePortRequest)
 	}
 	// for Access type, the LogicalBridge list must have only one item
 	length := len(in.BridgePort.Spec.LogicalBridges)
-	if in.BridgePort.Spec.Ptype == pb.BridgePortType_ACCESS && length > 1 {
+	if in.BridgePort.Spec.Ptype == pb.BridgePortType_BRIDGE_PORT_TYPE_ACCESS && length > 1 {
 		msg := fmt.Sprintf("ACCESS type must have single LogicalBridge and not (%d)", length)
 		return status.Errorf(codes.InvalidArgument, msg)
 	}
