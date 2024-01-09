@@ -60,13 +60,13 @@ func (s *Server) netlinkCreateBridgePort(ctx context.Context, in *pb.CreateBridg
 		}
 		vid := uint16(bridgeObject.Spec.VlanId)
 		switch in.BridgePort.Spec.Ptype {
-		case pb.BridgePortType_ACCESS:
+		case pb.BridgePortType_BRIDGE_PORT_TYPE_ACCESS:
 			// Example: bridge vlan add dev eth2 vid 20 pvid untagged
 			if err := s.nLink.BridgeVlanAdd(ctx, iface, vid, true, true, false, false); err != nil {
 				fmt.Printf("Failed to add vlan to bridge: %v", err)
 				return err
 			}
-		case pb.BridgePortType_TRUNK:
+		case pb.BridgePortType_BRIDGE_PORT_TYPE_TRUNK:
 			// Example: bridge vlan add dev eth2 vid 20
 			if err := s.nLink.BridgeVlanAdd(ctx, iface, vid, false, false, false, false); err != nil {
 				fmt.Printf("Failed to add vlan to bridge: %v", err)

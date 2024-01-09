@@ -34,7 +34,7 @@ var (
 	testBridgePort     = pb.BridgePort{
 		Spec: &pb.BridgePortSpec{
 			MacAddress:     []byte{0xCB, 0xB8, 0x33, 0x4C, 0x88, 0x4F},
-			Ptype:          pb.BridgePortType_TRUNK,
+			Ptype:          pb.BridgePortType_BRIDGE_PORT_TYPE_TRUNK,
 			LogicalBridges: []string{testLogicalBridgeName},
 		},
 	}
@@ -113,7 +113,7 @@ func Test_CreateBridgePort(t *testing.T) {
 			in: &pb.BridgePort{
 				Spec: &pb.BridgePortSpec{
 					MacAddress:     []byte{0xCB, 0xB8, 0x33, 0x4C, 0x88, 0x4F},
-					Ptype:          pb.BridgePortType_ACCESS,
+					Ptype:          pb.BridgePortType_BRIDGE_PORT_TYPE_ACCESS,
 					LogicalBridges: []string{"Japan", "Australia", "Germany"},
 				},
 			},
@@ -185,7 +185,7 @@ func Test_CreateBridgePort(t *testing.T) {
 			in: &pb.BridgePort{
 				Spec: &pb.BridgePortSpec{
 					MacAddress:     []byte{0xCB, 0xB8, 0x33, 0x4C, 0x88, 0x4F},
-					Ptype:          pb.BridgePortType_TRUNK,
+					Ptype:          pb.BridgePortType_BRIDGE_PORT_TYPE_TRUNK,
 					LogicalBridges: []string{"Japan", "Australia", "Germany"},
 				},
 			},
@@ -227,7 +227,7 @@ func Test_CreateBridgePort(t *testing.T) {
 			in: &pb.BridgePort{
 				Spec: &pb.BridgePortSpec{
 					MacAddress:     []byte{0xCB, 0xB8, 0x33, 0x4C, 0x88, 0x4F},
-					Ptype:          pb.BridgePortType_ACCESS,
+					Ptype:          pb.BridgePortType_BRIDGE_PORT_TYPE_ACCESS,
 					LogicalBridges: []string{testLogicalBridgeName},
 				},
 			},
@@ -469,7 +469,7 @@ func Test_DeleteBridgePort(t *testing.T) {
 func Test_UpdateBridgePort(t *testing.T) {
 	spec := &pb.BridgePortSpec{
 		MacAddress:     []byte{0xCB, 0xB8, 0x33, 0x4C, 0x88, 0x4F},
-		Ptype:          pb.BridgePortType_ACCESS,
+		Ptype:          pb.BridgePortType_BRIDGE_PORT_TYPE_ACCESS,
 		LogicalBridges: []string{"Japan", "Australia", "Germany"},
 	}
 	tests := map[string]struct {
