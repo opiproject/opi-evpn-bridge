@@ -1,24 +1,22 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2022-2023 Intel Corporation, or its subsidiaries.
 // Copyright (c) 2022-2023 Dell Inc, or its subsidiaries.
+// Copyright (C) 2023 Nordix Foundation.
 
 // Package port is the main package of the application
 package port
 
 import (
 	"context"
-	"fmt"
 	"log"
-	"path"
-	"strings"
+	"reflect"
 
 	"github.com/google/uuid"
-	"github.com/opiproject/opi-evpn-bridge/pkg/models"
+	"github.com/opiproject/opi-evpn-bridge/pkg/infradb"
 	"github.com/opiproject/opi-evpn-bridge/pkg/utils"
 
 	pb "github.com/opiproject/opi-api/network/evpn-gw/v1alpha1/gen/go"
 
-	"go.einride.tech/aip/fieldbehavior"
 	"go.einride.tech/aip/resourceid"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -26,173 +24,171 @@ import (
 )
 
 // CreateBridgePort executes the creation of the port
-func (s *Server) CreateBridgePort(ctx context.Context, in *pb.CreateBridgePortRequest) (*pb.BridgePort, error) {
+func (s *Server) CreateBridgePort(_ context.Context, in *pb.CreateBridgePortRequest) (*pb.BridgePort, error) {
 	// check input correctness
 	if err := s.validateCreateBridgePortRequest(in); err != nil {
+		log.Printf("CreateBridgePort(): validation failure: %v", err)
 		return nil, err
 	}
 	// see https://google.aip.dev/133#user-specified-ids
 	resourceID := resourceid.NewSystemGenerated()
 	if in.BridgePortId != "" {
-		log.Printf("client provided the ID of a resource %v, ignoring the name field %v", in.BridgePortId, in.BridgePort.Name)
+		log.Printf("CreateBridgePort(): client provided the ID of a resource %v, ignoring the name field %v", in.BridgePortId, in.BridgePort.Name)
 		resourceID = in.BridgePortId
 	}
 	in.BridgePort.Name = resourceIDToFullName(resourceID)
 	// idempotent API when called with same key, should return same object
-	obj := new(pb.BridgePort)
-	ok, err := s.store.Get(in.BridgePort.Name, obj)
+	bpObj, err := s.getBridgePort(in.BridgePort.Name)
 	if err != nil {
-		fmt.Printf("Failed to interact with store: %v", err)
-		return nil, err
+		if err != infradb.ErrKeyNotFound {
+			log.Printf("CreateBridgePort(): Failed to interact with store: %v", err)
+			return nil, err
+		}
+	} else {
+		log.Printf("CreateBridgePort(): Already existing BridgePort with id %v", in.BridgePort.Name)
+		return bpObj, nil
 	}
-	if ok {
-		log.Printf("Already existing BridgePort with id %v", in.BridgePort.Name)
-		return obj, nil
-	}
-	// configure netlink
-	if err := s.netlinkCreateBridgePort(ctx, in); err != nil {
-		return nil, err
-	}
-	// translate object
-	response := utils.ProtoClone(in.BridgePort)
-	response.Status = &pb.BridgePortStatus{OperStatus: pb.BPOperStatus_BP_OPER_STATUS_UP}
-	log.Printf("new object %v", models.NewPort(response))
-	// save object to the database
-	s.ListHelper[in.BridgePort.Name] = false
-	err = s.store.Set(in.BridgePort.Name, response)
+	// Store the domain object into DB
+	response, err := s.createBridgePort(in.BridgePort)
 	if err != nil {
+		log.Printf("CreateBridgePort(): BridgePort with id %v, Create Bridge Port to DB failure: %v", in.BridgePort.Name, err)
 		return nil, err
 	}
 	return response, nil
 }
 
 // DeleteBridgePort deletes a port
-func (s *Server) DeleteBridgePort(ctx context.Context, in *pb.DeleteBridgePortRequest) (*emptypb.Empty, error) {
+func (s *Server) DeleteBridgePort(_ context.Context, in *pb.DeleteBridgePortRequest) (*emptypb.Empty, error) {
 	// check input correctness
 	if err := s.validateDeleteBridgePortRequest(in); err != nil {
+		log.Printf("DeleteBridgePort(): validation failure: %v", err)
 		return nil, err
 	}
 	// fetch object from the database
-	iface := new(pb.BridgePort)
-	ok, err := s.store.Get(in.Name, iface)
+	_, err := s.getBridgePort(in.Name)
 	if err != nil {
-		fmt.Printf("Failed to interact with store: %v", err)
-		return nil, err
-	}
-	if !ok {
-		if in.AllowMissing {
-			return &emptypb.Empty{}, nil
+		if err != infradb.ErrKeyNotFound {
+			log.Printf("Failed to interact with store: %v", err)
+			return nil, err
 		}
-		err := status.Errorf(codes.NotFound, "unable to find key %s", in.Name)
-		return nil, err
+		if !in.AllowMissing {
+			err = status.Errorf(codes.NotFound, "unable to find key %s", in.Name)
+			log.Printf("DeleteBridgePort(): BridgePort with id %v: Not Found %v", in.Name, err)
+			return nil, err
+		}
+		return &emptypb.Empty{}, nil
 	}
-	// configure netlink
-	if err := s.netlinkDeleteBridgePort(ctx, iface); err != nil {
-		return nil, err
-	}
-	// remove from the Database
-	delete(s.ListHelper, iface.Name)
-	err = s.store.Delete(iface.Name)
-	if err != nil {
+
+	if err := s.deleteBridgePort(in.Name); err != nil {
+		log.Printf("DeleteBridgePort(): BridgePort with id %v, Delete Bridge Port from DB failure: %v", in.Name, err)
 		return nil, err
 	}
 	return &emptypb.Empty{}, nil
 }
 
 // UpdateBridgePort updates an Nvme Subsystem
-func (s *Server) UpdateBridgePort(ctx context.Context, in *pb.UpdateBridgePortRequest) (*pb.BridgePort, error) {
+func (s *Server) UpdateBridgePort(_ context.Context, in *pb.UpdateBridgePortRequest) (*pb.BridgePort, error) {
 	// check input correctness
 	if err := s.validateUpdateBridgePortRequest(in); err != nil {
+		log.Printf("UpdateBridgePort(): validation failure: %v", err)
 		return nil, err
 	}
 	// fetch object from the
-	port := new(pb.BridgePort)
-	ok, err := s.store.Get(in.BridgePort.Name, port)
+	bpObj, err := s.getBridgePort(in.BridgePort.Name)
 	if err != nil {
-		fmt.Printf("Failed to interact with store: %v", err)
+		if err != infradb.ErrKeyNotFound {
+			log.Printf("UpdateBridgePort(): Failed to interact with store: %v", err)
+			return nil, err
+		}
+		if !in.AllowMissing {
+			err = status.Errorf(codes.NotFound, "unable to find key %s", in.BridgePort.Name)
+			log.Printf("UpdateBridgePort(): BridgePort with id %v: Not Found %v", in.BridgePort.Name, err)
+			return nil, err
+		}
+
+		log.Printf("UpdateBridgePort(): Bridge Port with id %v is not found so it will be created", in.BridgePort.Name)
+
+		// Store the domain object into DB
+		response, err := s.createBridgePort(in.BridgePort)
+		if err != nil {
+			log.Printf("UpdateBridgePort(): BridgePort with id %v, Create Bridge Port to DB failure: %v", in.BridgePort.Name, err)
+			return nil, err
+		}
+		return response, nil
+	}
+
+	// Check if the object for update is currently in TO_BE_DELETED status
+	if err := checkTobeDeletedStatus(bpObj); err != nil {
+		log.Printf("UpdateBridgePort(): Bridge Port with id %v, Error: %v", in.BridgePort.Name, err)
 		return nil, err
 	}
-	if !ok {
-		// TODO: introduce "in.AllowMissing" field. In case "true", create a new resource, don't return error
-		err := status.Errorf(codes.NotFound, "unable to find key %s", in.BridgePort.Name)
-		return nil, err
+
+	// We do that because we need to see if the object before and after the application of the mask is equal.
+	// If it is the we just return the old object.
+	updatedbpObj := utils.ProtoClone(bpObj)
+
+	// Apply updateMask to the current Pb object
+	utils.ApplyMaskToStoredPbObject(in.UpdateMask, updatedbpObj, in.BridgePort)
+
+	// Check if the object before the application of the field mask
+	// is different with the one after the application of the field mask
+	if reflect.DeepEqual(bpObj, updatedbpObj) {
+		return bpObj, nil
 	}
-	resourceID := path.Base(port.Name)
-	iface, err := s.nLink.LinkByName(ctx, resourceID)
+
+	response, err := s.updateBridgePort(updatedbpObj)
 	if err != nil {
-		err := status.Errorf(codes.NotFound, "unable to find key %s", resourceID)
+		log.Printf("UpdateBridgePort(): BridgePort with id %v, Update Bridge Port to DB failure: %v", in.BridgePort.Name, err)
 		return nil, err
 	}
-	// base := iface.Attrs()
-	// iface.MTU = 1500 // TODO: remove this, just an example
-	if err := s.nLink.LinkModify(ctx, iface); err != nil {
-		fmt.Printf("Failed to update link: %v", err)
-		return nil, err
-	}
-	response := utils.ProtoClone(in.BridgePort)
-	response.Status = &pb.BridgePortStatus{OperStatus: pb.BPOperStatus_BP_OPER_STATUS_UP}
-	err = s.store.Set(in.BridgePort.Name, response)
-	if err != nil {
-		return nil, err
-	}
+
 	return response, nil
 }
 
 // GetBridgePort gets an BridgePort
-func (s *Server) GetBridgePort(ctx context.Context, in *pb.GetBridgePortRequest) (*pb.BridgePort, error) {
+func (s *Server) GetBridgePort(_ context.Context, in *pb.GetBridgePortRequest) (*pb.BridgePort, error) {
 	// check input correctness
 	if err := s.validateGetBridgePortRequest(in); err != nil {
+		log.Printf("GetBridgePort(): validation failure: %v", err)
 		return nil, err
 	}
 	// fetch object from the database
-	port := new(pb.BridgePort)
-	ok, err := s.store.Get(in.Name, port)
+	bpObj, err := s.getBridgePort(in.Name)
 	if err != nil {
-		fmt.Printf("Failed to interact with store: %v", err)
+		if err != infradb.ErrKeyNotFound {
+			log.Printf("Failed to interact with store: %v", err)
+			return nil, err
+		}
+		err = status.Errorf(codes.NotFound, "unable to find key %s", in.Name)
+		log.Printf("GetBridgePort(): BridgePort with id %v: Not Found %v", in.Name, err)
 		return nil, err
 	}
-	if !ok {
-		err := status.Errorf(codes.NotFound, "unable to find key %s", in.Name)
-		return nil, err
-	}
-	resourceID := path.Base(port.Name)
-	_, err = s.nLink.LinkByName(ctx, resourceID)
-	if err != nil {
-		err := status.Errorf(codes.NotFound, "unable to find key %s", resourceID)
-		return nil, err
-	}
-	// TODO
-	return &pb.BridgePort{Name: in.Name, Spec: &pb.BridgePortSpec{MacAddress: port.Spec.MacAddress}, Status: &pb.BridgePortStatus{OperStatus: pb.BPOperStatus_BP_OPER_STATUS_UP}}, nil
+
+	return bpObj, nil
 }
 
 // ListBridgePorts lists logical bridges
 func (s *Server) ListBridgePorts(_ context.Context, in *pb.ListBridgePortsRequest) (*pb.ListBridgePortsResponse, error) {
 	// check required fields
-	if err := fieldbehavior.ValidateRequiredFields(in); err != nil {
+	if err := s.validateListBridgePortsRequest(in); err != nil {
+		log.Printf("ListBridgePorts(): validation failure: %v", err)
 		return nil, err
 	}
 	// fetch pagination from the database, calculate size and offset
-	size, offset, perr := utils.ExtractPagination(in.PageSize, in.PageToken, s.Pagination)
-	if perr != nil {
-		return nil, perr
+	size, offset, err := utils.ExtractPagination(in.PageSize, in.PageToken, s.Pagination)
+	if err != nil {
+		return nil, err
 	}
 	// fetch object from the database
-	Blobarray := []*pb.BridgePort{}
-	for key := range s.ListHelper {
-		if !strings.HasPrefix(key, "//network.opiproject.org/ports") {
-			continue
-		}
-		port := new(pb.BridgePort)
-		ok, err := s.store.Get(key, port)
-		if err != nil {
-			fmt.Printf("Failed to interact with store: %v", err)
+	Blobarray, err := s.getAllBridgePorts()
+	if err != nil {
+		if err != infradb.ErrKeyNotFound {
+			log.Printf("Failed to interact with store: %v", err)
 			return nil, err
 		}
-		if !ok {
-			err := status.Errorf(codes.NotFound, "unable to find key %s", key)
-			return nil, err
-		}
-		Blobarray = append(Blobarray, port)
+		err := status.Errorf(codes.NotFound, "Error: %v", err)
+		log.Printf("ListBridgePorts(): %v", err)
+		return nil, err
 	}
 	// sort is needed, since MAP is unsorted in golang, and we might get different results
 	sortBridgePorts(Blobarray)

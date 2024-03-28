@@ -1,0 +1,32 @@
+grpcport: 50151
+httpport: 8082
+tlsfiles:
+database: redis
+dbaddress: 127.0.0.1:6379
+frraddress: 127.0.0.1
+buildenv: ipu
+subscribers:
+ - name: "lvm"
+   priority: 2
+   events: ["vrf", "bridge-port"]
+ - name: "lgm"
+   priority: 1
+   events: ["vrf", "svi", "logical-bridge"]
+ - name: "frr"
+   priority: 3
+   events: ["vrf", "svi"]
+ - name: "ipu"
+   priority: 4
+   events: ["vrf"]
+grpc:
+    server_addresses:
+      - 0.0.0.0
+    server_port: 51703
+    num_threads: 10
+    static_external_macs: []
+linuxfrr:
+    enabled: true
+    defaultvtep: "vxlan-vtep"
+    portmux: "enp0s1f0d5"
+    vrfmux: "enp0s1f0d4"
+    ipmtu: 2962

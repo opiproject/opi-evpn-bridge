@@ -214,7 +214,7 @@ services:
       jaeger:
         condition: service_healthy
     network_mode: service:leaf1
-    command: /opi-evpn-bridge -grpc_port=50151 -http_port=8082
+    command: /opi-evpn-bridge --grpcport=50151 --httpport=8082
     healthcheck:
       test: grpcurl -plaintext localhost:50151 list || exit 1
 
@@ -293,8 +293,6 @@ services:
       /entrypoint.sh ls localhost:50151 opi_api.network.evpn_gw.v1alpha1.BridgePortService.UpdateBridgePort -l && \
       echo toremove && \
       apt update && apt install iproute2 -y && \
-      ip link add br-tenant type bridge vlan_default_pvid 0 vlan_filtering 1 vlan_protocol 802.1Q && \
-      ip link set br-tenant up && \
       echo create && \
       /entrypoint.sh call --json_input --json_output localhost:50151 CreateVrf            "{\"vrf_id\"            : \"blue\",          \"vrf\" :             {\"spec\" : {               \"loopback_ip_prefix\": {\"addr\": {\"af\": \"IP_AF_INET\", \"v4_addr\": 167772418}, \"len\": 32}, \"vtep_ip_prefix\": {\"addr\": {\"af\": \"IP_AF_INET\", \"v4_addr\": 167772162}, \"len\": 32} }} }" && \
       /entrypoint.sh call --json_input --json_output localhost:50151 CreateVrf            "{\"vrf_id\"            : \"green\",         \"vrf\" :             {\"spec\" : {\"vni\" : 100, \"loopback_ip_prefix\": {\"addr\": {\"af\": \"IP_AF_INET\", \"v4_addr\": 167772674}, \"len\": 32}, \"vtep_ip_prefix\": {\"addr\": {\"af\": \"IP_AF_INET\", \"v4_addr\": 167772162}, \"len\": 32} }} }" && \
