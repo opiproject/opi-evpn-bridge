@@ -26,8 +26,6 @@ type SubscriberConfig struct {
 type P4FilesConfig struct {
 	P4infoFile string `yaml:"p4infofile"`
 	BinFile    string `yaml:"binfile"`
-	ConfFile   string `yaml:"conffile"`
-	SdePath    string `yaml:"sdepath"`
 }
 
 // RepresentorsConfig Representors config structure
@@ -43,7 +41,6 @@ type RepresentorsConfig struct {
 // P4Config p4 config structure
 type P4Config struct {
 	Enabled      bool                   `yaml:"enabled"`
-	Driver       string                 `yaml:"driver"`
 	Representors map[string]interface{} `yaml:"representors"`
 	Config       P4FilesConfig          `yaml:"config"`
 }

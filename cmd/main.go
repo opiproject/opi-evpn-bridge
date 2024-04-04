@@ -17,9 +17,6 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
-
 	pc "github.com/opiproject/opi-api/inventory/v1/gen/go"
 	pe "github.com/opiproject/opi-api/network/evpn-gw/v1alpha1/gen/go"
 	"github.com/opiproject/opi-evpn-bridge/pkg/bridge"
@@ -31,6 +28,8 @@ import (
 	"github.com/opiproject/opi-evpn-bridge/pkg/utils"
 	"github.com/opiproject/opi-evpn-bridge/pkg/vrf"
 	"github.com/opiproject/opi-smbios-bridge/pkg/inventory"
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -42,7 +41,13 @@ import (
 	gen_linux "github.com/opiproject/opi-evpn-bridge/pkg/LinuxGeneralModule"
 	intel_e2000_linux "github.com/opiproject/opi-evpn-bridge/pkg/LinuxVendorModule/intele2000"
 	frr "github.com/opiproject/opi-evpn-bridge/pkg/frr"
+	netlink "github.com/opiproject/opi-evpn-bridge/pkg/netlink"
+	ipu_vendor "github.com/opiproject/opi-evpn-bridge/pkg/vendor_plugins/intel-e2000/p4runtime/p4translation"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
+)
+
+const (
+	intelStr = "intel_e2000"
 )
 
 var rootCmd = &cobra.Command{
@@ -61,10 +66,11 @@ var rootCmd = &cobra.Command{
 		go runGatewayServer(config.GlobalConfig.GRPCPort, config.GlobalConfig.HTTPPort)
 
 		switch config.GlobalConfig.Buildenv {
-		case "intel_e2000":
+		case intelStr:
 			gen_linux.Init()
 			intel_e2000_linux.Init()
 			frr.Init()
+			ipu_vendor.Init()
 		case "ci":
 			gen_linux.Init()
 			ci_linux.Init()
@@ -77,8 +83,14 @@ var rootCmd = &cobra.Command{
 		if err := createGrdVrf(); err != nil {
 			log.Panicf("Error: %v", err)
 		}
+		switch config.GlobalConfig.Buildenv {
+		case intelStr:
+			netlink.Init()
+		default:
+		}
 
 		runGrpcServer(config.GlobalConfig.GRPCPort, config.GlobalConfig.TLSFiles)
+
 	},
 }
 
@@ -118,6 +130,30 @@ func setupLogger(filename string) {
 	log.SetOutput(logger.Writer())
 }
 
+func cleanUp() {
+	log.Println("Defer function called")
+	if err := deleteGrdVrf(); err != nil {
+		log.Println("Failed to delete GRD vrf")
+	}
+
+	switch config.GlobalConfig.Buildenv {
+	case intelStr:
+		gen_linux.DeInit()
+		intel_e2000_linux.DeInit()
+		frr.DeInit()
+	case "ci":
+		gen_linux.DeInit()
+		ci_linux.DeInit()
+		frr.DeInit()
+	default:
+		log.Panic(" ERROR: Could not find Build env ")
+	}
+
+	if err := infradb.Close(); err != nil {
+		log.Println("Failed to close infradb")
+	}
+}
+
 // main function
 func main() {
 	// setup file and console logger
@@ -133,12 +169,7 @@ func main() {
 	if err := rootCmd.Execute(); err != nil {
 		log.Panicf("Error in Execute(): %v", err)
 	}
-
-	defer func() {
-		if err := infradb.Close(); err != nil {
-			log.Panicf("Error in close(): %v", err)
-		}
-	}()
+	defer cleanUp()
 }
 
 // runGrpcServer start the grpc server for all the components
@@ -246,6 +277,19 @@ func createGrdVrf() error {
 	err = infradb.CreateVrf(grdVrf)
 	if err != nil {
 		log.Printf("CreateGrdVrf(): Error in creating GRD VRF object %+v\n", err)
+		return err
+	}
+
+	return nil
+}
+
+// deleteGrdVrf creates the grd vrf with vni 0
+func deleteGrdVrf() error {
+	log.Printf("DeleteGrdVrf(): deleted GRD VRF object\n")
+
+	err := infradb.DeleteVrf("//network.opiproject.org/vrfs/GRD")
+	if err != nil {
+		log.Printf("CreateGrdVrf(): Error in deleting GRD VRF object %+v\n", err)
 		return err
 	}
 

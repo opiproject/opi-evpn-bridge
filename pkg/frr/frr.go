@@ -265,6 +265,18 @@ func Init() {
 	}
 }
 
+// DeInit function handles stops functionality
+func DeInit() {
+	frrEnabled := config.GlobalConfig.LinuxFrr.Enabled
+	if !frrEnabled {
+		log.Println("FRR Module disabled")
+		return
+	}
+	// Unsubscribe to InfraDB notifications
+	eb := eventbus.EBus
+	eb.UnsubscribeModule(frrComp)
+}
+
 // routingTableBusy function checks the routing table
 /*func routingTableBusy(table uint32) bool {
 	cp, err := run([]string{"ip", "route", "show", "table", strconv.Itoa(int(table))}, false)
@@ -320,15 +332,12 @@ type BgpVrfCmd struct {
 // setUpVrf sets up the vrf
 func setUpVrf(vrf *infradb.Vrf) (string, bool) {
 	// This function must not be executed for the vrf representing the GRD
-	Ifname := strings.Split(vrf.Name, "/")
-	ifwlen := len(Ifname)
-	vrf.Name = Ifname[ifwlen-1]
-	if vrf.Name == "GRD" {
+	if path.Base(vrf.Name) == "GRD" {
 		return "", true
 	}
 	if !reflect.ValueOf(vrf.Spec.Vni).IsZero() {
 		// Configure the vrf in FRR and set up BGP EVPN for it
-		vrfName := fmt.Sprintf("vrf %s", vrf.Name)
+		vrfName := fmt.Sprintf("vrf %s", path.Base(vrf.Name))
 		vniID := fmt.Sprintf("vni %s", strconv.Itoa(int(*vrf.Spec.Vni)))
 		_, err := Frr.FrrZebraCmd(ctx, fmt.Sprintf("configure terminal\n %s\n %s\n exit-vrf\n exit", vrfName, vniID))
 		// fmt.Printf("FrrZebraCmd: %v:%v", data, err)
@@ -343,7 +352,7 @@ func setUpVrf(vrf *infradb.Vrf) (string, bool) {
 		} else {
 			LbiP = fmt.Sprintf("%+v", vrf.Spec.LoopbackIP.IP)
 		}
-		_, err = Frr.FrrBgpCmd(ctx, fmt.Sprintf("configure terminal\n router bgp 65000 vrf %s\n bgp router-id %s\n no bgp ebgp-requires-policy\n no bgp hard-administrative-reset\n no bgp graceful-restart notification\n address-family ipv4 unicast\n redistribute connected\n redistribute static\n exit-address-family\n address-family l2vpn evpn\n advertise ipv4 unicast\n exit-address-family\n exit", vrf.Name, LbiP))
+		_, err = Frr.FrrBgpCmd(ctx, fmt.Sprintf("configure terminal\n router bgp 65000 vrf %s\n bgp router-id %s\n no bgp ebgp-requires-policy\n no bgp hard-administrative-reset\n no bgp graceful-restart notification\n address-family ipv4 unicast\n redistribute connected\n redistribute static\n exit-address-family\n address-family l2vpn evpn\n advertise ipv4 unicast\n exit-address-family\n exit", path.Base(vrf.Name), LbiP))
 		if err != nil {
 			return "", false
 		}
@@ -371,7 +380,7 @@ func setUpVrf(vrf *infradb.Vrf) (string, bool) {
 		if err1 != nil {
 			log.Printf("error-%v", err)
 		}
-		cmd = fmt.Sprintf("show bgp vrf %s json", vrf.Name)
+		cmd = fmt.Sprintf("show bgp vrf %s json", path.Base(vrf.Name))
 		cp, err = Frr.FrrBgpCmd(ctx, cmd)
 		if err != nil {
 			log.Printf("error-%v", err)
@@ -461,14 +470,11 @@ func tearDownSvi(svi *infradb.Svi) bool {
 // tearDownVrf tears down vrf
 func tearDownVrf(vrf *infradb.Vrf) bool {
 	// This function must not be executed for the vrf representing the GRD
-	Ifname := strings.Split(vrf.Name, "/")
-	ifwlen := len(Ifname)
-	vrf.Name = Ifname[ifwlen-1]
-	if vrf.Name == "GRD" {
+	if path.Base(vrf.Name) == "GRD" {
 		return true
 	}
 
-	data, err := Frr.FrrZebraCmd(ctx, fmt.Sprintf("show vrf %s vni\n", vrf.Name))
+	data, err := Frr.FrrZebraCmd(ctx, fmt.Sprintf("show vrf %s vni\n", path.Base(vrf.Name)))
 	if err != nil {
 		log.Printf("tearDownVrf : failed to run the command")
 	}
@@ -479,8 +485,8 @@ func tearDownVrf(vrf *infradb.Vrf) bool {
 	// Clean up FRR last
 	if !reflect.ValueOf(vrf.Spec.Vni).IsZero() {
 		log.Printf("FRR Deleted event")
-		delCmd1 := fmt.Sprintf("no router bgp 65000 vrf %s", vrf.Name)
-		delCmd2 := fmt.Sprintf("no vrf %s", vrf.Name)
+		delCmd1 := fmt.Sprintf("no router bgp 65000 vrf %s", path.Base(vrf.Name))
+		delCmd2 := fmt.Sprintf("no vrf %s", path.Base(vrf.Name))
 		_, err = Frr.FrrBgpCmd(ctx, fmt.Sprintf("configure terminal\n %s\n exit\n", delCmd1))
 		if err != nil {
 			return false

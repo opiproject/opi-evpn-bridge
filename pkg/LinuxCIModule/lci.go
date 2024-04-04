@@ -215,3 +215,10 @@ func Init() {
 	ctx = context.Background()
 	nlink = utils.NewNetlinkWrapper()
 }
+
+// DeInit function handles stops functionality
+func DeInit() {
+	// Unsubscribe to InfraDB notifications
+	eb := eventbus.EBus
+	eb.UnsubscribeModule("lci")
+}
