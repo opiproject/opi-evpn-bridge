@@ -138,6 +138,14 @@ func Test_CreateVrf(t *testing.T) {
 						},
 						Len: 24,
 					},
+					VtepIpPrefix: &pc.IPPrefix{
+						Addr: &pc.IPAddress{
+							Af: pc.IpAf_IP_AF_INET,
+							V4OrV6: &pc.IPAddress_V4Addr{
+								V4Addr: 0,
+							},
+						},
+					},
 				},
 				Status: &pb.VrfStatus{
 					OperStatus: pb.VRFOperStatus_VRF_OPER_STATUS_DOWN,

@@ -9,6 +9,7 @@ import (
 	"errors"
 	"log"
 	"sync"
+	"time"
 
 	"github.com/opiproject/opi-evpn-bridge/pkg/infradb/common"
 	"github.com/opiproject/opi-evpn-bridge/pkg/infradb/subscriberframework/eventbus"
@@ -1208,6 +1209,80 @@ func GetAllSvis() ([]*Svi, error) {
 	}
 
 	return svis, nil
+}
+
+// DeleteAllResources deletes all components from infradb
+func DeleteAllResources() error {
+	duration := 10 * time.Second
+	bps, _ := GetAllBPs()
+	for _, bp := range bps {
+		err := DeleteBP(bp.Name)
+		if err != nil {
+			return err
+		}
+	}
+	startTime := time.Now()
+	for {
+		b, _ := GetAllBPs()
+		if len(b) == 0 {
+			break
+		}
+		if time.Since(startTime) > duration {
+			return errors.New("failed to delete BridgePorts")
+		}
+	}
+	svis, _ := GetAllSvis()
+	for _, svi := range svis {
+		err := DeleteSvi(svi.Name)
+		if err != nil {
+			return err
+		}
+	}
+	startTime = time.Now()
+	for {
+		s, _ := GetAllSvis()
+		if len(s) == 0 {
+			break
+		}
+		if time.Since(startTime) > duration {
+			return errors.New("failed to delete svis")
+		}
+	}
+	vrfs, _ := GetAllVrfs()
+	for _, vrf := range vrfs {
+		err := DeleteVrf(vrf.Name)
+		if err != nil {
+			return err
+		}
+	}
+	startTime = time.Now()
+	for {
+		v, _ := GetAllVrfs()
+		if len(v) == 0 {
+			break
+		}
+		if time.Since(startTime) > duration {
+			return errors.New("failed to delete vrfs")
+		}
+	}
+	lbs, _ := GetAllLBs()
+	for _, lb := range lbs {
+		err := DeleteLB(lb.Name)
+		if err != nil {
+			return err
+		}
+	}
+	startTime = time.Now()
+	for {
+		l, _ := GetAllLBs()
+		if len(l) == 0 {
+			break
+		}
+		if time.Since(startTime) > duration {
+			return errors.New("failed to delete LogicalBridges")
+		}
+	}
+	return nil
 }
 
 // UpdateSvi updates a svi infradb object
