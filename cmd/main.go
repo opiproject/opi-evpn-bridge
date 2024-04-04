@@ -14,11 +14,10 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"os/signal"
 	"path/filepath"
+	"syscall"
 	"time"
-
-	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 
 	pc "github.com/opiproject/opi-api/inventory/v1/gen/go"
 	pe "github.com/opiproject/opi-api/network/evpn-gw/v1alpha1/gen/go"
@@ -31,6 +30,8 @@ import (
 	"github.com/opiproject/opi-evpn-bridge/pkg/utils"
 	"github.com/opiproject/opi-evpn-bridge/pkg/vrf"
 	"github.com/opiproject/opi-smbios-bridge/pkg/inventory"
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -42,7 +43,14 @@ import (
 	gen_linux "github.com/opiproject/opi-evpn-bridge/pkg/LinuxGeneralModule"
 	intel_e2000_linux "github.com/opiproject/opi-evpn-bridge/pkg/LinuxVendorModule/intele2000"
 	frr "github.com/opiproject/opi-evpn-bridge/pkg/frr"
+	netlink "github.com/opiproject/opi-evpn-bridge/pkg/netlink"
+	"github.com/opiproject/opi-evpn-bridge/pkg/vendor_plugins/intel-e2000/p4runtime/p4driverapi"
+	ipu_vendor "github.com/opiproject/opi-evpn-bridge/pkg/vendor_plugins/intel-e2000/p4runtime/p4translation"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
+)
+
+const (
+	intelStr = "intel_e2000"
 )
 
 var rootCmd = &cobra.Command{
@@ -61,14 +69,16 @@ var rootCmd = &cobra.Command{
 		go runGatewayServer(config.GlobalConfig.GRPCPort, config.GlobalConfig.HTTPPort)
 
 		switch config.GlobalConfig.Buildenv {
-		case "intel_e2000":
-			gen_linux.Init()
-			intel_e2000_linux.Init()
-			frr.Init()
+		case intelStr:
+			gen_linux.Initialize()
+			intel_e2000_linux.Initialize()
+			frr.Initialize()
+			ipu_vendor.Initialize()
+
 		case "ci":
-			gen_linux.Init()
-			ci_linux.Init()
-			frr.Init()
+			gen_linux.Initialize()
+			ci_linux.Initialize()
+			frr.Initialize()
 		default:
 			log.Panic(" ERROR: Could not find Build env ")
 		}
@@ -77,8 +87,13 @@ var rootCmd = &cobra.Command{
 		if err := createGrdVrf(); err != nil {
 			log.Panicf("Error: %v", err)
 		}
-
+		switch config.GlobalConfig.Buildenv {
+		case intelStr:
+			netlink.Initialize()
+		default:
+		}
 		runGrpcServer(config.GlobalConfig.GRPCPort, config.GlobalConfig.TLSFiles)
+
 	},
 }
 
@@ -118,6 +133,33 @@ func setupLogger(filename string) {
 	log.SetOutput(logger.Writer())
 }
 
+func cleanUp() {
+	log.Println("Defer function called")
+	if err := infradb.DeleteAllResources(); err != nil {
+		log.Println("Failed to delete all the resources: ", err)
+	}
+	switch config.GlobalConfig.Buildenv {
+	case intelStr:
+		gen_linux.DeInitialize()
+		intel_e2000_linux.DeInitialize()
+		frr.DeInitialize()
+		netlink.DeInitialize()
+		ipu_vendor.DeInitialize()
+		close(p4driverapi.StopCh)
+
+	case "ci":
+		gen_linux.DeInitialize()
+		ci_linux.DeInitialize()
+		frr.DeInitialize()
+	default:
+		log.Panic(" ERROR: Could not find Build env ")
+	}
+
+	if err := infradb.Close(); err != nil {
+		log.Println("Failed to close infradb")
+	}
+}
+
 // main function
 func main() {
 	// setup file and console logger
@@ -129,26 +171,48 @@ func main() {
 		log.Panicf("Error in initialize(): %v", err)
 	}
 
+	sigChan := make(chan os.Signal, 1)
+	// Notify sigChan on SIGINT or SIGTERM.
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+
+	// This goroutine executes a blocking receive for signals.
+	// When it gets one it will then exit the program.
+	go func() {
+		sig := <-sigChan
+		switch sig {
+		case syscall.SIGINT:
+			cleanUp()
+			fmt.Println("Received SIGINT, shutting down.")
+		case syscall.SIGTERM:
+			cleanUp()
+			fmt.Println("Received SIGTERM, shutting down.")
+		default:
+			fmt.Println("Received unknown signal.")
+		}
+		// Perform any cleanup tasks here.
+		// ...
+
+		// Exit the program.
+		os.Exit(0)
+	}()
+
 	// start the main cmd
 	if err := rootCmd.Execute(); err != nil {
 		log.Panicf("Error in Execute(): %v", err)
 	}
-
-	defer func() {
-		if err := infradb.Close(); err != nil {
-			log.Panicf("Error in close(): %v", err)
-		}
-	}()
+	defer cleanUp()
 }
 
 // runGrpcServer start the grpc server for all the components
 func runGrpcServer(grpcPort uint16, tlsFiles string) {
-	tp := utils.InitTracerProvider("opi-evpn-bridge")
-	defer func() {
-		if err := tp.Shutdown(context.Background()); err != nil {
-			log.Panicf("Tracer Provider Shutdown: %v", err)
-		}
-	}()
+	if config.GlobalConfig.Tracer {
+		tp := utils.InitTracerProvider("opi-evpn-bridge")
+		defer func() {
+			if err := tp.Shutdown(context.Background()); err != nil {
+				log.Panicf("Tracer Provider Shutdown: %v", err)
+			}
+		}()
+	}
 
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", grpcPort))
 	if err != nil {

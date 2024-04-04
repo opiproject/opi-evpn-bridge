@@ -25,3 +25,4 @@ linuxfrr:
     enabled: true
     defaultvtep: "vxlan-vtep"
     ipmtu: 1500
+    localas: 65000

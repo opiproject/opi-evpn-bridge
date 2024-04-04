@@ -69,11 +69,24 @@ func (h *ModulelvmHandler) HandleEvent(eventType string, objectData *eventbus.Ob
 }
 
 // handlebp  handles the bridge port functionality
+//
+//gocognit:ignore
 func handlebp(objectData *eventbus.ObjectData) {
 	var comp common.Component
 	bp, err := infradb.GetBP(objectData.Name)
 	if err != nil {
 		log.Printf("LVM : GetBP error: %s\n", err)
+		comp.Name = lvmComp
+		comp.CompStatus = common.ComponentStatusError
+		if comp.Timer == 0 {
+			comp.Timer = 2 * time.Second
+		} else {
+			comp.Timer *= 2
+		}
+		err := infradb.UpdateBPStatus(objectData.Name, objectData.ResourceVersion, objectData.NotificationID, nil, comp)
+		if err != nil {
+			log.Printf("error in updating bp status: %s\n", err)
+		}
 		return
 	}
 	if objectData.ResourceVersion != bp.ResourceVersion {
@@ -227,11 +240,24 @@ func tearDownBp(bp *infradb.BridgePort) bool {
 }
 
 // handlevrf handles the vrf functionality
+//
+//gocognit:ignore
 func handlevrf(objectData *eventbus.ObjectData) {
 	var comp common.Component
 	vrf, err := infradb.GetVrf(objectData.Name)
 	if err != nil {
 		log.Printf("LVM : GetVrf error: %s\n", err)
+		comp.Name = lvmComp
+		comp.CompStatus = common.ComponentStatusError
+		if comp.Timer == 0 { // wait timer is 2 powerof natural numbers ex : 1,2,3...
+			comp.Timer = 2 * time.Second
+		} else {
+			comp.Timer *= 2
+		}
+		err := infradb.UpdateVrfStatus(objectData.Name, objectData.ResourceVersion, objectData.NotificationID, nil, comp)
+		if err != nil {
+			log.Printf("error updaing vrf status %s\n", err)
+		}
 		return
 	}
 	if objectData.ResourceVersion != vrf.ResourceVersion {
@@ -365,7 +391,7 @@ func tearDownVrf(vrf *infradb.Vrf) bool {
 	Intf, err := nlink.LinkByName(ctx, vlanIntf)
 	if err != nil {
 		log.Printf("Failed to get link %v: %s\n", vlanIntf, err)
-		return true
+		return false
 	}
 	if err = nlink.LinkDel(ctx, Intf); err != nil {
 		log.Printf("Failed to delete link %v: %s\n", vlanIntf, err)
@@ -380,8 +406,8 @@ var brTenant string
 var ctx context.Context
 var nlink utils.Netlink
 
-// Init function initialize config
-func Init() {
+// Initialize function initialize config
+func Initialize() {
 	eb := eventbus.EBus
 	for _, subscriberConfig := range config.GlobalConfig.Subscribers {
 		if subscriberConfig.Name == lvmComp {
@@ -395,5 +421,11 @@ func Init() {
 	ipMtu = config.GlobalConfig.LinuxFrr.IPMtu
 	brTenant = "br-tenant"
 	ctx = context.Background()
-	nlink = utils.NewNetlinkWrapper()
+	nlink = utils.NewNetlinkWrapperWithArgs(config.GlobalConfig.Tracer)
+}
+
+// DeInitialize function handles stops functionality
+func DeInitialize() {
+	eb := eventbus.EBus
+	eb.UnsubscribeModule(lvmComp)
 }
