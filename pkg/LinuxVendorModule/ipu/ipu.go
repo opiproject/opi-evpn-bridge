@@ -180,7 +180,7 @@ func setUpBp(bp *infradb.BridgePort) bool {
 		}
 		//TODO: Update opi-api to change vlanid to uint16 in LogiclaBridge
 		vid := uint16(BrObj.Spec.VlanID)
-		if err = nlink.BridgeVlanAdd(ctx, vlanLink, vid, true, false, false, false); err != nil {
+		if err = nlink.BridgeVlanAdd(ctx, vlanLink, vid, false, false, false, false); err != nil {
 			log.Printf("Failed to add VLAN %d to bridge interface %s: %v\n", vportID, link, err)
 			return false
 		}
