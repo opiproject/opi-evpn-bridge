@@ -332,7 +332,7 @@ func setUpTenantBridge() {
 	brTenantMtu := ipMtu + 20
 	vlanfiltering := true
 	bridge := &netlink.Bridge{LinkAttrs: netlink.LinkAttrs{Name: brTenant},
-		VlanDefaultPVID: nil,
+		VlanDefaultPVID: new(uint16),
 		VlanFiltering:   &vlanfiltering,
 	}
 
