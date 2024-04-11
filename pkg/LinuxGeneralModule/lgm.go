@@ -350,9 +350,12 @@ func setUpTenantBridge() {
 }
 
 // routingTableBusy checks if the route is in filterred list
-func routingTableBusy(table uint32) bool {
-	_, err := nlink.RouteListFiltered(ctx, netlink.FAMILY_V4, &netlink.Route{Table: int(table)}, netlink.RT_FILTER_TABLE)
-	return err == nil
+func routingTableBusy(table uint32) (bool, error) {
+	routeList, err := nlink.RouteListFiltered(ctx, netlink.FAMILY_V4, &netlink.Route{Table: int(table)}, netlink.RT_FILTER_TABLE)
+	if err != nil {
+		return false, err
+	}
+	return len(routeList) > 0, nil
 }
 
 // setUpBridge sets up the bridge
@@ -414,12 +417,21 @@ func setUpVrf(vrf *infradb.Vrf) (string, bool) {
 		*vrf.Metadata.RoutingTable[1] = 255
 		return "", true
 	}
-	routingTable := GenerateRouteTable()
 	vrf.Metadata.RoutingTable = make([]*uint32, 1)
 	vrf.Metadata.RoutingTable[0] = new(uint32)
-	if routingTableBusy(routingTable) {
-		log.Printf("LGM :Routing table %d is not empty\n", routingTable)
-		// return "Error"
+	var routingTable uint32
+	for {
+		routingTable = GenerateRouteTable()
+		isBusy, err := routingTableBusy(routingTable)
+		if err != nil {
+			log.Printf("LGM : Error occurred when checking if routing table %d is busy: %+v\n", routingTable, err)
+			return "", false
+		}
+		if !isBusy {
+			log.Printf("LGM: Routing Table %d is not busy\n", routingTable)
+			break
+		}
+		log.Printf("LGM: Routing Table %d is busy\n", routingTable)
 	}
 	var vtip string
 	if !reflect.ValueOf(vrf.Spec.VtepIP).IsZero() {
