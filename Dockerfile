@@ -22,9 +22,7 @@ COPY --from=docker.io/fullstorydev/grpcurl:v1.8.9-alpine /bin/grpcurl /usr/local
 COPY --from=builder /app/config.yaml /
 RUN apk add --no-cache iproute2 && \
 	mkdir -p /etc/iproute2/ && \
-	echo "255     opi_evpn_br" > /etc/iproute2/rt_protos && \
-	cat /etc/iproute2/rt_protos && \
-	ls -al /
+	echo "255     opi_evpn_br" > /etc/iproute2/rt_protos /
 EXPOSE 50051 8082
 CMD [ "/opi-evpn-bridge", "--grpcport=50051", "--httpport=8082"]
 HEALTHCHECK CMD grpcurl -plaintext localhost:50051 list || exit 1

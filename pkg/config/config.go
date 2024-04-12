@@ -7,7 +7,10 @@
 package config
 
 import (
+	"fmt"
 	"log"
+	"net"
+	"strconv"
 
 	"github.com/spf13/viper"
 )
@@ -76,8 +79,8 @@ type NetlinkConfig struct {
 // Config global config structure
 type Config struct {
 	CfgFile     string
-	GRPCPort    int                `yaml:"grpcport"`
-	HTTPPort    int                `yaml:"httpport"`
+	GRPCPort    uint16             `yaml:"grpcport"`
+	HTTPPort    uint16             `yaml:"httpport"`
 	TLSFiles    string             `yaml:"tlsfiles"`
 	Database    string             `yaml:"database"`
 	DBAddress   string             `yaml:"dbaddress"`
@@ -99,21 +102,80 @@ func SetConfig(cfg Config) error {
 	return nil
 }
 
+const (
+	configFilePath = "./"
+)
+
+// Initcfg read the config from file
+func Initcfg() {
+	if GlobalConfig.CfgFile != "" {
+		viper.SetConfigFile(GlobalConfig.CfgFile)
+	} else {
+		// Search config in the default location
+		viper.AddConfigPath(configFilePath)
+		viper.SetConfigType("yaml")
+		viper.SetConfigName("config.yaml")
+	}
+	if err := LoadConfig(); err != nil {
+		log.Fatal(err)
+	}
+}
+
 // LoadConfig loads the config from yaml file
-func LoadConfig() {
-	if err := viper.ReadInConfig(); err == nil {
+func LoadConfig() error {
+	if err := viper.ReadInConfig(); err != nil {
 		log.Println("Using config file:", viper.ConfigFileUsed())
+		return err
 	}
 
 	if err := viper.Unmarshal(&GlobalConfig); err != nil {
 		log.Println(err)
-		return
+		return err
 	}
 
 	log.Printf("config %+v", GlobalConfig)
+	return nil
 }
 
 // GetConfig gets the global config
 func GetConfig() *Config {
 	return &GlobalConfig
+}
+
+// ValidateConfig validates the config parameters
+func ValidateConfig() error {
+	var err error
+
+	grpcPort := viper.GetInt("grpcport")
+	if grpcPort <= 0 || grpcPort > 65535 {
+		err = fmt.Errorf("grpcPort must be a positive integer between 1 and 65535")
+		return err
+	}
+
+	httpPort := viper.GetInt("httpport")
+	if httpPort <= 0 || httpPort > 65535 {
+		err = fmt.Errorf("httpPort must be a positive integer between 1 and 65535")
+		return err
+	}
+
+	dbAddr := viper.GetString("dbaddress")
+	_, port, err := net.SplitHostPort(dbAddr)
+	if err != nil {
+		err = fmt.Errorf("invalid DBAddress format. It should be in ip_address:port format")
+		return err
+	}
+
+	dbPort, err := strconv.Atoi(port)
+	if err != nil || dbPort <= 0 || dbPort > 65535 {
+		err = fmt.Errorf("invalid db port. It must be a positive integer between 1 and 65535")
+		return err
+	}
+
+	frrAddr := viper.GetString("frraddress")
+	if net.ParseIP(frrAddr) == nil {
+		err = fmt.Errorf("invalid FRRAddress format. It should be a valid IP address")
+		return err
+	}
+
+	return nil
 }

@@ -15,7 +15,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"strconv"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -46,16 +45,12 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 )
 
-const (
-	configFilePath = "./"
-)
-
 var rootCmd = &cobra.Command{
 	Use:   "opi-evpn-bridge",
 	Short: "evpn bridge",
 	Long:  "evpn bridge application",
 	PreRunE: func(_ *cobra.Command, _ []string) error {
-		return validateConfigs()
+		return config.ValidateConfig()
 	},
 	Run: func(_ *cobra.Command, _ []string) {
 
@@ -63,22 +58,15 @@ var rootCmd = &cobra.Command{
 
 		err := infradb.NewInfraDB(config.GlobalConfig.DBAddress, config.GlobalConfig.Database)
 		if err != nil {
-			log.Println("error in creating db", err)
+			exit(err)
 		}
 		go runGatewayServer(config.GlobalConfig.GRPCPort, config.GlobalConfig.HTTPPort)
-
-		defer func() {
-			if err := infradb.Close(); err != nil {
-				log.Fatal(err)
-			}
-		}()
 
 		switch config.GlobalConfig.Buildenv {
 		case "ipu":
 			gen_linux.Init()
 			ipu_linux.Init()
 			frr.Init()
-
 		case "ci":
 			gen_linux.Init()
 			ci_linux.Init()
@@ -89,7 +77,7 @@ var rootCmd = &cobra.Command{
 
 		// Create GRD VRF configuration during startup
 		if err := createGrdVrf(); err != nil {
-			log.Printf("Error in creating GRD VRF %+v\n", err)
+			exit(err)
 		}
 
 		runGrpcServer(config.GlobalConfig.GRPCPort, config.GlobalConfig.TLSFiles)
@@ -97,12 +85,12 @@ var rootCmd = &cobra.Command{
 }
 
 // initialize the cobra configuration and bind the flags
-func initialize() {
-	cobra.OnInitialize(initConfig)
+func initialize() error {
+	cobra.OnInitialize(config.Initcfg)
 
 	rootCmd.PersistentFlags().StringVarP(&config.GlobalConfig.CfgFile, "config", "c", "config.yaml", "config file path")
-	rootCmd.PersistentFlags().IntVar(&config.GlobalConfig.GRPCPort, "grpcport", 50151, "The gRPC server port")
-	rootCmd.PersistentFlags().IntVar(&config.GlobalConfig.HTTPPort, "httpport", 8082, "The HTTP server port")
+	rootCmd.PersistentFlags().Uint16Var(&config.GlobalConfig.GRPCPort, "grpcport", 50151, "The gRPC server port")
+	rootCmd.PersistentFlags().Uint16Var(&config.GlobalConfig.HTTPPort, "httpport", 8082, "The HTTP server port")
 	rootCmd.PersistentFlags().StringVar(&config.GlobalConfig.TLSFiles, "tlsfiles", "", "TLS files in server_cert:server_key:ca_cert format.")
 	rootCmd.PersistentFlags().StringVar(&config.GlobalConfig.DBAddress, "dbaddress", "127.0.0.1:6379", "db address in ip_address:port format")
 	rootCmd.PersistentFlags().StringVar(&config.GlobalConfig.FRRAddress, "frraddress", "127.0.0.1", "Frr address in ip_address format, no port")
@@ -110,21 +98,10 @@ func initialize() {
 
 	if err := viper.GetViper().BindPFlags(rootCmd.PersistentFlags()); err != nil {
 		log.Printf("Error binding flags to Viper: %v\n", err)
-		os.Exit(1)
+		return err
 	}
-}
 
-// initConfig read the config from file
-func initConfig() {
-	if config.GlobalConfig.CfgFile != "" {
-		viper.SetConfigFile(config.GlobalConfig.CfgFile)
-	} else {
-		// Search config in the default location
-		viper.AddConfigPath(configFilePath)
-		viper.SetConfigType("yaml")
-		viper.SetConfigName("config.yaml")
-	}
-	config.LoadConfig()
+	return nil
 }
 
 const logfile string = "opi-evpn-bridge.log"
@@ -139,63 +116,40 @@ func setupLogger(filename string) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	logger = log.New(io.MultiWriter(out), "", log.Lshortfile|log.LstdFlags)
+	logger = log.New(io.MultiWriter(out, os.Stdout), "", log.Lshortfile|log.LstdFlags)
 	log.SetOutput(logger.Writer())
 }
 
-// validateConfigs validates the config parameters
-func validateConfigs() error {
-	var err error
-
-	grpcPort := viper.GetInt("grpcport")
-	if grpcPort <= 0 || grpcPort > 65535 {
-		err = fmt.Errorf("grpcPort must be a positive integer between 1 and 65535")
-		return err
-	}
-
-	httpPort := viper.GetInt("httpport")
-	if httpPort <= 0 || httpPort > 65535 {
-		err = fmt.Errorf("httpPort must be a positive integer between 1 and 65535")
-		return err
-	}
-
-	dbAddr := viper.GetString("dbaddress")
-	_, port, err := net.SplitHostPort(dbAddr)
-	if err != nil {
-		err = fmt.Errorf("invalid DBAddress format. It should be in ip_address:port format")
-		return err
-	}
-
-	dbPort, err := strconv.Atoi(port)
-	if err != nil || dbPort <= 0 || dbPort > 65535 {
-		err = fmt.Errorf("invalid db port. It must be a positive integer between 1 and 65535")
-		return err
-	}
-
-	frrAddr := viper.GetString("frraddress")
-	if net.ParseIP(frrAddr) == nil {
-		err = fmt.Errorf("invalid FRRAddress format. It should be a valid IP address")
-		return err
-	}
-
-	return nil
+func exit(e error) {
+	log.Println("error while running opi-evpn-bridge", e.Error())
+	os.Exit(1)
 }
 
 // main function
 func main() {
 	// setup file and console logger
 	setupLogger(logfile)
+
 	// initialize  cobra config
-	initialize()
+	if err := initialize(); err != nil {
+		// log.Println(err)
+		exit(err)
+	}
+
 	// start the main cmd
 	if err := rootCmd.Execute(); err != nil {
-		log.Println(err)
-		os.Exit(1)
+		exit(err)
 	}
+
+	defer func() {
+		if err := infradb.Close(); err != nil {
+			exit(err)
+		}
+	}()
 }
 
 // runGrpcServer start the grpc server for all the components
-func runGrpcServer(grpcPort int, tlsFiles string) {
+func runGrpcServer(grpcPort uint16, tlsFiles string) {
 	tp := utils.InitTracerProvider("opi-evpn-bridge")
 	defer func() {
 		if err := tp.Shutdown(context.Background()); err != nil {
@@ -258,7 +212,7 @@ func runGrpcServer(grpcPort int, tlsFiles string) {
 }
 
 // runGatewayServer
-func runGatewayServer(grpcPort int, httpPort int) {
+func runGatewayServer(grpcPort uint16, httpPort uint16) {
 	ctx := context.Background()
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
