@@ -819,6 +819,21 @@ func tearDownSvi(svi *infradb.Svi) bool {
 		log.Printf("LGM: unable to find key %s and error is %v", svi.Spec.LogicalBridge, err)
 		return false
 	}
+	brIntf, err := nlink.LinkByName(ctx, brTenant)
+	if err != nil {
+		log.Printf("LGM : Failed to get link information for %s: %v\n", brTenant, err)
+		return false
+	}
+	if BrObj.Spec.VlanID > math.MaxUint16 {
+		log.Printf("LGM : VlanID %v value passed in Logical Bridge create is greater than 16 bit value\n", BrObj.Spec.VlanID)
+		return false
+	}
+	vid := uint16(BrObj.Spec.VlanID)
+	if err = nlink.BridgeVlanDel(ctx, brIntf, vid, false, false, true, false); err != nil {
+		log.Printf("LGM : Failed to Del VLAN %d to bridge interface %s: %v\n", vid, brTenant, err)
+		return false
+	}
+	log.Printf("LGM Executed : bridge vlan del dev %s vid %d self\n", brTenant, vid)
 	linkSvi := fmt.Sprintf("%+v-%+v", path.Base(svi.Spec.Vrf), BrObj.Spec.VlanID)
 	Intf, err := nlink.LinkByName(ctx, linkSvi)
 	if err != nil {
