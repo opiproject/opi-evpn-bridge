@@ -116,17 +116,29 @@ func Initcfg() {
 		viper.SetConfigType("yaml")
 		viper.SetConfigName("config.yaml")
 	}
+
 	if err := LoadConfig(); err != nil {
-		log.Fatal(err)
+		log.Panic(err)
 	}
 }
 
 // LoadConfig loads the config from yaml file
 func LoadConfig() error {
 	if err := viper.ReadInConfig(); err != nil {
-		log.Println("Using config file:", viper.ConfigFileUsed())
-		return err
+		// Handle errors
+		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
+			// Cfg file not found
+			fmt.Println("Config file not found in default paths. Using defaults.")
+		} else if _, ok := err.(viper.ConfigParseError); ok {
+			// Cfg file parsing error
+			log.Panicf("Error parsing config file: %v", err)
+		} else {
+			// Other errors
+			log.Panicf("Error reading config file: %v", err)
+		}
 	}
+
+	fmt.Println("Using config file:", viper.ConfigFileUsed())
 
 	if err := viper.Unmarshal(&GlobalConfig); err != nil {
 		log.Println(err)

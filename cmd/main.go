@@ -58,7 +58,7 @@ var rootCmd = &cobra.Command{
 
 		err := infradb.NewInfraDB(config.GlobalConfig.DBAddress, config.GlobalConfig.Database)
 		if err != nil {
-			exit(err)
+			log.Panicf("Error: %v", err)
 		}
 		go runGatewayServer(config.GlobalConfig.GRPCPort, config.GlobalConfig.HTTPPort)
 
@@ -72,12 +72,12 @@ var rootCmd = &cobra.Command{
 			ci_linux.Init()
 			frr.Init()
 		default:
-			log.Fatal(" ERROR: Could not find Build env ")
+			log.Panic(" ERROR: Could not find Build env ")
 		}
 
 		// Create GRD VRF configuration during startup
 		if err := createGrdVrf(); err != nil {
-			exit(err)
+			log.Panicf("Error: %v", err)
 		}
 
 		runGrpcServer(config.GlobalConfig.GRPCPort, config.GlobalConfig.TLSFiles)
@@ -96,6 +96,7 @@ func initialize() error {
 	rootCmd.PersistentFlags().StringVar(&config.GlobalConfig.FRRAddress, "frraddress", "127.0.0.1", "Frr address in ip_address format, no port")
 	rootCmd.PersistentFlags().StringVar(&config.GlobalConfig.Database, "database", "redis", "Database connection string")
 
+	// Bind command-line flags to config fields
 	if err := viper.GetViper().BindPFlags(rootCmd.PersistentFlags()); err != nil {
 		log.Printf("Error binding flags to Viper: %v\n", err)
 		return err
@@ -114,15 +115,10 @@ func setupLogger(filename string) {
 	filename = filepath.Clean(filename)
 	out, err := os.OpenFile(filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0600)
 	if err != nil {
-		log.Fatal(err)
+		log.Panic(err)
 	}
-	logger = log.New(io.MultiWriter(out, os.Stdout), "", log.Lshortfile|log.LstdFlags)
+	logger = log.New(io.MultiWriter(out), "", log.Lshortfile|log.LstdFlags)
 	log.SetOutput(logger.Writer())
-}
-
-func exit(e error) {
-	log.Println("error while running opi-evpn-bridge", e.Error())
-	os.Exit(1)
 }
 
 // main function
@@ -133,17 +129,17 @@ func main() {
 	// initialize  cobra config
 	if err := initialize(); err != nil {
 		// log.Println(err)
-		exit(err)
+		log.Panicf("Error in initialize(): %v", err)
 	}
 
 	// start the main cmd
 	if err := rootCmd.Execute(); err != nil {
-		exit(err)
+		log.Panicf("Error in Execute(): %v", err)
 	}
 
 	defer func() {
 		if err := infradb.Close(); err != nil {
-			exit(err)
+			log.Panicf("Error in close(): %v", err)
 		}
 	}()
 }
