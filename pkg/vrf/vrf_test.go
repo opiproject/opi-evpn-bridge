@@ -49,12 +49,17 @@ var (
 				Len: 24,
 			},
 		},
+		Status: &pb.VrfStatus{
+			OperStatus: pb.VRFOperStatus_VRF_OPER_STATUS_DOWN,
+			Components: []*pb.Component{{Name: "dummy", Status: pb.CompStatus_COMP_STATUS_PENDING}},
+		},
 	}
 	testVrfWithStatus = pb.Vrf{
 		Name: testVrfName,
 		Spec: testVrf.Spec,
 		Status: &pb.VrfStatus{
 			OperStatus: pb.VRFOperStatus_VRF_OPER_STATUS_DOWN,
+			Components: []*pb.Component{{Name: "dummy", Status: pb.CompStatus_COMP_STATUS_PENDING}},
 		},
 	}
 )
@@ -136,6 +141,7 @@ func Test_CreateVrf(t *testing.T) {
 				},
 				Status: &pb.VrfStatus{
 					OperStatus: pb.VRFOperStatus_VRF_OPER_STATUS_DOWN,
+					Components: []*pb.Component{{Name: "dummy", Status: pb.CompStatus_COMP_STATUS_PENDING}},
 				},
 			},
 			errCode: codes.OK,

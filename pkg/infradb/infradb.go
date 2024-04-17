@@ -74,6 +74,7 @@ func CreateLB(lb *LogicalBridge) error {
 	subscribers := eventbus.EBus.GetSubscribers("logical-bridge")
 	if subscribers == nil {
 		log.Println("CreateLB(): No subscribers for Logical Bridge objects")
+		return errors.New("no subscribers found for logical bridge")
 	}
 
 	log.Printf("CreateLB(): Create Logical Bridge: %+v\n", lb)
@@ -144,6 +145,7 @@ func DeleteLB(name string) error {
 	subscribers := eventbus.EBus.GetSubscribers("logical-bridge")
 	if subscribers == nil {
 		log.Println("DeleteLB(): No subscribers for Logical Bridge objects")
+		return errors.New("no subscribers found for logical bridge")
 	}
 
 	lb := LogicalBridge{}
@@ -242,6 +244,7 @@ func UpdateLB(lb *LogicalBridge) error {
 	subscribers := eventbus.EBus.GetSubscribers("logical-bridge")
 	if subscribers == nil {
 		log.Println("UpdateLB(): No subscribers for Logical Bridge objects")
+		return errors.New("no subscribers found for logical bridge")
 	}
 
 	err := infradb.client.Set(lb.Name, lb)
@@ -386,6 +389,7 @@ func CreateBP(bp *BridgePort) error {
 	subscribers := eventbus.EBus.GetSubscribers("bridge-port")
 	if subscribers == nil {
 		log.Println("CreateBP(): No subscribers for Bridge Port objects")
+		return errors.New("no subscribers found for bridge port")
 	}
 
 	// Dimitris: Do I need to add here a check for MAC uniquness in of BP ?
@@ -481,6 +485,7 @@ func DeleteBP(name string) error {
 	subscribers := eventbus.EBus.GetSubscribers("bridge-port")
 	if subscribers == nil {
 		log.Println("DeleteBP(): No subscribers for Bridge Port objects")
+		return errors.New("no subscribers found for bridge port")
 	}
 
 	bp := BridgePort{}
@@ -571,6 +576,7 @@ func UpdateBP(bp *BridgePort) error {
 	subscribers := eventbus.EBus.GetSubscribers("bridge-port")
 	if subscribers == nil {
 		log.Println("UpdateBP(): No subscribers for Bridge Port objects")
+		return errors.New("no subscribers found for bridge port")
 	}
 
 	err := infradb.client.Set(bp.Name, bp)
@@ -726,6 +732,7 @@ func CreateVrf(vrf *Vrf) error {
 	subscribers := eventbus.EBus.GetSubscribers("vrf")
 	if subscribers == nil {
 		log.Println("CreateVrf(): No subscribers for Vrf objects")
+		return errors.New("no subscribers found for vrf")
 	}
 
 	log.Printf("CreateVrf(): Create Vrf: %+v\n", vrf)
@@ -798,6 +805,7 @@ func DeleteVrf(name string) error {
 	subscribers := eventbus.EBus.GetSubscribers("vrf")
 	if subscribers == nil {
 		log.Println("DeleteVrf(): No subscribers for Vrf objects")
+		return errors.New("no subscribers found for vrf")
 	}
 
 	vrf := Vrf{}
@@ -890,6 +898,7 @@ func UpdateVrf(vrf *Vrf) error {
 	subscribers := eventbus.EBus.GetSubscribers("vrf")
 	if subscribers == nil {
 		log.Println("CreateVrf(): No subscribers for Vrf objects")
+		return errors.New("no subscribers found for vrf")
 	}
 
 	err := infradb.client.Set(vrf.Name, vrf)
@@ -1035,6 +1044,7 @@ func CreateSvi(svi *Svi) error {
 	subscribers := eventbus.EBus.GetSubscribers("svi")
 	if subscribers == nil {
 		log.Println("CreateSvi(): No subscribers for SVI objects")
+		return errors.New("no subscribers found for svi")
 	}
 
 	log.Printf("CreateSvi(): Create SVI: %+v\n", svi)
@@ -1125,6 +1135,7 @@ func DeleteSvi(name string) error {
 	subscribers := eventbus.EBus.GetSubscribers("svi")
 	if subscribers == nil {
 		log.Println("DeleteSvi(): No subscribers for SVI objects")
+		return errors.New("no subscribers found for svi")
 	}
 
 	svi := Svi{}
@@ -1212,6 +1223,7 @@ func UpdateSvi(svi *Svi) error {
 	subscribers := eventbus.EBus.GetSubscribers("svi")
 	if subscribers == nil {
 		log.Println("UpdateSvi(): No subscribers for SVI objects")
+		return errors.New("no subscribers found for svi")
 	}
 
 	err := infradb.client.Set(svi.Name, svi)

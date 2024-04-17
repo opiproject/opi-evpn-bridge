@@ -56,8 +56,6 @@ func handlesvi(objectData *eventbus.ObjectData) {
 		return
 	}
 
-	log.Printf("FRR :GetSvi Name: %s\n", svi.Name)
-
 	if objectData.ResourceVersion != svi.ResourceVersion {
 		log.Printf("FRR: Mismatch in resoruce version %+v\n and svi resource version %+v\n", objectData.ResourceVersion, svi.ResourceVersion)
 		comp.Name = frrComp
@@ -131,8 +129,6 @@ func handlevrf(objectData *eventbus.ObjectData) {
 		log.Printf("GetVRF error: %s %s\n", err, objectData.Name)
 		return
 	}
-
-	log.Printf("FRR :GetVRF Name: %s\n", vrf.Name)
 
 	if len(vrf.Status.Components) != 0 {
 		for i := 0; i < len(vrf.Status.Components); i++ {

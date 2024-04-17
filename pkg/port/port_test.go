@@ -32,12 +32,17 @@ var (
 			Ptype:          pb.BridgePortType_BRIDGE_PORT_TYPE_TRUNK,
 			LogicalBridges: []string{testLogicalBridgeName},
 		},
+		Status: &pb.BridgePortStatus{
+			OperStatus: pb.BPOperStatus_BP_OPER_STATUS_DOWN,
+			Components: []*pb.Component{{Name: "dummy", Status: pb.CompStatus_COMP_STATUS_PENDING}},
+		},
 	}
 	testBridgePortWithStatus = pb.BridgePort{
 		Name: testBridgePortName,
 		Spec: testBridgePort.Spec,
 		Status: &pb.BridgePortStatus{
 			OperStatus: pb.BPOperStatus_BP_OPER_STATUS_DOWN,
+			Components: []*pb.Component{{Name: "dummy", Status: pb.CompStatus_COMP_STATUS_PENDING}},
 		},
 	}
 )

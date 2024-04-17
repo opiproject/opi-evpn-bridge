@@ -42,12 +42,17 @@ var (
 				Len: 24,
 			},
 		},
+		Status: &pb.LogicalBridgeStatus{
+			OperStatus: pb.LBOperStatus_LB_OPER_STATUS_DOWN,
+			Components: []*pb.Component{{Name: "dummy", Status: pb.CompStatus_COMP_STATUS_PENDING}},
+		},
 	}
 	testLogicalBridgeWithStatus = pb.LogicalBridge{
 		Name: testLogicalBridgeName,
 		Spec: testLogicalBridge.Spec,
 		Status: &pb.LogicalBridgeStatus{
 			OperStatus: pb.LBOperStatus_LB_OPER_STATUS_DOWN,
+			Components: []*pb.Component{{Name: "dummy", Status: pb.CompStatus_COMP_STATUS_PENDING}},
 		},
 	}
 )
@@ -118,6 +123,7 @@ func Test_CreateLogicalBridge(t *testing.T) {
 				},
 				Status: &pb.LogicalBridgeStatus{
 					OperStatus: pb.LBOperStatus_LB_OPER_STATUS_DOWN,
+					Components: []*pb.Component{{Name: "dummy", Status: pb.CompStatus_COMP_STATUS_PENDING}},
 				},
 			},
 			errCode: codes.OK,
