@@ -46,6 +46,21 @@ func handlebp(objectData *eventbus.ObjectData) {
 		log.Printf("LCI : GetBP error: %s\n", err)
 		return
 	}
+	if objectData.ResourceVersion != BP.ResourceVersion {
+		log.Printf("LVM: Mismatch in resoruce version %+v\n and bp resource version %+v\n", objectData.ResourceVersion, BP.ResourceVersion)
+		comp.Name = lciComp
+		comp.CompStatus = common.ComponentStatusError
+		if comp.Timer == 0 {
+			comp.Timer = 2 * time.Second
+		} else {
+			comp.Timer *= 2
+		}
+		err := infradb.UpdateBPStatus(objectData.Name, objectData.ResourceVersion, objectData.NotificationID, nil, comp)
+		if err != nil {
+			log.Printf("error in updating bp status: %s\n", err)
+		}
+		return
+	}
 	if len(BP.Status.Components) != 0 {
 		for i := 0; i < len(BP.Status.Components); i++ {
 			if BP.Status.Components[i].Name == "lci" {

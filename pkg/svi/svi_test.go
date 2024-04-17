@@ -48,6 +48,7 @@ var (
 		Spec: testSvi.Spec,
 		Status: &pb.SviStatus{
 			OperStatus: pb.SVIOperStatus_SVI_OPER_STATUS_DOWN,
+			Components: []*pb.Component{{Name: "dummy", Status: pb.CompStatus_COMP_STATUS_PENDING}},
 		},
 	}
 )

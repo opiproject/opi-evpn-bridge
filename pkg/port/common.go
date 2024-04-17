@@ -25,6 +25,7 @@ import (
 
 	"github.com/opiproject/opi-evpn-bridge/pkg/bridge"
 	"github.com/opiproject/opi-evpn-bridge/pkg/infradb"
+	"github.com/opiproject/opi-evpn-bridge/pkg/infradb/subscriberframework/eventbus"
 	"github.com/opiproject/opi-evpn-bridge/pkg/utils/mocks"
 )
 
@@ -151,6 +152,9 @@ func newTestEnv(ctx context.Context, t *testing.T) *testEnv {
 	env.mockFrr = mocks.NewFrr(t)
 	env.opi = NewServer()
 	env.lbServer = bridge.NewServer()
+	eb := eventbus.EBus
+	eb.StartSubscriber("dummy", "logical-bridge", 1, nil)
+	eb.StartSubscriber("dummy", "bridge-port", 1, nil)
 	_ = infradb.NewInfraDB("", "gomap")
 	conn, err := grpc.DialContext(ctx,
 		"",

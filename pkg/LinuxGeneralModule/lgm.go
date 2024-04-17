@@ -89,10 +89,23 @@ func (h *ModulelgmHandler) HandleEvent(eventType string, objectData *eventbus.Ob
 func handleLB(objectData *eventbus.ObjectData) {
 	var comp common.Component
 	lb, err := infradb.GetLB(objectData.Name)
-	if err == nil {
-		log.Printf("LGM : GetLB Name: %s\n", lb.Name)
-	} else {
+	if err != nil {
 		log.Printf("LGM: GetLB error: %s %s\n", err, objectData.Name)
+		return
+	}
+	if objectData.ResourceVersion != lb.ResourceVersion {
+		log.Printf("LGM: Mismatch in resoruce version %+v\n and lb resource version %+v\n", objectData.ResourceVersion, lb.ResourceVersion)
+		comp.Name = lgmComp
+		comp.CompStatus = common.ComponentStatusError
+		if comp.Timer == 0 {
+			comp.Timer = 2 * time.Second
+		} else {
+			comp.Timer *= 2
+		}
+		err := infradb.UpdateLBStatus(objectData.Name, objectData.ResourceVersion, objectData.NotificationID, nil, comp)
+		if err != nil {
+			log.Printf("error in updating lb status: %s\n", err)
+		}
 		return
 	}
 	if len(lb.Status.Components) != 0 {
@@ -148,9 +161,7 @@ func handleLB(objectData *eventbus.ObjectData) {
 func handlesvi(objectData *eventbus.ObjectData) {
 	var comp common.Component
 	svi, err := infradb.GetSvi(objectData.Name)
-	if err == nil {
-		log.Printf("LGM : GetSvi Name: %s\n", svi.Name)
-	} else {
+	if err != nil {
 		log.Printf("LGM: GetSvi error: %s %s\n", err, objectData.Name)
 		return
 	}
@@ -221,9 +232,7 @@ func handlesvi(objectData *eventbus.ObjectData) {
 func handlevrf(objectData *eventbus.ObjectData) {
 	var comp common.Component
 	vrf, err := infradb.GetVrf(objectData.Name)
-	if err == nil {
-		log.Printf("LGM : GetVRF Name: %s\n", vrf.Name)
-	} else {
+	if err != nil {
 		log.Printf("LGM: GetVRF error: %s %s\n", err, objectData.Name)
 		return
 	}

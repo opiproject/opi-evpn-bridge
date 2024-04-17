@@ -45,31 +45,33 @@ type ObjectData struct {
 
 // StartSubscriber will be called by the modules to initialize and start listening for events
 func (e *EventBus) StartSubscriber(moduleName, eventType string, priority int, eventHandler EventHandler) {
-	subscriber := e.Subscribe(moduleName, eventType, priority, eventHandler)
+	if !e.subscriberExist(eventType, moduleName) {
+		subscriber := e.Subscribe(moduleName, eventType, priority, eventHandler)
 
-	go func() {
-		for {
-			select {
-			case event := <-subscriber.Ch:
-				log.Printf("\nSubscriber %s for %s received \n", moduleName, eventType)
+		go func() {
+			for {
+				select {
+				case event := <-subscriber.Ch:
+					log.Printf("\nSubscriber %s for %s received \n", moduleName, eventType)
 
-				handlerKey := moduleName + "." + eventType
-				if handler, ok := e.eventHandlers[handlerKey]; ok {
-					if objectData, ok := event.(*ObjectData); ok {
-						handler.HandleEvent(eventType, objectData)
+					handlerKey := moduleName + "." + eventType
+					if handler, ok := e.eventHandlers[handlerKey]; ok {
+						if objectData, ok := event.(*ObjectData); ok {
+							handler.HandleEvent(eventType, objectData)
+						} else {
+							subscriber.Ch <- "error: unexpected event type"
+						}
+						// handler.HandleEvent(eventType, event)
 					} else {
-						subscriber.Ch <- "error: unexpected event type"
+						subscriber.Ch <- "error: no event handler found"
 					}
-					// handler.HandleEvent(eventType, event)
-				} else {
-					subscriber.Ch <- "error: no event handler found"
+				case <-subscriber.Quit:
+					close(subscriber.Ch)
+					return
 				}
-			case <-subscriber.Quit:
-				close(subscriber.Ch)
-				return
 			}
-		}
-	}()
+		}()
+	}
 }
 
 // NewEventBus initializes ann EventBus object
@@ -111,6 +113,18 @@ func (e *EventBus) GetSubscribers(eventType string) []*Subscriber {
 	defer e.mutex.RUnlock()
 
 	return e.subscribers[eventType]
+}
+
+func (e *EventBus) subscriberExist(eventType string, moduleName string) bool {
+	subList := e.GetSubscribers(eventType)
+	if len(subList) != 0 {
+		for _, s := range subList {
+			if s.Name == moduleName {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // Publish api notifies the subscribers with certain eventType
