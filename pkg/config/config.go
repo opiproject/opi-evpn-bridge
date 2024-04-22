@@ -84,7 +84,6 @@ type Config struct {
 	TLSFiles    string             `yaml:"tlsfiles"`
 	Database    string             `yaml:"database"`
 	DBAddress   string             `yaml:"dbaddress"`
-	FRRAddress  string             `yaml:"frraddress"`
 	Buildenv    string             `yaml:"buildenv"`
 	Subscribers []SubscriberConfig `yaml:"subscribers"`
 	LinuxFrr    LinuxFrrConfig     `yaml:"linuxfrr"`
@@ -145,6 +144,10 @@ func LoadConfig() error {
 		return err
 	}
 
+	if err := ValidateConfig(); err != nil {
+		log.Panic(err)
+	}
+
 	log.Printf("config %+v", GlobalConfig)
 	return nil
 }
@@ -180,12 +183,6 @@ func ValidateConfig() error {
 	dbPort, err := strconv.Atoi(port)
 	if err != nil || dbPort <= 0 || dbPort > 65535 {
 		err = fmt.Errorf("invalid db port. It must be a positive integer between 1 and 65535")
-		return err
-	}
-
-	frrAddr := viper.GetString("frraddress")
-	if net.ParseIP(frrAddr) == nil {
-		err = fmt.Errorf("invalid FRRAddress format. It should be a valid IP address")
 		return err
 	}
 

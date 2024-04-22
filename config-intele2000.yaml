@@ -3,7 +3,6 @@ httpport: 8082
 tlsfiles:
 database: redis
 dbaddress: 127.0.0.1:6379
-frraddress: 127.0.0.1
 buildenv: intel_e2000
 subscribers:
  - name: "lvm"
