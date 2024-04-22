@@ -2,8 +2,8 @@
 // Copyright (c) 2022-2023 Intel Corporation, or its subsidiaries.
 // Copyright (C) 2023 Nordix Foundation.
 
-// Package ipu handles ipu vendor specific tasks
-package ipu
+// Package intele2000 handles intel e2000 vendor specific tasks
+package intele2000
 
 import (
 	"context"

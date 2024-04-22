@@ -4,7 +4,7 @@ tlsfiles:
 database: redis
 dbaddress: 127.0.0.1:6379
 frraddress: 127.0.0.1
-buildenv: ipu
+buildenv: intel_e2000
 subscribers:
  - name: "lvm"
    priority: 2
@@ -15,7 +15,7 @@ subscribers:
  - name: "frr"
    priority: 3
    events: ["vrf", "svi"]
- - name: "ipu"
+ - name: "intel_e2000"
    priority: 4
    events: ["vrf"]
 grpc:
