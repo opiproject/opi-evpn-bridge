@@ -49,9 +49,7 @@ var rootCmd = &cobra.Command{
 	Use:   "opi-evpn-bridge",
 	Short: "evpn bridge",
 	Long:  "evpn bridge application",
-	PreRunE: func(_ *cobra.Command, _ []string) error {
-		return config.ValidateConfig()
-	},
+
 	Run: func(_ *cobra.Command, _ []string) {
 
 		taskmanager.TaskMan.StartTaskManager()
@@ -93,7 +91,6 @@ func initialize() error {
 	rootCmd.PersistentFlags().Uint16Var(&config.GlobalConfig.HTTPPort, "httpport", 8082, "The HTTP server port")
 	rootCmd.PersistentFlags().StringVar(&config.GlobalConfig.TLSFiles, "tlsfiles", "", "TLS files in server_cert:server_key:ca_cert format.")
 	rootCmd.PersistentFlags().StringVar(&config.GlobalConfig.DBAddress, "dbaddress", "127.0.0.1:6379", "db address in ip_address:port format")
-	rootCmd.PersistentFlags().StringVar(&config.GlobalConfig.FRRAddress, "frraddress", "127.0.0.1", "Frr address in ip_address format, no port")
 	rootCmd.PersistentFlags().StringVar(&config.GlobalConfig.Database, "database", "redis", "Database connection string")
 
 	// Bind command-line flags to config fields
