@@ -40,7 +40,7 @@ import (
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	ci_linux "github.com/opiproject/opi-evpn-bridge/pkg/LinuxCIModule"
 	gen_linux "github.com/opiproject/opi-evpn-bridge/pkg/LinuxGeneralModule"
-	ipu_linux "github.com/opiproject/opi-evpn-bridge/pkg/LinuxVendorModule/ipu"
+	intel_e2000_linux "github.com/opiproject/opi-evpn-bridge/pkg/LinuxVendorModule/intele2000"
 	frr "github.com/opiproject/opi-evpn-bridge/pkg/frr"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 )
@@ -63,9 +63,9 @@ var rootCmd = &cobra.Command{
 		go runGatewayServer(config.GlobalConfig.GRPCPort, config.GlobalConfig.HTTPPort)
 
 		switch config.GlobalConfig.Buildenv {
-		case "ipu":
+		case "intel_e2000":
 			gen_linux.Init()
-			ipu_linux.Init()
+			intel_e2000_linux.Init()
 			frr.Init()
 		case "ci":
 			gen_linux.Init()

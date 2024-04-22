@@ -526,7 +526,7 @@ func setUpVrf(vrf *infradb.Vrf) (string, bool) {
 		// Create bridge for external VXLAN under vrf
 		// Linux apparently creates a deterministic MAC address for a bridge type link with a given
 		// name. We need to assign a true random MAC address to avoid collisions when pairing two
-		// IPU servers.
+		// intel e2000 servers.
 
 		brErr := nlink.LinkAdd(ctx, &netlink.Bridge{
 			LinkAttrs: netlink.LinkAttrs{Name: brStr + vrf.Name},
