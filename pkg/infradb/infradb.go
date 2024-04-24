@@ -72,7 +72,7 @@ func CreateLB(lb *LogicalBridge) error {
 	vpns := make(map[uint32]bool)
 
 	subscribers := eventbus.EBus.GetSubscribers("logical-bridge")
-	if subscribers == nil {
+	if len(subscribers) == 0 {
 		log.Println("CreateLB(): No subscribers for Logical Bridge objects")
 		return errors.New("no subscribers found for logical bridge")
 	}
@@ -143,7 +143,7 @@ func DeleteLB(name string) error {
 	defer globalLock.Unlock()
 
 	subscribers := eventbus.EBus.GetSubscribers("logical-bridge")
-	if subscribers == nil {
+	if len(subscribers) == 0 {
 		log.Println("DeleteLB(): No subscribers for Logical Bridge objects")
 		return errors.New("no subscribers found for logical bridge")
 	}
@@ -242,7 +242,7 @@ func UpdateLB(lb *LogicalBridge) error {
 	defer globalLock.Unlock()
 
 	subscribers := eventbus.EBus.GetSubscribers("logical-bridge")
-	if subscribers == nil {
+	if len(subscribers) == 0 {
 		log.Println("UpdateLB(): No subscribers for Logical Bridge objects")
 		return errors.New("no subscribers found for logical bridge")
 	}
@@ -387,7 +387,7 @@ func CreateBP(bp *BridgePort) error {
 	defer globalLock.Unlock()
 
 	subscribers := eventbus.EBus.GetSubscribers("bridge-port")
-	if subscribers == nil {
+	if len(subscribers) == 0 {
 		log.Println("CreateBP(): No subscribers for Bridge Port objects")
 		return errors.New("no subscribers found for bridge port")
 	}
@@ -483,7 +483,7 @@ func DeleteBP(name string) error {
 	defer globalLock.Unlock()
 
 	subscribers := eventbus.EBus.GetSubscribers("bridge-port")
-	if subscribers == nil {
+	if len(subscribers) == 0 {
 		log.Println("DeleteBP(): No subscribers for Bridge Port objects")
 		return errors.New("no subscribers found for bridge port")
 	}
@@ -574,7 +574,7 @@ func UpdateBP(bp *BridgePort) error {
 	defer globalLock.Unlock()
 
 	subscribers := eventbus.EBus.GetSubscribers("bridge-port")
-	if subscribers == nil {
+	if len(subscribers) == 0 {
 		log.Println("UpdateBP(): No subscribers for Bridge Port objects")
 		return errors.New("no subscribers found for bridge port")
 	}
@@ -730,7 +730,7 @@ func CreateVrf(vrf *Vrf) error {
 	vpns := make(map[uint32]bool)
 
 	subscribers := eventbus.EBus.GetSubscribers("vrf")
-	if subscribers == nil {
+	if len(subscribers) == 0 {
 		log.Println("CreateVrf(): No subscribers for Vrf objects")
 		return errors.New("no subscribers found for vrf")
 	}
@@ -803,7 +803,7 @@ func DeleteVrf(name string) error {
 	defer globalLock.Unlock()
 
 	subscribers := eventbus.EBus.GetSubscribers("vrf")
-	if subscribers == nil {
+	if len(subscribers) == 0 {
 		log.Println("DeleteVrf(): No subscribers for Vrf objects")
 		return errors.New("no subscribers found for vrf")
 	}
@@ -896,7 +896,7 @@ func UpdateVrf(vrf *Vrf) error {
 	defer globalLock.Unlock()
 
 	subscribers := eventbus.EBus.GetSubscribers("vrf")
-	if subscribers == nil {
+	if len(subscribers) == 0 {
 		log.Println("CreateVrf(): No subscribers for Vrf objects")
 		return errors.New("no subscribers found for vrf")
 	}
@@ -1042,7 +1042,7 @@ func CreateSvi(svi *Svi) error {
 	defer globalLock.Unlock()
 
 	subscribers := eventbus.EBus.GetSubscribers("svi")
-	if subscribers == nil {
+	if len(subscribers) == 0 {
 		log.Println("CreateSvi(): No subscribers for SVI objects")
 		return errors.New("no subscribers found for svi")
 	}
@@ -1133,7 +1133,7 @@ func DeleteSvi(name string) error {
 	defer globalLock.Unlock()
 
 	subscribers := eventbus.EBus.GetSubscribers("svi")
-	if subscribers == nil {
+	if len(subscribers) == 0 {
 		log.Println("DeleteSvi(): No subscribers for SVI objects")
 		return errors.New("no subscribers found for svi")
 	}
@@ -1221,7 +1221,7 @@ func UpdateSvi(svi *Svi) error {
 	defer globalLock.Unlock()
 
 	subscribers := eventbus.EBus.GetSubscribers("svi")
-	if subscribers == nil {
+	if len(subscribers) == 0 {
 		log.Println("UpdateSvi(): No subscribers for SVI objects")
 		return errors.New("no subscribers found for svi")
 	}
