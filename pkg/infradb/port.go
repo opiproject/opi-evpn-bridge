@@ -86,7 +86,7 @@ func NewBridgePort(in *pb.BridgePort) *BridgePort {
 	macAddr := net.HardwareAddr(in.Spec.MacAddress)
 
 	subscribers := eventbus.EBus.GetSubscribers("bridge-port")
-	if subscribers == nil {
+	if len(subscribers) == 0 {
 		log.Println("NewBridgePort(): No subscribers for Bridge Port objects")
 	}
 

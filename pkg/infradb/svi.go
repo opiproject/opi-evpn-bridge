@@ -81,7 +81,7 @@ func NewSvi(in *pb.Svi) *Svi {
 	}
 
 	subscribers := eventbus.EBus.GetSubscribers("svi")
-	if subscribers == nil {
+	if len(subscribers) == 0 {
 		log.Println("NewSvi(): No subscribers for SVI objects")
 	}
 

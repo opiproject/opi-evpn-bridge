@@ -75,7 +75,7 @@ func NewLogicalBridge(in *pb.LogicalBridge) *LogicalBridge {
 	}
 
 	subscribers := eventbus.EBus.GetSubscribers("logical-bridge")
-	if subscribers == nil {
+	if len(subscribers) == 0 {
 		log.Println("NewLogicalBridge(): No subscribers for Logical Bridge objects")
 	}
 

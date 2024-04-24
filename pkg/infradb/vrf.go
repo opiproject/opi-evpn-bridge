@@ -96,7 +96,7 @@ func NewVrfWithArgs(name string, vni *uint32, loopbackIP, vtepIP *net.IPNet) (*V
 	}
 
 	subscribers := eventbus.EBus.GetSubscribers("vrf")
-	if subscribers == nil {
+	if len(subscribers) == 0 {
 		log.Println("NewVrfWithArgs(): No subscribers for Vrf objects")
 	}
 
@@ -135,7 +135,7 @@ func NewVrf(in *pb.Vrf) *Vrf {
 	}
 
 	subscribers := eventbus.EBus.GetSubscribers("vrf")
-	if subscribers == nil {
+	if len(subscribers) == 0 {
 		log.Println("NewVrf(): No subscribers for Vrf objects")
 	}
 
