@@ -137,7 +137,7 @@ func setUpBp(bp *infradb.BridgePort) bool {
 			log.Printf("LVM : VlanID %v value passed in Logical Bridge create is greater than 16 bit value\n", BrObj.Spec.VlanID)
 			return false
 		}
-		//TODO: Update opi-api to change vlanid to uint16 in LogiclaBridge
+		//TODO: Update opi-api to change vlanid to int16 in LogiclaBridge "https://linter.aip.dev/141/forbidden-types"
 		vid := uint16(BrObj.Spec.VlanID)
 		switch bp.Spec.Ptype {
 		case infradb.Access:
