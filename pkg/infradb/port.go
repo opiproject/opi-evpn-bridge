@@ -7,6 +7,8 @@ package infradb
 
 import (
 	//	"fmt"
+	"errors"
+
 	"log"
 	"net"
 
@@ -77,7 +79,7 @@ type BridgePort struct {
 var _ EvpnObject[*pb.BridgePort] = (*BridgePort)(nil)
 
 // NewBridgePort creates new Bridge Port object from protobuf message
-func NewBridgePort(in *pb.BridgePort) *BridgePort {
+func NewBridgePort(in *pb.BridgePort) (*BridgePort, error) {
 	var bpType BridgePortType
 	var transTrunk bool
 	components := make([]common.Component, 0)
@@ -88,6 +90,7 @@ func NewBridgePort(in *pb.BridgePort) *BridgePort {
 	subscribers := eventbus.EBus.GetSubscribers("bridge-port")
 	if len(subscribers) == 0 {
 		log.Println("NewBridgePort(): No subscribers for Bridge Port objects")
+		return &BridgePort{}, errors.New("no subscribers found for bridge port")
 	}
 
 	for _, sub := range subscribers {
@@ -122,7 +125,7 @@ func NewBridgePort(in *pb.BridgePort) *BridgePort {
 		Metadata:         &BridgePortMetadata{},
 		TransparentTrunk: transTrunk,
 		ResourceVersion:  generateVersion(),
-	}
+	}, nil
 }
 
 // ToPb transforms Bridge Port object to protobuf message

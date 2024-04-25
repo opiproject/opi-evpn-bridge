@@ -42,7 +42,10 @@ func (s *Server) createBridgePort(bp *pb.BridgePort) (*pb.BridgePort, error) {
 	}
 
 	// translation of pb to domain object
-	domainBP := infradb.NewBridgePort(bp)
+	domainBP, err := infradb.NewBridgePort(bp)
+	if err != nil {
+		return nil, err
+	}
 	// Note: The status of the object will be generated in infraDB operation not here
 	if err := infradb.CreateBP(domainBP); err != nil {
 		return nil, err
@@ -86,7 +89,10 @@ func (s *Server) updateBridgePort(bp *pb.BridgePort) (*pb.BridgePort, error) {
 	}
 
 	// translation of pb to domain object
-	domainBP := infradb.NewBridgePort(bp)
+	domainBP, err := infradb.NewBridgePort(bp)
+	if err != nil {
+		return nil, err
+	}
 	// Note: The status of the object will be generated in infraDB operation not here
 	if err := infradb.UpdateBP(domainBP); err != nil {
 		return nil, err

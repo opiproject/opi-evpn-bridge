@@ -37,7 +37,10 @@ func (s *Server) createVrf(vrf *pb.Vrf) (*pb.Vrf, error) {
 	}
 
 	// translation of pb to domain object
-	domainVrf := infradb.NewVrf(vrf)
+	domainVrf, err := infradb.NewVrf(vrf)
+	if err != nil {
+		return nil, err
+	}
 	// Note: The status of the object will be generated in infraDB operation not here
 	if err := infradb.CreateVrf(domainVrf); err != nil {
 		return nil, err
@@ -81,7 +84,10 @@ func (s *Server) updateVrf(vrf *pb.Vrf) (*pb.Vrf, error) {
 	}
 
 	// translation of pb to domain object
-	domainVrf := infradb.NewVrf(vrf)
+	domainVrf, err := infradb.NewVrf(vrf)
+	if err != nil {
+		return nil, err
+	}
 	// Note: The status of the object will be generated in infraDB operation not here
 	if err := infradb.UpdateVrf(domainVrf); err != nil {
 		return nil, err
@@ -128,7 +134,10 @@ func (s *Server) TestCreateVrf(vrf *pb.Vrf) (*pb.Vrf, error) {
 	}
 
 	// translation of pb to domain object
-	domainVrf := infradb.NewVrf(vrf)
+	domainVrf, err := infradb.NewVrf(vrf)
+	if err != nil {
+		return nil, err
+	}
 	// Note: The status of the object will be generated in infraDB operation not here
 	if err := infradb.CreateVrf(domainVrf); err != nil {
 		return nil, err

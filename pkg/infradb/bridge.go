@@ -8,6 +8,7 @@ package infradb
 import (
 	// "encoding/binary"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"log"
 	"net"
@@ -63,7 +64,7 @@ type LogicalBridge struct {
 var _ EvpnObject[*pb.LogicalBridge] = (*LogicalBridge)(nil)
 
 // NewLogicalBridge creates new Logical Bridge object from protobuf message
-func NewLogicalBridge(in *pb.LogicalBridge) *LogicalBridge {
+func NewLogicalBridge(in *pb.LogicalBridge) (*LogicalBridge, error) {
 	var vip *net.IPNet
 	components := make([]common.Component, 0)
 
@@ -77,6 +78,7 @@ func NewLogicalBridge(in *pb.LogicalBridge) *LogicalBridge {
 	subscribers := eventbus.EBus.GetSubscribers("logical-bridge")
 	if len(subscribers) == 0 {
 		log.Println("NewLogicalBridge(): No subscribers for Logical Bridge objects")
+		return &LogicalBridge{}, errors.New("no subscribers found for logical bridge")
 	}
 
 	for _, sub := range subscribers {
@@ -99,7 +101,7 @@ func NewLogicalBridge(in *pb.LogicalBridge) *LogicalBridge {
 		BridgePorts:     make(map[string]bool),
 		MacTable:        make(map[string]string),
 		ResourceVersion: generateVersion(),
-	}
+	}, nil
 }
 
 // ToPb transforms Logical Bridge object to protobuf message
