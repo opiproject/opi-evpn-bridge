@@ -9,11 +9,13 @@ MAKEFLAGS += --silent
 
 GOARCH ?= $(shell go env GOARCH) # detect automatically the underlying arch
 
+GOOS ?= $(shell go env GOOS) # detect automatically the underlying operating system
+
 compile: get build
 
 build:
 	@echo "  >  Building binaries..."
-	@CGO_ENABLED=0 GOARCH=$(GOARCH) go build -o ${PROJECTNAME} ./cmd/...
+	@CGO_ENABLED=0 GOOS=$(GOOS) GOARCH=$(GOARCH) go build -o ${PROJECTNAME} ./cmd/...
 
 get:
 	@echo "  >  Checking if there are any missing dependencies..."
