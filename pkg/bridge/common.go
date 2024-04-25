@@ -39,7 +39,10 @@ func (s *Server) createLogicalBridge(lb *pb.LogicalBridge) (*pb.LogicalBridge, e
 	}
 
 	// translation of pb to domain object
-	domainLB := infradb.NewLogicalBridge(lb)
+	domainLB, err := infradb.NewLogicalBridge(lb)
+	if err != nil {
+		return nil, err
+	}
 	// Note: The status of the object will be generated in infraDB operation not here
 	if err := infradb.CreateLB(domainLB); err != nil {
 		return nil, err
@@ -83,7 +86,10 @@ func (s *Server) updateLogicalBridge(lb *pb.LogicalBridge) (*pb.LogicalBridge, e
 	}
 
 	// translation of pb to domain object
-	domainLB := infradb.NewLogicalBridge(lb)
+	domainLB, err := infradb.NewLogicalBridge(lb)
+	if err != nil {
+		return nil, err
+	}
 	// Note: The status of the object will be generated in infraDB operation not here
 	if err := infradb.UpdateLB(domainLB); err != nil {
 		return nil, err
@@ -132,7 +138,10 @@ func (s *Server) TestCreateLogicalBridge(lb *pb.LogicalBridge) (*pb.LogicalBridg
 	}
 
 	// translation of pb to domain object
-	domainLB := infradb.NewLogicalBridge(lb)
+	domainLB, err := infradb.NewLogicalBridge(lb)
+	if err != nil {
+		return nil, err
+	}
 	// Note: The status of the object will be generated in infraDB operation not here
 	if err := infradb.CreateLB(domainLB); err != nil {
 		return nil, err

@@ -43,7 +43,10 @@ func (s *Server) createSvi(svi *pb.Svi) (*pb.Svi, error) {
 	}
 
 	// translation of pb to domain object
-	domainSvi := infradb.NewSvi(svi)
+	domainSvi, err := infradb.NewSvi(svi)
+	if err != nil {
+		return nil, err
+	}
 	// Note: The status of the object will be generated in infraDB operation not here
 	if err := infradb.CreateSvi(domainSvi); err != nil {
 		return nil, err
@@ -87,7 +90,10 @@ func (s *Server) updateSvi(svi *pb.Svi) (*pb.Svi, error) {
 	}
 
 	// translation of pb to domain object
-	domainSvi := infradb.NewSvi(svi)
+	domainSvi, err := infradb.NewSvi(svi)
+	if err != nil {
+		return nil, err
+	}
 	// Note: The status of the object will be generated in infraDB operation not here
 	if err := infradb.UpdateSvi(domainSvi); err != nil {
 		return nil, err

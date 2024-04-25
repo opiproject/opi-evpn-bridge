@@ -7,6 +7,7 @@ package infradb
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"log"
 	"net"
@@ -119,7 +120,7 @@ func NewVrfWithArgs(name string, vni *uint32, loopbackIP, vtepIP *net.IPNet) (*V
 }
 
 // NewVrf creates new VRF object from protobuf message
-func NewVrf(in *pb.Vrf) *Vrf {
+func NewVrf(in *pb.Vrf) (*Vrf, error) {
 	var vip *net.IPNet
 	components := make([]common.Component, 0)
 
@@ -137,6 +138,7 @@ func NewVrf(in *pb.Vrf) *Vrf {
 	subscribers := eventbus.EBus.GetSubscribers("vrf")
 	if len(subscribers) == 0 {
 		log.Println("NewVrf(): No subscribers for Vrf objects")
+		return &Vrf{}, errors.New("no subscribers found for vrf")
 	}
 
 	for _, sub := range subscribers {
@@ -159,7 +161,7 @@ func NewVrf(in *pb.Vrf) *Vrf {
 		Metadata:        &VrfMetadata{},
 		Svis:            make(map[string]bool),
 		ResourceVersion: generateVersion(),
-	}
+	}, nil
 }
 
 // ToPb transforms VRF object to protobuf message

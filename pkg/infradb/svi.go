@@ -8,6 +8,8 @@ package infradb
 import (
 	"encoding/binary"
 	//	"fmt"
+	"errors"
+
 	"log"
 	"net"
 
@@ -65,7 +67,7 @@ type Svi struct {
 var _ EvpnObject[*pb.Svi] = (*Svi)(nil)
 
 // NewSvi creates new SVI object from protobuf message
-func NewSvi(in *pb.Svi) *Svi {
+func NewSvi(in *pb.Svi) (*Svi, error) {
 	components := make([]common.Component, 0)
 	gwIPs := make([]*net.IPNet, 0)
 
@@ -83,6 +85,7 @@ func NewSvi(in *pb.Svi) *Svi {
 	subscribers := eventbus.EBus.GetSubscribers("svi")
 	if len(subscribers) == 0 {
 		log.Println("NewSvi(): No subscribers for SVI objects")
+		return &Svi{}, errors.New("no subscribers found for svi")
 	}
 
 	for _, sub := range subscribers {
@@ -106,7 +109,7 @@ func NewSvi(in *pb.Svi) *Svi {
 		},
 		Metadata:        &SviMetadata{},
 		ResourceVersion: generateVersion(),
-	}
+	}, nil
 }
 
 // ToPb transforms Svi object to protobuf message
