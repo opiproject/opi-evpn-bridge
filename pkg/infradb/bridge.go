@@ -62,7 +62,7 @@ type LogicalBridge struct {
 // build time check that struct implements interface
 var _ EvpnObject[*pb.LogicalBridge] = (*LogicalBridge)(nil)
 
-// NewLogicalBridge creates new Logica Bridge object from protobuf message
+// NewLogicalBridge creates new Logical Bridge object from protobuf message
 func NewLogicalBridge(in *pb.LogicalBridge) *LogicalBridge {
 	var vip *net.IPNet
 	components := make([]common.Component, 0)
