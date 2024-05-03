@@ -257,6 +257,25 @@ func UpdateLB(lb *LogicalBridge) error {
 
 	return nil
 }
+func removeVniFromVpns(vni uint32) error {
+	vpns := make(map[uint32]bool)
+	if vni != 0 {
+		found, err := infradb.client.Get("vpns", &vpns)
+		if err != nil {
+			return err
+		}
+		if !found {
+			return ErrKeyNotFound
+		}
+		delete(vpns, vni)
+
+		err = infradb.client.Set("vpns", &vpns)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
 
 // UpdateLBStatus updates the status of logical bridge object based on the component report
 // nolint: funlen
@@ -320,23 +339,11 @@ func UpdateLBStatus(name string, resourceVersion string, notificationID string, 
 			}
 
 			// Delete VNI from the VPN map
-			vpns := make(map[uint32]bool)
-			found, err = infradb.client.Get("vpns", &vpns)
-			if err != nil {
-				log.Println(err)
-				return err
-			}
-			if !found {
-				log.Println("UpdateLBStatus(): No VPNs have been found")
-				return ErrKeyNotFound
-			}
 			if lb.Spec.Vni != nil {
-				delete(vpns, *lb.Spec.Vni)
-			}
-			err = infradb.client.Set("vpns", &vpns)
-			if err != nil {
-				log.Println(err)
-				return err
+				err = removeVniFromVpns(*lb.Spec.Vni)
+				if err != nil {
+					return err
+				}
 			}
 
 			lbs := make(map[string]bool)
@@ -974,23 +981,11 @@ func UpdateVrfStatus(name string, resourceVersion string, notificationID string,
 			}
 
 			// Delete VNI from the VPN map
-			vpns := make(map[uint32]bool)
-			found, err = infradb.client.Get("vpns", &vpns)
-			if err != nil {
-				log.Println(err)
-				return err
-			}
-			if !found {
-				log.Println("UpdateVrfStatus(): No VPNs have been found")
-				return ErrKeyNotFound
-			}
 			if vrf.Spec.Vni != nil {
-				delete(vpns, *vrf.Spec.Vni)
-			}
-			err = infradb.client.Set("vpns", &vpns)
-			if err != nil {
-				log.Println(err)
-				return err
+				err = removeVniFromVpns(*vrf.Spec.Vni)
+				if err != nil {
+					return err
+				}
 			}
 
 			// Delete VRF from VRFs Map
