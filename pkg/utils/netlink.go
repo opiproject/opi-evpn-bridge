@@ -26,6 +26,7 @@ type Netlink interface {
 	LinkByName(context.Context, string) (netlink.Link, error)
 	LinkModify(context.Context, netlink.Link) error
 	LinkSetHardwareAddr(context.Context, netlink.Link, net.HardwareAddr) error
+	LinkSetVfHardwareAddr(context.Context, netlink.Link, int, net.HardwareAddr) error
 	AddrAdd(context.Context, netlink.Link, *netlink.Addr) error
 	AddrDel(context.Context, netlink.Link, *netlink.Addr) error
 	AddrList(context.Context, netlink.Link, int) ([]netlink.Addr, error)
@@ -35,6 +36,12 @@ type Netlink interface {
 	LinkSetDown(context.Context, netlink.Link) error
 	LinkSetMaster(context.Context, netlink.Link, netlink.Link) error
 	LinkSetNoMaster(context.Context, netlink.Link) error
+	LinkSetNsFd(context.Context, netlink.Link, int) error
+	LinkSetName(context.Context, netlink.Link, string) error
+	LinkSetVfRate(context.Context, netlink.Link, int, int, int) error
+	LinkSetVfSpoofchk(context.Context, netlink.Link, int, bool) error
+	LinkSetVfTrust(context.Context, netlink.Link, int, bool) error
+	LinkSetVfState(context.Context, netlink.Link, int, uint32) error
 	BridgeVlanAdd(context.Context, netlink.Link, uint16, bool, bool, bool, bool) error
 	BridgeVlanDel(context.Context, netlink.Link, uint16, bool, bool, bool, bool) error
 	LinkSetMTU(context.Context, netlink.Link, int) error
@@ -102,6 +109,14 @@ func (n *NetlinkWrapper) LinkSetHardwareAddr(ctx context.Context, link netlink.L
 	childSpan.SetAttributes(attribute.String("link.name", link.Attrs().Name))
 	defer childSpan.End()
 	return netlink.LinkSetHardwareAddr(link, hwaddr)
+}
+
+// LinkSetVfHardwareAddr is a wrapper for netlink.LinkSetVfHardwareAddr
+func (n *NetlinkWrapper) LinkSetVfHardwareAddr(ctx context.Context, link netlink.Link, vf int, hwaddr net.HardwareAddr) error {
+	_, childSpan := n.tracer.Start(ctx, "netlink.LinkSetVfHardwareAddrr")
+	childSpan.SetAttributes(attribute.String("link.name", link.Attrs().Name))
+	defer childSpan.End()
+	return netlink.LinkSetVfHardwareAddr(link, vf, hwaddr)
 }
 
 // AddrAdd is a wrapper for netlink.AddrAdd
@@ -182,6 +197,54 @@ func (n *NetlinkWrapper) LinkSetNoMaster(ctx context.Context, link netlink.Link)
 	childSpan.SetAttributes(attribute.String("link.name", link.Attrs().Name))
 	defer childSpan.End()
 	return netlink.LinkSetNoMaster(link)
+}
+
+// LinkSetNsFd is a wrapper for netlink.LinkSetNsFd
+func (n *NetlinkWrapper) LinkSetNsFd(ctx context.Context, link netlink.Link, fd int) error {
+	_, childSpan := n.tracer.Start(ctx, "netlink.LinkSetNsFd")
+	childSpan.SetAttributes(attribute.String("link.name", link.Attrs().Name))
+	defer childSpan.End()
+	return netlink.LinkSetNsFd(link, fd)
+}
+
+// LinkSetName is a wrapper for netlink.LinkSetName
+func (n *NetlinkWrapper) LinkSetName(ctx context.Context, link netlink.Link, name string) error {
+	_, childSpan := n.tracer.Start(ctx, "netlink.LinkSetName")
+	childSpan.SetAttributes(attribute.String("link.name", link.Attrs().Name))
+	defer childSpan.End()
+	return netlink.LinkSetName(link, name)
+}
+
+// LinkSetVfRate is a wrapper for netlink.LinkSetVfRate
+func (n *NetlinkWrapper) LinkSetVfRate(ctx context.Context, link netlink.Link, vf int, minRate int, maxRate int) error {
+	_, childSpan := n.tracer.Start(ctx, "netlink.LinkSetVfRate")
+	childSpan.SetAttributes(attribute.String("link.name", link.Attrs().Name))
+	defer childSpan.End()
+	return netlink.LinkSetVfRate(link, vf, minRate, maxRate)
+}
+
+// LinkSetVfSpoofchk is a wrapper for netlink.LinkSetVfSpoofchk
+func (n *NetlinkWrapper) LinkSetVfSpoofchk(ctx context.Context, link netlink.Link, vf int, check bool) error {
+	_, childSpan := n.tracer.Start(ctx, "netlink.LinkSetVfSpoofchk")
+	childSpan.SetAttributes(attribute.String("link.name", link.Attrs().Name))
+	defer childSpan.End()
+	return netlink.LinkSetVfSpoofchk(link, vf, check)
+}
+
+// LinkSetVfTrust is a wrapper for netlink.LinkSetVfTrust
+func (n *NetlinkWrapper) LinkSetVfTrust(ctx context.Context, link netlink.Link, vf int, state bool) error {
+	_, childSpan := n.tracer.Start(ctx, "netlink.LinkSetVfTrust")
+	childSpan.SetAttributes(attribute.String("link.name", link.Attrs().Name))
+	defer childSpan.End()
+	return netlink.LinkSetVfTrust(link, vf, state)
+}
+
+// LinkSetVfState is a wrapper for netlink.LinkSetVfState
+func (n *NetlinkWrapper) LinkSetVfState(ctx context.Context, link netlink.Link, vf int, state uint32) error {
+	_, childSpan := n.tracer.Start(ctx, "netlink.LinkSetVfState")
+	childSpan.SetAttributes(attribute.String("link.name", link.Attrs().Name))
+	defer childSpan.End()
+	return netlink.LinkSetVfState(link, vf, state)
 }
 
 // BridgeVlanAdd is a wrapper for netlink.BridgeVlanAdd
