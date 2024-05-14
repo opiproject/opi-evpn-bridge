@@ -16,6 +16,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
+	"go.opentelemetry.io/otel/trace/noop"
 )
 
 const (
@@ -64,13 +65,18 @@ type FrrWrapper struct {
 
 // NewFrrWrapper creates initialized instance of FrrWrapper with default address
 func NewFrrWrapper() *FrrWrapper {
-	return NewFrrWrapperWithArgs(defaultAddress)
+	return NewFrrWrapperWithArgs(defaultAddress, true)
 }
 
 // NewFrrWrapperWithArgs creates initialized instance of FrrWrapper
-func NewFrrWrapperWithArgs(address string) *FrrWrapper {
-	// default tracer name is good for now
-	return &FrrWrapper{address: address, tracer: otel.Tracer("")}
+func NewFrrWrapperWithArgs(address string, enableTracer bool) *FrrWrapper {
+	frrWrapper := &FrrWrapper{address: address}
+	frrWrapper.tracer = noop.NewTracerProvider().Tracer("")
+	if enableTracer {
+		// default tracer name is good for now
+		frrWrapper.tracer = otel.Tracer("")
+	}
+	return frrWrapper
 }
 
 // build time check that struct implements interface
