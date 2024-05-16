@@ -17,10 +17,10 @@ type EventBus struct {
 // Subscriber holds the info for each subscriber
 type Subscriber struct {
 	Ch   chan interface{}
-	Quit chan bool
+	Quit chan struct{}
 }
 
-// NewEventBus initializes ann EventBus object
+// NewEventBus initializes an EventBus object
 func NewEventBus() *EventBus {
 	return &EventBus{
 		subscribers: make(map[string][]*Subscriber),
@@ -34,7 +34,7 @@ func (e *EventBus) Subscribe(eventType string) *Subscriber {
 
 	subscriber := &Subscriber{
 		Ch:   make(chan interface{}),
-		Quit: make(chan bool),
+		Quit: make(chan struct{}),
 	}
 
 	e.subscribers[eventType] = append(e.subscribers[eventType], subscriber)
@@ -60,5 +60,4 @@ func (e *EventBus) Publish(eventType string, data interface{}) {
 // Unsubscribe the subscriber, which delete the subscriber(all resources will be washed out)
 func (s *Subscriber) Unsubscribe() {
 	close(s.Ch)
-	s.Quit <- true
 }

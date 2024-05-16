@@ -5,6 +5,7 @@
 package utils
 
 import (
+	"context"
 	"log"
 	"net"
 	"regexp"
@@ -34,7 +35,9 @@ func ValidateMacAddress(b []byte) error {
 
 // GetIPAddress gets the ip address from link
 func GetIPAddress(dev string) net.IPNet {
-	link, err := netlink.LinkByName(dev)
+	nlink := NewNetlinkWrapper()
+	ctx := context.Background()
+	link, err := nlink.LinkByName(ctx, dev)
 	if err != nil {
 		log.Printf("Error in LinkByName %+v\n", err)
 		return net.IPNet{
@@ -42,7 +45,7 @@ func GetIPAddress(dev string) net.IPNet {
 		}
 	}
 
-	addrs, err := netlink.AddrList(link, netlink.FAMILY_V4) // ip address show
+	addrs, err := nlink.AddrList(ctx, link, netlink.FAMILY_V4) // ip address show
 	if err != nil {
 		log.Printf("Error in AddrList\n")
 		return net.IPNet{

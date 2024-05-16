@@ -181,10 +181,10 @@ var LatestL2Nexthop = make(map[L2NexthopKey]L2NexthopStruct)
 ###  and must be handled by the p4ctrl module.
 --------------------------------------------------------------------------*/
 
-// Route structure has route info
+/*// Route structure has route info
 type Route interface {
 	Route_store(*infradb.Vrf, map[string]string)
-}
+}*/
 
 // RouteStruct structure has route info
 type RouteStruct struct {
@@ -215,7 +215,7 @@ type NexthopStruct struct {
 	RouteRefs []RouteStruct
 	Key       NexthopKey
 	Resolved  bool
-	Neighbor  *NeighStruct // ???
+	Neighbor  *NeighStruct
 	NhType    int
 	Metadata  map[interface{}]interface{}
 }
@@ -223,12 +223,13 @@ type NexthopStruct struct {
 // NetMaskToInt convert network mask to int
 func NetMaskToInt(mask int) (netmaskint [4]int64) {
 	var binarystring string
-
-	for ii := 1; ii <= mask; ii++ {
-		binarystring += "1"
-	}
-	for ii := 1; ii <= (32 - mask); ii++ {
-		binarystring += "0"
+	if mask >= 0 {
+		for i := 1; i <= mask; i++ {
+			binarystring += "1"
+		}
+		for i := 1; i <= (32 - mask); i++ {
+			binarystring += "0"
+		}
 	}
 	oct1 := binarystring[0:8]
 	oct2 := binarystring[8:16]
@@ -238,7 +239,6 @@ func NetMaskToInt(mask int) (netmaskint [4]int64) {
 	netmaskint[1], _ = strconv.ParseInt(oct2, 2, 64)
 	netmaskint[2], _ = strconv.ParseInt(oct3, 2, 64)
 	netmaskint[3], _ = strconv.ParseInt(oct4, 2, 64)
-
 	return netmaskint
 }
 
@@ -281,7 +281,7 @@ var RtnScope = map[string]int{
 }
 
 // flagstring strucure
-type flagstring struct {
+/*type flagstring struct {
 	f int
 	s string
 }
@@ -290,14 +290,19 @@ type flagstring struct {
 var testFlag = []flagstring{
 	{f: unix.RTNH_F_ONLINK, s: "onlink"},
 	{f: unix.RTNH_F_PERVASIVE, s: "pervasive"},
+}*/
+
+var testFlag = map[int]string{
+	unix.RTNH_F_ONLINK:    "onlink",
+	unix.RTNH_F_PERVASIVE: "pervasive",
 }
 
-// getFlags gets the flag
-func getFlags(s string) int {
+// getFlag gets the flag
+func getFlag(s string) int {
 	f := 0
-	for _, F := range testFlag {
-		if s == F.s {
-			f |= F.f
+	for ff, ss := range testFlag {
+		if s == ss {
+			f |= ff
 		}
 	}
 	return f
@@ -305,30 +310,29 @@ func getFlags(s string) int {
 
 // getFlagString return flag of type string
 func getFlagString(flag int) string {
-	f := ""
-	for _, F := range testFlag {
-		if F.f == flag {
-			str := F.s
-			return str
+	for flg, str := range testFlag {
+		if flg == flag {
+			retStr := str
+			return retStr
 		}
 	}
-	return f
+	return ""
 }
 
 // NhIDCache Variable
 var NhIDCache = make(map[NexthopKey]int)
 
-// NhNextID Variable
-var NhNextID = 16
+// nhNextID Variable
+var nhNextID = 16
 
 // NHAssignID returns the nexthop id
 func NHAssignID(key NexthopKey) int {
 	id := NhIDCache[key]
 	if id == 0 {
 		// Assigne a free id and insert it into the cache
-		id = NhNextID
+		id = nhNextID
 		NhIDCache[key] = id
-		NhNextID++
+		nhNextID++
 	}
 	return id
 }
@@ -344,7 +348,7 @@ func NHParse(v *infradb.Vrf, rc RouteCmdInfo) NexthopStruct {
 		NameIndex[nh.nexthop.LinkIndex] = vrf.Attrs().Name
 	}
 	if len(rc.Flags) != 0 {
-		nh.nexthop.Flags = getFlags(rc.Flags[0])
+		nh.nexthop.Flags = getFlag(rc.Flags[0])
 	}
 	if !reflect.ValueOf(rc.Gateway).IsZero() {
 		nIP := &net.IPNet{
@@ -386,7 +390,7 @@ func checkRtype(rType string) bool {
 
 // preFilterRoute pre filter the routes
 func preFilterRoute(r RouteStruct) bool {
-	if checkRtype(r.NlType) && !r.Route0.Dst.IP.IsLoopback() && strings.Compare(r.Route0.Dst.IP.String(), "0.0.0.0") != 0 {
+	if checkRtype(r.NlType) && !r.Route0.Dst.IP.IsLoopback() && r.Route0.Dst.IP.String() != "0.0.0.0" {
 		return true
 	}
 
@@ -472,12 +476,9 @@ func setRouteType(rs RouteStruct, v *infradb.Vrf) string {
 	return "unknown"
 }
 
-// RouteSlice empty route structure slice
-var RouteSlice []RouteStruct
-
-// Parse_Route parse the routes
+// ParseRoute parse the routes
 //nolint
-func Parse_Route(v *infradb.Vrf, Rm []RouteCmdInfo, t int) RouteList {
+func ParseRoute(v *infradb.Vrf, Rm []RouteCmdInfo, t int) RouteList {
 	var route RouteList
 	for _, Ro := range Rm {
 		if reflect.ValueOf(Ro.Type).IsZero() && (!reflect.ValueOf(Ro.Dev).IsZero() || !reflect.ValueOf(Ro.Gateway).IsZero()) {
@@ -542,7 +543,7 @@ func Parse_Route(v *infradb.Vrf, Rm []RouteCmdInfo, t int) RouteList {
 			rs.Route0.Type = RtnType[Ro.Type]
 		}
 		if len(Ro.Flags) != 0 {
-			rs.Route0.Flags = getFlags(Ro.Flags[0])
+			rs.Route0.Flags = getFlag(Ro.Flags[0])
 		}
 		if !reflect.ValueOf(Ro.Scope).IsZero() {
 			rs.Route0.Scope = vn.Scope(RtnScope[Ro.Scope])
@@ -573,10 +574,6 @@ func Parse_Route(v *infradb.Vrf, Rm []RouteCmdInfo, t int) RouteList {
 	}
 	return route
 }
-
-/*func comparekey(i, j int) bool {
-	return RouteSlice[i].Key.Table > RouteSlice[j].Key.Table && RouteSlice[i].Key.Dst > RouteSlice[j].Key.Dst
-}*/
 
 //--------------------------------------------------------------------------
 //###  NexthopStruct Database Entries
@@ -631,7 +628,8 @@ type FDBEntryList struct {
 }
 
 // ParseFdb parse the fdb
-func ParseFdb(fdbIP FdbIPStruct, fdbentry FdbEntryStruct) FdbEntryStruct {
+func ParseFdb(fdbIP FdbIPStruct) FdbEntryStruct {
+	var fdbentry = FdbEntryStruct{}
 	fdbentry.VlanID = fdbIP.Vlan
 	fdbentry.Mac = fdbIP.Mac
 	fdbentry.Key = FDBKey{fdbIP.Vlan, fdbIP.Mac}
@@ -892,11 +890,11 @@ func neighborAnnotate(neighbor NeighStruct) NeighStruct {
 			}
 		}
 		if LB.Spec.Vni != nil {
-			vid, err := strconv.ParseInt(vID, 10, 64)
+			vid, err := strconv.Atoi(vID)
 			if err != nil {
 				panic(err)
 			}
-			fdbEntry := LatestFDB[FDBKey{int(vid), neighbor.Neigh0.HardwareAddr.String()}]
+			fdbEntry := LatestFDB[FDBKey{vid, neighbor.Neigh0.HardwareAddr.String()}]
 			neighbor.Metadata["l2_nh"] = fdbEntry.Nexthop
 			neighbor.Type = VXLAN // confirm this later
 		}
@@ -1364,7 +1362,7 @@ func cmdProcessRt(v *infradb.Vrf, r string, t int) RouteList {
 		}
 		RouteData = append(RouteData, ri)
 	}
-	route := Parse_Route(v, RouteData, t)
+	route := ParseRoute(v, RouteData, t)
 	return route
 }
 
@@ -1389,7 +1387,7 @@ func readRouteFromIP(v *infradb.Vrf) {
 	for i := 0; i < len(nl); i++ {
 		rm = append(rm, nl[i])
 	}
-	nr := Parse_Route(v, rm, 0)
+	nr := ParseRoute(v, rm, 0)
 	for _, r := range nr.RS {
 		addRoute(r)
 	}
@@ -1477,7 +1475,7 @@ func readFDB() []FdbEntryStruct {
 		fdbs = append(fdbs, fi)
 	}
 	for _, m := range fdbs {
-		fs = ParseFdb(m, fs)
+		fs = ParseFdb(m)
 		if preFilterMac(fs) {
 			macs = append(macs, fs)
 		}

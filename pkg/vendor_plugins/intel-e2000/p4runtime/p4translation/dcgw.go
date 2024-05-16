@@ -1369,7 +1369,7 @@ func (l L3Decoder) StaticAdditions() []interface{} {
 	},
 	)
 	for _, port := range l._grpcPorts {
-		var peerVsi, err = strconv.ParseInt(port.peer["vsi"], 10, 64)
+		var peerVsi, err = strconv.Atoi(port.peer["vsi"])
 		if err != nil {
 			panic(err)
 		}
@@ -1386,7 +1386,7 @@ func (l L3Decoder) StaticAdditions() []interface{} {
 			},
 			Action: p4client.Action{
 				ActionName: "linux_networking_control.fwd_to_port",
-				Params:     []interface{}{uint32(_toEgressVsi(int(peerVsi)))},
+				Params:     []interface{}{uint32(_toEgressVsi(peerVsi))},
 			},
 		},
 			p4client.TableEntry{
