@@ -259,20 +259,18 @@ func UpdateLB(lb *LogicalBridge) error {
 }
 func removeVniFromVpns(vni uint32) error {
 	vpns := make(map[uint32]bool)
-	if vni != 0 {
-		found, err := infradb.client.Get("vpns", &vpns)
-		if err != nil {
-			return err
-		}
-		if !found {
-			return ErrKeyNotFound
-		}
-		delete(vpns, vni)
+	found, err := infradb.client.Get("vpns", &vpns)
+	if err != nil {
+		return err
+	}
+	if !found {
+		return ErrKeyNotFound
+	}
+	delete(vpns, vni)
 
-		err = infradb.client.Set("vpns", &vpns)
-		if err != nil {
-			return err
-		}
+	err = infradb.client.Set("vpns", &vpns)
+	if err != nil {
+		return err
 	}
 	return nil
 }
