@@ -311,8 +311,8 @@ var ctx context.Context
 // nlink variable wrapper
 var nlink utils.Netlink
 
-// Init initializes the config, logger and subscribers
-func Init() {
+// Initialize initializes the config, logger and subscribers
+func Initialize() {
 	eb := eventbus.EBus
 	for _, subscriberConfig := range config.GlobalConfig.Subscribers {
 		if subscriberConfig.Name == lgmComp {
@@ -332,8 +332,8 @@ func Init() {
 	}
 }
 
-// DeInit function handles stops functionality
-func DeInit() {
+// DeInitialize function handles stops functionality
+func DeInitialize() {
 	eb := eventbus.EBus
 	err := TearDownTenantBridge()
 	if err != nil {

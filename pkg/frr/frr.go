@@ -241,8 +241,8 @@ var ctx context.Context
 // Frr variable of type utils wrapper
 var Frr utils.Frr
 
-// Init function handles init functionality
-func Init() {
+// Initialize function handles init functionality
+func Initialize() {
 	frrEnabled := config.GlobalConfig.LinuxFrr.Enabled
 	if !frrEnabled {
 		log.Println("FRR Module disabled")
@@ -265,8 +265,8 @@ func Init() {
 	}
 }
 
-// DeInit function handles stops functionality
-func DeInit() {
+// DeInitialize function handles stops functionality
+func DeInitialize() {
 	frrEnabled := config.GlobalConfig.LinuxFrr.Enabled
 	if !frrEnabled {
 		log.Println("FRR Module disabled")

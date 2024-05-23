@@ -985,8 +985,8 @@ func tearDownSvi(svi *infradb.Svi) bool {
 	return true
 }
 
-// Init function handles init functionality
-func Init() {
+// Initialize function handles init functionality
+func Initialize() {
 	// Netlink Listener
 	startSubscriber(nm.EventBus, "route_added")
 
@@ -1062,14 +1062,14 @@ func Init() {
 	}
 }
 
-// Exit function deletes the static additions
-func Exit() {
+// DeInitialize function handles stops functionality
+func DeInitialize() {
 	L3entries := L3.StaticDeletions()
 	for _, entry := range L3entries {
 		if e, ok := entry.(p4client.TableEntry); ok {
 			er := p4client.DelEntry(e)
 			if er != nil {
-				log.Printf("intel-e2000: error adding entry for %v error %v\n", e.Tablename, er)
+				log.Printf("intel-e2000: error deleting entry for %v error %v\n", e.Tablename, er)
 			}
 		} else {
 			log.Println("intel-e2000: Entry is not of type p4client.TableEntry")
@@ -1080,7 +1080,7 @@ func Exit() {
 		if e, ok := entry.(p4client.TableEntry); ok {
 			er := p4client.DelEntry(e)
 			if er != nil {
-				log.Printf("intel-e2000: error adding entry for %v error %v\n", e.Tablename, er)
+				log.Printf("intel-e2000: error deleting entry for %v error %v\n", e.Tablename, er)
 			}
 		} else {
 			log.Println("intel-e2000: Entry is not of type p4client.TableEntry")

@@ -67,14 +67,14 @@ var rootCmd = &cobra.Command{
 
 		switch config.GlobalConfig.Buildenv {
 		case intelStr:
-			gen_linux.Init()
-			intel_e2000_linux.Init()
-			frr.Init()
-			ipu_vendor.Init()
+			gen_linux.Initialize()
+			intel_e2000_linux.Initialize()
+			frr.Initialize()
+			ipu_vendor.Initialize()
 		case "ci":
-			gen_linux.Init()
-			ci_linux.Init()
-			frr.Init()
+			gen_linux.Initialize()
+			ci_linux.Initialize()
+			frr.Initialize()
 		default:
 			log.Panic(" ERROR: Could not find Build env ")
 		}
@@ -85,7 +85,7 @@ var rootCmd = &cobra.Command{
 		}
 		switch config.GlobalConfig.Buildenv {
 		case intelStr:
-			netlink.Init()
+			netlink.Initialize()
 		default:
 		}
 
@@ -138,13 +138,14 @@ func cleanUp() {
 
 	switch config.GlobalConfig.Buildenv {
 	case intelStr:
-		gen_linux.DeInit()
-		intel_e2000_linux.DeInit()
-		frr.DeInit()
+		gen_linux.DeInitialize()
+		intel_e2000_linux.DeInitialize()
+		frr.DeInitialize()
+		ipu_vendor.DeInitialize()
 	case "ci":
-		gen_linux.DeInit()
-		ci_linux.DeInit()
-		frr.DeInit()
+		gen_linux.DeInitialize()
+		ci_linux.DeInitialize()
+		frr.DeInitialize()
 	default:
 		log.Panic(" ERROR: Could not find Build env ")
 	}

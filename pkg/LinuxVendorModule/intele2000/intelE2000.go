@@ -380,8 +380,8 @@ var brTenant string
 var ctx context.Context
 var nlink utils.Netlink
 
-// Init function initialize config
-func Init() {
+// Initialize function initialize config
+func Initialize() {
 	eb := eventbus.EBus
 	for _, subscriberConfig := range config.GlobalConfig.Subscribers {
 		if subscriberConfig.Name == lvmComp {
@@ -398,8 +398,8 @@ func Init() {
 	nlink = utils.NewNetlinkWrapper()
 }
 
-// DeInit function handles stops functionality
-func DeInit() {
+// DeInitialize function handles stops functionality
+func DeInitialize() {
 	eb := eventbus.EBus
 	eb.UnsubscribeModule(lvmComp)
 }

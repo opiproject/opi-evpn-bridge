@@ -34,13 +34,11 @@ import (
 )
 
 var ctx context.Context
+
 var nlink utils.Netlink
 
-// dbLock variable
-// var dbLock int
-
-// GRD variable
-var GRD int
+// EventBus variable
+var EventBus = eb.NewEventBus()
 
 // pollInterval variable
 var pollInterval int
@@ -51,12 +49,15 @@ var phyPorts = make(map[string]int)
 // stopMonitoring variable
 var stopMonitoring bool
 
-// EventBus variable
-var EventBus = eb.NewEventBus()
-
 // strNone variable
 var strNone = "NONE"
 var zebraStr = "zebra"
+
+// l2nexthopID
+var l2nexthopID = 16
+
+// nhNextID Variable
+var nhNextID = 16
 
 // Route Direction
 const ( // Route direction
@@ -76,34 +77,47 @@ const ( // NexthopStruct TYPE & L2NEXTHOP TYPE & FDBentry
 	OTHER
 )
 
-// RTNNeighbor
+// rtNNeighbor
 const (
-	RTNNeighbor = 1111
+	rtNNeighbor = 1111
 )
 
-// NeighKey strcture of neighbor
-type NeighKey struct {
+// neighKey strcture of neighbor
+type neighKey struct {
 	Dst     string
 	VrfName string
 	Dev     int
 }
 
-// RouteKey structure of route description
-type RouteKey struct {
+// routeKey structure of route description
+type routeKey struct {
 	Table int
 	Dst   string
 }
 
-// NexthopKey structure of nexthop
-type NexthopKey struct {
+// nexthopKey structure of nexthop
+type nexthopKey struct {
 	VrfName string
 	Dst     string
 	Dev     int
 	Local   bool
 }
 
-// NeighIPStruct nighbor ip structure
-type NeighIPStruct struct {
+// fdbKey structure key for sorting theFDB entries
+type fdbKey struct {
+	VlanID int
+	Mac    string
+}
+
+// l2NexthopKey is l2 neighbor key
+type l2NexthopKey struct {
+	Dev    string
+	VlanID int
+	Dst    string
+}
+
+// neighIPStruct nighbor ip structure
+type neighIPStruct struct {
 	Dst         string
 	Dev         string
 	Lladdr      string
@@ -112,21 +126,8 @@ type NeighIPStruct struct {
 	Protocol    string
 }
 
-// FDBKey structure key for sorting theFDB entries
-type FDBKey struct {
-	VlanID int
-	Mac    string
-}
-
-// L2NexthopKey is l2 neighbor key
-type L2NexthopKey struct {
-	Dev    string
-	VlanID int
-	Dst    string
-}
-
-// FdbIPStruct fdb ip structure
-type FdbIPStruct struct {
+// fdbIPStruct fdb ip structure
+type fdbIPStruct struct {
 	Mac    string
 	Ifname string
 	Vlan   int
@@ -136,35 +137,63 @@ type FdbIPStruct struct {
 	Dst    string
 }
 
-// Routes Variable
-var Routes = make(map[RouteKey]RouteStruct)
+// nHRouteInfo neighbor route info
+type nHRouteInfo struct {
+	ID       int
+	Gateway  string
+	Dev      string
+	Scope    string
+	Protocol string
+	Flags    []string
+}
+
+// routeCmdInfo structure
+type routeCmdInfo struct {
+	Type     string
+	Dst      string
+	Nhid     int
+	Gateway  string
+	Dev      string
+	Protocol string
+	Scope    string
+	Prefsrc  string
+	Metric   int
+	Flags    []string
+	Weight   int
+	VRF      *infradb.Vrf
+	Table    int
+	NhInfo   nHRouteInfo // {id gateway Dev scope protocol flags}
+}
+
+// routes Variable
+var routes = make(map[routeKey]RouteStruct)
 
 // Nexthops Variable
-var Nexthops = make(map[NexthopKey]NexthopStruct)
+var Nexthops = make(map[nexthopKey]NexthopStruct)
 
 // Neighbors Variable
-var Neighbors = make(map[NeighKey]NeighStruct)
+var Neighbors = make(map[neighKey]neighStruct)
 
-// FDB Variable
-var FDB = make(map[FDBKey]FdbEntryStruct)
+// fDB Variable
+var fDB = make(map[fdbKey]FdbEntryStruct)
 
-// L2Nexthops Variable
-var L2Nexthops = make(map[L2NexthopKey]L2NexthopStruct)
+// l2Nexthops Variable
+var l2Nexthops = make(map[l2NexthopKey]L2NexthopStruct)
 
-// LatestRoutes Variable
-var LatestRoutes = make(map[RouteKey]RouteStruct)
+// latestRoutes Variable
+var latestRoutes = make(map[routeKey]RouteStruct)
 
-// LatestNexthop Variable
-var LatestNexthop = make(map[NexthopKey]NexthopStruct)
+// latestNexthop Variable
+var latestNexthop = make(map[nexthopKey]NexthopStruct)
 
-// LatestNeighbors Variable
-var LatestNeighbors = make(map[NeighKey]NeighStruct)
+// latestNeighbors Variable
+var latestNeighbors = make(map[neighKey]neighStruct)
 
-// LatestFDB Variable
-var LatestFDB = make(map[FDBKey]FdbEntryStruct)
+// latestFDB Variable
+var latestFDB = make(map[fdbKey]FdbEntryStruct)
 
-// LatestL2Nexthop Variable
-var LatestL2Nexthop = make(map[L2NexthopKey]L2NexthopStruct)
+// latestL2Nexthop Variable
+var latestL2Nexthop = make(map[l2NexthopKey]L2NexthopStruct)
 
 /*--------------------------------------------------------------------------
 ###  Route Database Entries
@@ -181,11 +210,6 @@ var LatestL2Nexthop = make(map[L2NexthopKey]L2NexthopStruct)
 ###  and must be handled by the p4ctrl module.
 --------------------------------------------------------------------------*/
 
-/*// Route structure has route info
-type Route interface {
-	Route_store(*infradb.Vrf, map[string]string)
-}*/
-
 // RouteStruct structure has route info
 type RouteStruct struct {
 	Route0   vn.Route
@@ -193,12 +217,12 @@ type RouteStruct struct {
 	Nexthops []NexthopStruct
 	Metadata map[interface{}]interface{}
 	NlType   string
-	Key      RouteKey
+	Key      routeKey
 	Err      error
 }
 
-// RouteList list has route info
-type RouteList struct {
+// routeList list has route info
+type routeList struct {
 	RS []RouteStruct
 }
 
@@ -213,15 +237,72 @@ type NexthopStruct struct {
 	Scope     int
 	Protocol  int
 	RouteRefs []RouteStruct
-	Key       NexthopKey
+	Key       nexthopKey
 	Resolved  bool
-	Neighbor  *NeighStruct
+	Neighbor  *neighStruct
 	NhType    int
 	Metadata  map[interface{}]interface{}
 }
 
-// NetMaskToInt convert network mask to int
-func NetMaskToInt(mask int) (netmaskint [4]int64) {
+// --------------------------------------------------------------------------
+// ###  Bridge MAC Address Database
+// ###
+// ###  We split the Linux fDB entries into DMAC and L2 NexthopStruct tables similar
+// ###  to routes and L3 nexthops, Thus, all remote EVPN DMAC entries share a
+// ###  single VXLAN L2 nexthop table entry.
+// ###
+// ###  TODO: Support for dynamically learned MAC addresses on BridgePorts
+// ###  (e.g. for pod interfaces operating in promiscuous mode).
+// --------------------------------------------------------------------------
+
+// L2NexthopStruct structure
+type L2NexthopStruct struct {
+	Dev      string
+	VlanID   int
+	Dst      net.IP
+	Key      l2NexthopKey
+	lb       *infradb.LogicalBridge
+	bp       *infradb.BridgePort
+	ID       int
+	FdbRefs  []FdbEntryStruct
+	Resolved bool
+	Type     int
+	Metadata map[interface{}]interface{}
+}
+
+// FdbEntryStruct structure
+type FdbEntryStruct struct {
+	VlanID   int
+	Mac      string
+	Key      fdbKey
+	State    string
+	lb       *infradb.LogicalBridge
+	bp       *infradb.BridgePort
+	Nexthop  L2NexthopStruct
+	Type     int
+	Metadata map[interface{}]interface{}
+	Err      error
+}
+
+// neighStruct structure
+type neighStruct struct {
+	Neigh0   vn.Neigh
+	Protocol string
+	VrfName  string
+	Type     int
+	Dev      string
+	Err      error
+	Key      neighKey
+	Metadata map[interface{}]interface{}
+}
+
+// neighList structure
+type neighList struct {
+	NS []neighStruct
+}
+
+// netMaskToInt convert network mask to int
+func netMaskToInt(mask int) (netmaskint [4]int64) {
 	var binarystring string
 	if mask >= 0 {
 		for i := 1; i <= mask; i++ {
@@ -231,6 +312,7 @@ func NetMaskToInt(mask int) (netmaskint [4]int64) {
 			binarystring += "0"
 		}
 	}
+
 	oct1 := binarystring[0:8]
 	oct2 := binarystring[8:16]
 	oct3 := binarystring[16:24]
@@ -242,8 +324,8 @@ func NetMaskToInt(mask int) (netmaskint [4]int64) {
 	return netmaskint
 }
 
-// RtnType map of string key as RTN Type
-var RtnType = map[string]int{
+// rtnType map of string key as RTN Type
+var rtnType = map[string]int{
 	"unspec":      unix.RTN_UNSPEC,
 	"unicast":     unix.RTN_UNICAST,
 	"local":       unix.RTN_LOCAL,
@@ -256,11 +338,11 @@ var RtnType = map[string]int{
 	"throw":       unix.RTN_THROW,
 	"nat":         unix.RTN_NAT,
 	"xresolve":    unix.RTN_XRESOLVE,
-	"neighbor":    RTNNeighbor,
+	"neighbor":    rtNNeighbor,
 }
 
-// RtnProto map of string key as RTN Type
-var RtnProto = map[string]int{
+// rtnProto map of string key as RTN Type
+var rtnProto = map[string]int{
 	"unspec":        unix.RTPROT_UNSPEC,
 	"redirect":      unix.RTPROT_REDIRECT,
 	"kernel":        unix.RTPROT_KERNEL,
@@ -271,8 +353,8 @@ var RtnProto = map[string]int{
 	"196":           196,
 }
 
-// RtnScope map of string key as RTN scope
-var RtnScope = map[string]int{
+// rtnScope map of string key as RTN scope
+var rtnScope = map[string]int{
 	"global":  unix.RT_SCOPE_UNIVERSE,
 	"site":    unix.RT_SCOPE_SITE,
 	"link":    unix.RT_SCOPE_LINK,
@@ -280,22 +362,67 @@ var RtnScope = map[string]int{
 	"nowhere": unix.RT_SCOPE_NOWHERE,
 }
 
-// flagstring strucure
-/*type flagstring struct {
-	f int
-	s string
-}
-
-// testFlag array of flag string
-var testFlag = []flagstring{
-	{f: unix.RTNH_F_ONLINK, s: "onlink"},
-	{f: unix.RTNH_F_PERVASIVE, s: "pervasive"},
-}*/
-
 var testFlag = map[int]string{
 	unix.RTNH_F_ONLINK:    "onlink",
 	unix.RTNH_F_PERVASIVE: "pervasive",
 }
+
+//--------------------------------------------------------------------------
+//###  Neighbor Database Entries
+//--------------------------------------------------------------------------
+
+// linkTable wg sync.WaitGroup
+var linkTable []vn.Link
+
+// vrfList netlink libarary var
+var vrfList []vn.Link
+
+// deviceList netlink libarary var
+var deviceList []vn.Link
+
+// vlanList netlink libarary var
+var vlanList []vn.Link
+
+// bridgeList netlink libarary var
+var bridgeList []vn.Link
+
+// vxlanList netlink libarary var
+var vxlanList []vn.Link
+
+// linkList netlink libarary var
+var linkList []vn.Link
+
+// NameIndex netlink libarary var
+var NameIndex = make(map[int]string)
+
+// oldgenmap old map
+var oldgenmap = make(map[interface{}]interface{})
+
+// latestgenmap latest map
+var latestgenmap = make(map[interface{}]interface{})
+
+// notifyEvents array
+var notifyEvents = []string{"_added", "_updated", "_deleted"}
+
+//--------------------------------------------------------------------------
+//###  NexthopStruct Database Entries
+//--------------------------------------------------------------------------
+
+// l2NhIDCache
+var l2NhIDCache = make(map[l2NexthopKey]int)
+
+// nhIDCache Variable
+var nhIDCache = make(map[nexthopKey]int)
+
+const (
+	// Define each route type as a constant
+	routeTypeConnected = "connected"
+	routeTypeEvpnVxlan = "evpn-vxlan"
+	routeTypeStatic    = "static"
+	routeTypeBgp       = "bgp"
+	routeTypeLocal     = "local"
+	routeTypeNeighbor  = "neighbor"
+)
 
 // getFlag gets the flag
 func getFlag(s string) int {
@@ -309,6 +436,7 @@ func getFlag(s string) int {
 }
 
 // getFlagString return flag of type string
+
 func getFlagString(flag int) string {
 	for flg, str := range testFlag {
 		if flg == flag {
@@ -319,30 +447,24 @@ func getFlagString(flag int) string {
 	return ""
 }
 
-// NhIDCache Variable
-var NhIDCache = make(map[NexthopKey]int)
-
-// nhNextID Variable
-var nhNextID = 16
-
 // NHAssignID returns the nexthop id
-func NHAssignID(key NexthopKey) int {
-	id := NhIDCache[key]
+func NHAssignID(key nexthopKey) int {
+	id := nhIDCache[key]
 	if id == 0 {
 		// Assigne a free id and insert it into the cache
 		id = nhNextID
-		NhIDCache[key] = id
+		nhIDCache[key] = id
 		nhNextID++
 	}
 	return id
 }
 
 // NHParse parses the neighbor
-func NHParse(v *infradb.Vrf, rc RouteCmdInfo) NexthopStruct {
+func NHParse(v *infradb.Vrf, rc *routeCmdInfo) NexthopStruct {
 	var nh NexthopStruct
 	nh.Weight = 1
 	nh.Vrf = v
-	if !reflect.ValueOf(rc.Dev).IsZero() {
+	if rc.Dev != "" {
 		vrf, _ := vn.LinkByName(rc.Dev)
 		nh.nexthop.LinkIndex = vrf.Attrs().Index
 		NameIndex[nh.nexthop.LinkIndex] = vrf.Attrs().Name
@@ -350,36 +472,36 @@ func NHParse(v *infradb.Vrf, rc RouteCmdInfo) NexthopStruct {
 	if len(rc.Flags) != 0 {
 		nh.nexthop.Flags = getFlag(rc.Flags[0])
 	}
-	if !reflect.ValueOf(rc.Gateway).IsZero() {
+	if rc.Gateway != "" {
 		nIP := &net.IPNet{
 			IP: net.ParseIP(rc.Gateway),
 		}
 		nh.nexthop.Gw = nIP.IP
 	}
-	if !reflect.ValueOf(rc.Protocol).IsZero() {
-		nh.Protocol = RtnProto[rc.Protocol]
+	if rc.Protocol != "" {
+		nh.Protocol = rtnProto[rc.Protocol]
 	}
-	if !reflect.ValueOf(rc.Scope).IsZero() {
-		nh.Scope = RtnScope[rc.Scope]
+	if rc.Scope != "" {
+		nh.Scope = rtnScope[rc.Scope]
 	}
-	if !reflect.ValueOf(rc.Type).IsZero() {
-		nh.NhType = RtnType[rc.Type]
+	if rc.Type != "" {
+		nh.NhType = rtnType[rc.Type]
 		if nh.NhType == unix.RTN_LOCAL {
 			nh.Local = true
 		} else {
 			nh.Local = false
 		}
 	}
-	if !reflect.ValueOf(rc.Weight).IsZero() {
+	if rc.Weight >= 0 {
 		nh.Weight = rc.Weight
 	}
-	nh.Key = NexthopKey{nh.Vrf.Name, nh.nexthop.Gw.String(), nh.nexthop.LinkIndex, nh.Local}
+	nh.Key = nexthopKey{nh.Vrf.Name, nh.nexthop.Gw.String(), nh.nexthop.LinkIndex, nh.Local}
 	return nh
 }
 
 // checkRtype checks the route type
 func checkRtype(rType string) bool {
-	var Types = [6]string{"connected", "evpn-vxlan", "static", "bgp", "local", "neighbor"}
+	var Types = [6]string{routeTypeConnected, routeTypeEvpnVxlan, routeTypeStatic, routeTypeBgp, routeTypeLocal, routeTypeNeighbor}
 	for _, v := range Types {
 		if v == rType {
 			return true
@@ -447,11 +569,11 @@ func (route RouteStruct) annotate() RouteStruct {
 	return route
 }
 
-//nolint
+// nolint
 func setRouteType(rs RouteStruct, v *infradb.Vrf) string {
 	if rs.Route0.Type == unix.RTN_UNICAST && rs.Route0.Protocol == unix.RTPROT_KERNEL && rs.Route0.Scope == unix.RT_SCOPE_LINK && len(rs.Nexthops) == 1 {
 		// Connected routes are proto=kernel and scope=link with a netdev as single nexthop
-		return "connected"
+		return routeTypeConnected
 	} else if rs.Route0.Type == unix.RTN_UNICAST && int(rs.Route0.Protocol) == int('B') && rs.Route0.Scope == unix.RT_SCOPE_UNIVERSE {
 		// EVPN routes to remote destinations are proto=bgp, scope global withipu_infra_mgr_db
 		// all Nexthops residing on the br-<VRF name> bridge interface of the VRF.
@@ -461,42 +583,42 @@ func setRouteType(rs RouteStruct, v *infradb.Vrf) string {
 				devs = append(devs, NameIndex[d.nexthop.LinkIndex])
 			}
 			if len(devs) == 1 && devs[0] == "br-"+v.Name {
-				return "evpn-vxlan"
+				return routeTypeEvpnVxlan
 			}
-			return "bgp"
+			return routeTypeBgp
 		}
 	} else if rs.Route0.Type == unix.RTN_UNICAST && checkProto(int(rs.Route0.Protocol)) && rs.Route0.Scope == unix.RT_SCOPE_UNIVERSE {
-		return "static"
+		return routeTypeStatic
 	} else if rs.Route0.Type == unix.RTN_LOCAL {
-		return "local"
-	} else if rs.Route0.Type == RTNNeighbor {
+		return routeTypeLocal
+	} else if rs.Route0.Type == rtNNeighbor {
 		// Special /32 or /128 routes for Resolved neighbors on connected subnets
-		return "neighbor"
+		return routeTypeNeighbor
 	}
 	return "unknown"
 }
 
 // ParseRoute parse the routes
-//nolint
-func ParseRoute(v *infradb.Vrf, Rm []RouteCmdInfo, t int) RouteList {
-	var route RouteList
+// nolint
+func ParseRoute(v *infradb.Vrf, Rm []*routeCmdInfo, t int) routeList {
+	var route routeList
 	for _, Ro := range Rm {
-		if reflect.ValueOf(Ro.Type).IsZero() && (!reflect.ValueOf(Ro.Dev).IsZero() || !reflect.ValueOf(Ro.Gateway).IsZero()) {
-			Ro.Type = "local"
+		if Ro.Type =="" && (Ro.Dev !="" || Ro.Gateway != "") {
+			Ro.Type = routeTypeLocal
 		}
 		var rs RouteStruct
 		rs.Vrf = v
-		if !reflect.ValueOf(Ro.Nhid).IsZero() || !reflect.ValueOf(Ro.Gateway).IsZero() || !reflect.ValueOf(Ro.Dev).IsZero() {
+		if Ro.Nhid != 0 || Ro.Gateway != "" || Ro.Dev != "" {
 			rs.Nexthops = append(rs.Nexthops, NHParse(v, Ro))
 		}
 		rs.NlType = "unknown"
 		rs.Route0.Table = t
 		rs.Route0.Priority = 1
-		if !reflect.ValueOf(Ro.Dev).IsZero() {
+		if Ro.Dev != "" {
 			dev, _ := vn.LinkByName(Ro.Dev)
 			rs.Route0.LinkIndex = dev.Attrs().Index
 		}
-		if !reflect.ValueOf(Ro.Dst).IsZero() {
+		if Ro.Dst !="" {
 			var Mask int
 			split := Ro.Dst
 			if strings.Contains(Ro.Dst, "/") {
@@ -513,7 +635,7 @@ func ParseRoute(v *infradb.Vrf, Rm []RouteCmdInfo, t int) RouteList {
 					Mask: net.IPv4Mask(0, 0, 0, 0),
 				}
 			} else {
-				mtoip := NetMaskToInt(Mask)
+				mtoip := netMaskToInt(Mask)
 				b3 := make([]byte, 8) // Converting int64 to byte
 				binary.LittleEndian.PutUint64(b3, uint64(mtoip[3]))
 				b2 := make([]byte, 8)
@@ -529,32 +651,32 @@ func ParseRoute(v *infradb.Vrf, Rm []RouteCmdInfo, t int) RouteList {
 			}
 			rs.Route0.Dst = nIP
 		}
-		if !reflect.ValueOf(Ro.Metric).IsZero() {
+		if Ro.Metric != 0  {
 			rs.Route0.Priority = Ro.Metric
 		}
-		if !reflect.ValueOf(Ro.Protocol).IsZero() {
-			if RtnProto[Ro.Protocol] != 0 {
-				rs.Route0.Protocol = vn.RouteProtocol(RtnProto[Ro.Protocol])
+		if Ro.Protocol != "" {
+			if rtnProto[Ro.Protocol] != 0 {
+				rs.Route0.Protocol = vn.RouteProtocol(rtnProto[Ro.Protocol])
 			} else {
 				rs.Route0.Protocol = 0
 			}
 		}
-		if !reflect.ValueOf(Ro.Type).IsZero() {
-			rs.Route0.Type = RtnType[Ro.Type]
+		if Ro.Type != "" {
+			rs.Route0.Type = rtnType[Ro.Type]
 		}
 		if len(Ro.Flags) != 0 {
 			rs.Route0.Flags = getFlag(Ro.Flags[0])
 		}
-		if !reflect.ValueOf(Ro.Scope).IsZero() {
-			rs.Route0.Scope = vn.Scope(RtnScope[Ro.Scope])
+		if Ro.Scope != "" {
+			rs.Route0.Scope = vn.Scope(rtnScope[Ro.Scope])
 		}
-		if !reflect.ValueOf(Ro.Prefsrc).IsZero() {
+		if Ro.Prefsrc != "" {
 			nIP := &net.IPNet{
 				IP: net.ParseIP(Ro.Prefsrc),
 			}
 			rs.Route0.Src = nIP.IP
 		}
-		if !reflect.ValueOf(Ro.Gateway).IsZero() {
+		if Ro.Gateway != "" {
 			nIP := &net.IPNet{
 				IP: net.ParseIP(Ro.Gateway),
 			}
@@ -563,11 +685,11 @@ func ParseRoute(v *infradb.Vrf, Rm []RouteCmdInfo, t int) RouteList {
 		if !reflect.ValueOf(Ro.VRF).IsZero() {
 			rs.Vrf, _ = infradb.GetVrf(Ro.VRF.Name)
 		}
-		if !reflect.ValueOf(Ro.Table).IsZero() {
+		if Ro.Table != 0 {
 			rs.Route0.Table = Ro.Table
 		}
 		rs.NlType = setRouteType(rs, v)
-		rs.Key = RouteKey{Table: rs.Route0.Table, Dst: rs.Route0.Dst.String()}
+		rs.Key = routeKey{Table: rs.Route0.Table, Dst: rs.Route0.Dst.String()}
 		if preFilterRoute(rs) {
 			route.RS = append(route.RS, rs)
 		}
@@ -575,64 +697,12 @@ func ParseRoute(v *infradb.Vrf, Rm []RouteCmdInfo, t int) RouteList {
 	return route
 }
 
-//--------------------------------------------------------------------------
-//###  NexthopStruct Database Entries
-//--------------------------------------------------------------------------
-
-// TryResolve function
-type TryResolve func(map[string]string)
-
-// --------------------------------------------------------------------------
-// ###  Bridge MAC Address Database
-// ###
-// ###  We split the Linux FDB entries into DMAC and L2 NexthopStruct tables similar
-// ###  to routes and L3 nexthops, Thus, all remote EVPN DMAC entries share a
-// ###  single VXLAN L2 nexthop table entry.
-// ###
-// ###  TODO: Support for dynamically learned MAC addresses on BridgePorts
-// ###  (e.g. for pod interfaces operating in promiscuous mode).
-// --------------------------------------------------------------------------
-
-// L2NexthopStruct structure
-type L2NexthopStruct struct {
-	Dev      string
-	VlanID   int
-	Dst      net.IP
-	Key      L2NexthopKey
-	lb       *infradb.LogicalBridge
-	bp       *infradb.BridgePort
-	ID       int
-	FdbRefs  []FdbEntryStruct
-	Resolved bool
-	Type     int
-	Metadata map[interface{}]interface{}
-}
-
-// FdbEntryStruct structure
-type FdbEntryStruct struct {
-	VlanID   int
-	Mac      string
-	Key      FDBKey
-	State    string
-	lb       *infradb.LogicalBridge
-	bp       *infradb.BridgePort
-	Nexthop  L2NexthopStruct
-	Type     int
-	Metadata map[interface{}]interface{}
-	Err      error
-}
-
-// FDBEntryList list
-type FDBEntryList struct {
-	FS []FdbEntryStruct
-}
-
 // ParseFdb parse the fdb
-func ParseFdb(fdbIP FdbIPStruct) FdbEntryStruct {
+func ParseFdb(fdbIP fdbIPStruct) FdbEntryStruct {
 	var fdbentry = FdbEntryStruct{}
 	fdbentry.VlanID = fdbIP.Vlan
 	fdbentry.Mac = fdbIP.Mac
-	fdbentry.Key = FDBKey{fdbIP.Vlan, fdbIP.Mac}
+	fdbentry.Key = fdbKey{fdbIP.Vlan, fdbIP.Mac}
 	fdbentry.State = fdbIP.State
 	lbs, _ := infradb.GetAllLBs()
 	for _, lb := range lbs {
@@ -653,13 +723,14 @@ func ParseFdb(fdbIP FdbIPStruct) FdbEntryStruct {
 	fdbentry.Type = fdbentry.Nexthop.Type
 	return fdbentry
 }
-//nolint
+
+// nolint
 // ParseL2NH parse the l2hn
 func (l2n L2NexthopStruct) ParseL2NH(vlanID int, dev string, dst string, LB *infradb.LogicalBridge, BP *infradb.BridgePort) L2NexthopStruct {
 	l2n.Dev = dev
 	l2n.VlanID = vlanID
 	l2n.Dst = net.IP(dst)
-	l2n.Key = L2NexthopKey{l2n.Dev, l2n.VlanID, string(l2n.Dst)}
+	l2n.Key = l2NexthopKey{l2n.Dev, l2n.VlanID, string(l2n.Dst)}
 	l2n.lb = LB
 	l2n.bp = BP
 	l2n.Resolved = true
@@ -675,14 +746,8 @@ func (l2n L2NexthopStruct) ParseL2NH(vlanID int, dev string, dst string, LB *inf
 	return l2n
 }
 
-// l2nexthopID
-var l2nexthopID = 16
-
-// l2NhIDCache
-var l2NhIDCache = make(map[L2NexthopKey]int)
-
 // L2NHAssignID get nexthop id
-func L2NHAssignID(key L2NexthopKey) int {
+func L2NHAssignID(key l2NexthopKey) int {
 	id := l2NhIDCache[key]
 	if id == 0 {
 		// Assigne a free id and insert it into the cache
@@ -698,16 +763,16 @@ func addFdbEntry(m FdbEntryStruct) {
 	m = addL2Nexthop(m)
 	// TODO
 	// logger.debug(f"Adding {m.format()}.")
-	LatestFDB[m.Key] = m
+	latestFDB[m.Key] = m
 }
 
 // addL2Nexthop add the l2 nexthop
 func addL2Nexthop(m FdbEntryStruct) FdbEntryStruct {
-	if reflect.ValueOf(LatestL2Nexthop).IsZero() {
+	if reflect.ValueOf(latestL2Nexthop).IsZero() {
 		log.Fatal("netlink: L2Nexthop DB empty\n")
 		return FdbEntryStruct{}
 	}
-	latestNexthops := LatestL2Nexthop[m.Nexthop.Key]
+	latestNexthops := latestL2Nexthop[m.Nexthop.Key]
 	if !(reflect.ValueOf(latestNexthops).IsZero()) {
 		latestNexthops.FdbRefs = append(latestNexthops.FdbRefs, m)
 		m.Nexthop = latestNexthops
@@ -715,42 +780,11 @@ func addL2Nexthop(m FdbEntryStruct) FdbEntryStruct {
 		latestNexthops = m.Nexthop
 		latestNexthops.FdbRefs = append(latestNexthops.FdbRefs, m)
 		latestNexthops.ID = L2NHAssignID(latestNexthops.Key)
-		LatestL2Nexthop[latestNexthops.Key] = latestNexthops
+		latestL2Nexthop[latestNexthops.Key] = latestNexthops
 		m.Nexthop = latestNexthops
 	}
 	return m
 }
-
-//--------------------------------------------------------------------------
-//###  Neighbor Database Entries
-//--------------------------------------------------------------------------
-
-// NeighInit neighbor init function
-type NeighInit func(int, map[string]string)
-
-// linkTable wg sync.WaitGroup
-var linkTable []vn.Link
-
-// vrfList netlink libarary var
-var vrfList []vn.Link
-
-// deviceList netlink libarary var
-var deviceList []vn.Link
-
-// vlanList netlink libarary var
-var vlanList []vn.Link
-
-// bridgeList netlink libarary var
-var bridgeList []vn.Link
-
-// vxlanList netlink libarary var
-var vxlanList []vn.Link
-
-// linkList netlink libarary var
-var linkList []vn.Link
-
-// NameIndex netlink libarary var
-var NameIndex = make(map[int]string)
 
 // getlink get the link
 func getlink() {
@@ -820,25 +854,8 @@ func dumpDBs() {
 	}
 }
 
-// NeighStruct structure
-type NeighStruct struct {
-	Neigh0   vn.Neigh
-	Protocol string
-	VrfName  string
-	Type     int
-	Dev      string
-	Err      error
-	Key      NeighKey
-	Metadata map[interface{}]interface{}
-}
-
-// NeighList structure
-type NeighList struct {
-	NS []NeighStruct
-}
-
 // nolint
-func neighborAnnotate(neighbor NeighStruct) NeighStruct {
+func neighborAnnotate(neighbor neighStruct) neighStruct {
 	neighbor.Metadata = make(map[interface{}]interface{})
 	if strings.HasPrefix(neighbor.Dev, path.Base(neighbor.VrfName)) && neighbor.Protocol != zebraStr {
 		pattern := fmt.Sprintf(`%s-\d+$`, path.Base(neighbor.VrfName))
@@ -848,7 +865,7 @@ func neighborAnnotate(neighbor NeighStruct) NeighStruct {
 		var BP *infradb.BridgePort
 		vID := strings.Split(s[0], "-")[1]
 		lbs, _ := infradb.GetAllLBs()
-		vlanID, err := strconv.ParseUint(vID,10,32)
+		vlanID, err := strconv.ParseUint(vID, 10, 32)
 		if err != nil {
 			panic(err)
 		}
@@ -858,13 +875,13 @@ func neighborAnnotate(neighbor NeighStruct) NeighStruct {
 				break
 			}
 		}
-		if !(reflect.ValueOf(LB).IsZero()) {
+		if LB != nil {
 			bp := LB.MacTable[neighbor.Neigh0.HardwareAddr.String()]
 			if bp != "" {
 				BP, _ = infradb.GetBP(bp)
 			}
 		}
-		if !(reflect.ValueOf(BP).IsZero()) {
+		if BP != nil {
 			neighbor.Type = SVI
 			neighbor.Metadata["vport_id"] = BP.Metadata.VPort
 			neighbor.Metadata["vlanID"] = vlanID
@@ -879,7 +896,7 @@ func neighborAnnotate(neighbor NeighStruct) NeighStruct {
 		var LB *infradb.LogicalBridge
 		vID := strings.Split(s[0], "-")[1]
 		lbs, _ := infradb.GetAllLBs()
-		vlanID, err := strconv.ParseUint(vID,10,32)
+		vlanID, err := strconv.ParseUint(vID, 10, 32)
 		if err != nil {
 			panic(err)
 		}
@@ -894,7 +911,7 @@ func neighborAnnotate(neighbor NeighStruct) NeighStruct {
 			if err != nil {
 				panic(err)
 			}
-			fdbEntry := LatestFDB[FDBKey{vid, neighbor.Neigh0.HardwareAddr.String()}]
+			fdbEntry := latestFDB[fdbKey{vid, neighbor.Neigh0.HardwareAddr.String()}]
 			neighbor.Metadata["l2_nh"] = fdbEntry.Nexthop
 			neighbor.Type = VXLAN // confirm this later
 		}
@@ -916,9 +933,9 @@ func neighborAnnotate(neighbor NeighStruct) NeighStruct {
 }
 
 // CheckNdup checks the duplication of neighbor
-func CheckNdup(tmpKey NeighKey) bool {
+func CheckNdup(tmpKey neighKey) bool {
 	var dup = false
-	for k := range LatestNeighbors {
+	for k := range latestNeighbors {
 		if k == tmpKey {
 			dup = true
 			break
@@ -928,9 +945,9 @@ func CheckNdup(tmpKey NeighKey) bool {
 }
 
 // CheckRdup checks the duplication of routes
-func CheckRdup(tmpKey RouteKey) bool {
+func CheckRdup(tmpKey routeKey) bool {
 	var dup = false
-	for j := range LatestRoutes {
+	for j := range latestRoutes {
 		if j == tmpKey {
 			dup = true
 			break
@@ -940,13 +957,13 @@ func CheckRdup(tmpKey RouteKey) bool {
 }
 
 // addNeigh adds the neigh
-func addNeigh(dump NeighList) {
+func addNeigh(dump neighList) {
 	for _, n := range dump.NS {
 		n = neighborAnnotate(n)
-		if len(LatestNeighbors) == 0 {
-			LatestNeighbors[n.Key] = n
+		if len(latestNeighbors) == 0 {
+			latestNeighbors[n.Key] = n
 		} else if !CheckNdup(n.Key) {
-			LatestNeighbors[n.Key] = n
+			latestNeighbors[n.Key] = n
 		}
 	}
 }
@@ -967,7 +984,7 @@ func getStateStr(s int) string {
 	return neighState[s]
 }
 
-func printNeigh(neigh *NeighStruct) string {
+func printNeigh(neigh *neighStruct) string {
 	var Proto string
 	if neigh == nil {
 		return strNone
@@ -986,7 +1003,7 @@ func dumpRouteDB() string {
 	var s string
 	log.Printf("netlink: Dump Route table:\n")
 	s = "Route table:\n"
-	for _, n := range LatestRoutes {
+	for _, n := range latestRoutes {
 		var via string
 		if n.Route0.Gw.String() == "<nil>" {
 			via = strNone
@@ -1009,13 +1026,13 @@ func dumpL2NexthDB() string {
 	log.Printf("netlink: Dump L2 Nexthop table:\n")
 	s = "L2 Nexthop table:\n"
 	var ip string
-	for _, n := range LatestL2Nexthop {
+	for _, n := range latestL2Nexthop {
 		if n.Dst.String() == "<nil>" {
 			ip = strNone
 		} else {
 			ip = n.Dst.String()
 		}
-		str := fmt.Sprintf("L2Nexthop(id=%d dev=%s vlan=%d dst=%s type=%d #FDB entries=%d Resolved=%t) ", n.ID, n.Dev, n.VlanID, ip, n.Type, len(n.FdbRefs), n.Resolved)
+		str := fmt.Sprintf("L2Nexthop(id=%d dev=%s vlan=%d dst=%s type=%d #fDB entries=%d Resolved=%t) ", n.ID, n.Dev, n.VlanID, ip, n.Type, len(n.FdbRefs), n.Resolved)
 		log.Println(str)
 		s += str
 		s += "\n"
@@ -1028,9 +1045,9 @@ func dumpL2NexthDB() string {
 // dumpFDB dump the fdb entries
 func dumpFDB() string {
 	var s string
-	log.Printf("netlink: Dump FDB table:\n")
-	s = "FDB table:\n"
-	for _, n := range LatestFDB {
+	log.Printf("netlink: Dump fDB table:\n")
+	s = "fDB table:\n"
+	for _, n := range latestFDB {
 		str := fmt.Sprintf("MacAddr(vlan=%d mac=%s state=%s type=%d l2nh_id=%d) ", n.VlanID, n.Mac, n.State, n.Type, n.Nexthop.ID)
 		log.Println(str)
 		s += str
@@ -1046,7 +1063,7 @@ func dumpNexthDB() string {
 	var s string
 	log.Printf("netlink: Dump Nexthop table:\n")
 	s = "Nexthop table:\n"
-	for _, n := range LatestNexthop {
+	for _, n := range latestNexthop {
 		str := fmt.Sprintf("Nexthop(id=%d vrf=%s dst=%s dev=%s Local=%t weight=%d flags=[%s] #routes=%d Resolved=%t neighbor=%s) ", n.ID, n.Vrf.Name, n.nexthop.Gw.String(), NameIndex[n.nexthop.LinkIndex], n.Local, n.Weight, getFlagString(n.nexthop.Flags), len(n.RouteRefs), n.Resolved, printNeigh(n.Neighbor))
 		log.Println(str)
 		s += str
@@ -1062,7 +1079,7 @@ func dumpNeighDB() string {
 	var s string
 	log.Printf("netlink: Dump Neighbor table:\n")
 	s = "Neighbor table:\n"
-	for _, n := range LatestNeighbors {
+	for _, n := range latestNeighbors {
 		var Proto string
 		if n.Protocol == "" {
 			Proto = strNone
@@ -1080,7 +1097,7 @@ func dumpNeighDB() string {
 
 // getProto gets the route protocol
 func getProto(n RouteStruct) string {
-	for p, i := range RtnProto {
+	for p, i := range rtnProto {
 		if i == int(n.Route0.Protocol) {
 			return p
 		}
@@ -1089,8 +1106,8 @@ func getProto(n RouteStruct) string {
 }
 
 // checkNeigh checks the nighbor
-func checkNeigh(nk NeighKey) bool {
-	for k := range LatestNeighbors {
+func checkNeigh(nk neighKey) bool {
+	for k := range latestNeighbors {
 		if k == nk {
 			return true
 		}
@@ -1102,11 +1119,11 @@ func checkNeigh(nk NeighKey) bool {
 func tryResolve(nexhthopSt NexthopStruct) NexthopStruct {
 	if len(nexhthopSt.nexthop.Gw) != 0 {
 		// Nexthops with a gateway IP need resolution of that IP
-		neighborKey := NeighKey{Dst: nexhthopSt.nexthop.Gw.String(), VrfName: nexhthopSt.Vrf.Name, Dev: nexhthopSt.nexthop.LinkIndex}
+		neighborKey := neighKey{Dst: nexhthopSt.nexthop.Gw.String(), VrfName: nexhthopSt.Vrf.Name, Dev: nexhthopSt.nexthop.LinkIndex}
 		ch := checkNeigh(neighborKey)
-		if ch && LatestNeighbors[neighborKey].Neigh0.Type != 0 {
+		if ch && latestNeighbors[neighborKey].Neigh0.Type != 0 {
 			nexhthopSt.Resolved = true
-			nh := LatestNeighbors[neighborKey]
+			nh := latestNeighbors[neighborKey]
 			nexhthopSt.Neighbor = &nh
 		} else {
 			nexhthopSt.Resolved = false
@@ -1118,8 +1135,8 @@ func tryResolve(nexhthopSt NexthopStruct) NexthopStruct {
 }
 
 // checkNhDB checks the neighbor database
-func checkNhDB(nhKey NexthopKey) bool {
-	for k := range LatestNexthop {
+func checkNhDB(nhKey nexthopKey) bool {
+	for k := range latestNexthop {
 		if k == nhKey {
 			return true
 		}
@@ -1131,7 +1148,7 @@ func checkNhDB(nhKey NexthopKey) bool {
 func addNexthop(nexthop NexthopStruct, r RouteStruct) RouteStruct {
 	ch := checkNhDB(nexthop.Key)
 	if ch {
-		NH0 := LatestNexthop[nexthop.Key]
+		NH0 := latestNexthop[nexthop.Key]
 		// Links route with existing nexthop
 		NH0.RouteRefs = append(NH0.RouteRefs, r)
 		r.Nexthops = append(r.Nexthops, NH0)
@@ -1140,7 +1157,7 @@ func addNexthop(nexthop NexthopStruct, r RouteStruct) RouteStruct {
 		nexthop.RouteRefs = append(nexthop.RouteRefs, r)
 		nexthop.ID = NHAssignID(nexthop.Key)
 		nexthop = tryResolve(nexthop)
-		LatestNexthop[nexthop.Key] = nexthop
+		latestNexthop[nexthop.Key] = nexthop
 		r.Nexthops = append(r.Nexthops, nexthop)
 	}
 	return r
@@ -1149,7 +1166,7 @@ func addNexthop(nexthop NexthopStruct, r RouteStruct) RouteStruct {
 // checkRoute checks the route
 func checkRoute(r RouteStruct) bool {
 	Rk := r.Key
-	for k := range LatestRoutes {
+	for k := range latestRoutes {
 		if k == Rk {
 			return true
 		}
@@ -1174,7 +1191,7 @@ func deleteNH(nexthop []NexthopStruct) []NexthopStruct {
 func addRoute(r RouteStruct) {
 	ch := checkRoute(r)
 	if ch {
-		R0 := LatestRoutes[r.Key]
+		R0 := latestRoutes[r.Key]
 		if r.Route0.Priority >= R0.Route0.Priority {
 			// Route with lower metric exists and takes precedence
 			log.Printf("netlink: Ignoring %+v  with higher metric than %+v\n", r, R0)
@@ -1187,16 +1204,16 @@ func addRoute(r RouteStruct) {
 		for _, nexthop := range Nexthops {
 			r = addNexthop(nexthop, r)
 		}
-		LatestRoutes[r.Key] = r
+		latestRoutes[r.Key] = r
 	}
 }
 
 // cmdProcessNb process the neighbor command
-func cmdProcessNb(nb string, v string) NeighList {
-	var nbs []NeighIPStruct
+func cmdProcessNb(nb string, v string) neighList {
+	var nbs []neighIPStruct
 	CPs := strings.Split(nb[2:len(nb)-3], "},{")
 	for i := 0; i < len(CPs); i++ {
-		var ni NeighIPStruct
+		var ni neighIPStruct
 		log.Println(CPs[i])
 		err := json.Unmarshal([]byte(fmt.Sprintf("{%v}", CPs[i])), &ni)
 		if err != nil {
@@ -1204,7 +1221,7 @@ func cmdProcessNb(nb string, v string) NeighList {
 		}
 		nbs = append(nbs, ni)
 	}
-	Neigh := ParseNeigh(nbs, v)
+	Neigh := parseNeigh(nbs, v)
 	return Neigh
 }
 
@@ -1225,7 +1242,7 @@ func getState(s string) int {
 }
 
 // preFilterNeighbor pre filter the neighbors
-func preFilterNeighbor(n NeighStruct) bool {
+func preFilterNeighbor(n neighStruct) bool {
 	if n.Neigh0.State != vn.NUD_NONE && n.Neigh0.State != vn.NUD_INCOMPLETE && n.Neigh0.State != vn.NUD_FAILED && NameIndex[n.Neigh0.LinkIndex] != "lo" {
 		return true
 	}
@@ -1233,34 +1250,34 @@ func preFilterNeighbor(n NeighStruct) bool {
 	return false
 }
 
-// ParseNeigh parses the neigh
-func ParseNeigh(nm []NeighIPStruct, v string) NeighList {
-	var NL NeighList
+// parseNeigh parses the neigh
+func parseNeigh(nm []neighIPStruct, v string) neighList {
+	var NL neighList
 	for _, ND := range nm {
-		var ns NeighStruct
+		var ns neighStruct
 		ns.Neigh0.Type = OTHER
 		ns.VrfName = v
-		if !reflect.ValueOf(ND.Dev).IsZero() {
+		if ND.Dev != "" {
 			vrf, _ := vn.LinkByName(ND.Dev)
 			ns.Neigh0.LinkIndex = vrf.Attrs().Index
 		}
-		if !reflect.ValueOf(ND.Dst).IsZero() {
+		if ND.Dst != "" {
 			ipnet := &net.IPNet{
 				IP: net.ParseIP(ND.Dst),
 			}
 			ns.Neigh0.IP = ipnet.IP
 		}
-		if !reflect.ValueOf(ND.State).IsZero() {
+		if len(ND.State) != 0 {
 			ns.Neigh0.State = getState(ND.State[0])
 		}
-		if !reflect.ValueOf(ND.Lladdr).IsZero() {
+		if ND.Lladdr != "" {
 			ns.Neigh0.HardwareAddr, _ = net.ParseMAC(ND.Lladdr)
 		}
-		if !reflect.ValueOf(ND.Protocol).IsZero() {
+		if ND.Protocol != "" {
 			ns.Protocol = ND.Protocol
 		}
 		//	ns  =  neighborAnnotate(ns)   /* Need InfraDB to finish for fetching LB/BP information */
-		ns.Key = NeighKey{VrfName: v, Dst: ns.Neigh0.IP.String(), Dev: ns.Neigh0.LinkIndex}
+		ns.Key = neighKey{VrfName: v, Dst: ns.Neigh0.IP.String(), Dev: ns.Neigh0.LinkIndex}
 		if preFilterNeighbor(ns) {
 			NL.NS = append(NL.NS, ns)
 		}
@@ -1269,19 +1286,19 @@ func ParseNeigh(nm []NeighIPStruct, v string) NeighList {
 }
 
 // getNeighborRoutes gets the nighbor routes
-func getNeighborRoutes() []RouteCmdInfo { // []map[string]string{
+func getNeighborRoutes() []routeCmdInfo { // []map[string]string{
 	// Return a list of /32 or /128 routes & Nexthops to be inserted into
 	// the routing tables for Resolved neighbors on connected subnets
 	// on physical and SVI interfaces.
-	var neighborRoutes []RouteCmdInfo // []map[string]string
-	for _, N := range LatestNeighbors {
+	var neighborRoutes []routeCmdInfo // []map[string]string
+	for _, N := range latestNeighbors {
 		if (NameIndex[N.Neigh0.LinkIndex] == "enp0s1f0d1" || NameIndex[N.Neigh0.LinkIndex] == "enp0s1f0d3") && N.Neigh0.State == vn.NUD_REACHABLE {
 			vrf, _ := infradb.GetVrf(N.VrfName)
 			table := int(*vrf.Metadata.RoutingTable[0])
 
 			//# Create a special route with dst == gateway to resolve
 			//# the nexthop to the existing neighbor
-			R0 := RouteCmdInfo{Type: "neighbor", Dst: N.Neigh0.IP.String(), Protocol: "ipu_infra_mgr", Scope: "global", Gateway: N.Neigh0.IP.String(), Dev: NameIndex[N.Neigh0.LinkIndex], VRF: vrf, Table: table}
+			R0 := routeCmdInfo{Type: routeTypeNeighbor, Dst: N.Neigh0.IP.String(), Protocol: "ipu_infra_mgr", Scope: "global", Gateway: N.Neigh0.IP.String(), Dev: NameIndex[N.Neigh0.LinkIndex], VRF: vrf, Table: table}
 			neighborRoutes = append(neighborRoutes, R0)
 		}
 	}
@@ -1290,7 +1307,7 @@ func getNeighborRoutes() []RouteCmdInfo { // []map[string]string{
 
 // readNeighbors reads the nighbors
 func readNeighbors(v *infradb.Vrf) {
-	var N NeighList
+	var N neighList
 	var err error
 	var Nb string
 	if v.Spec.Vni == nil {
@@ -1306,34 +1323,6 @@ func readNeighbors(v *infradb.Vrf) {
 	addNeigh(N)
 }
 
-// NHRouteInfo neighbor route info
-type NHRouteInfo struct {
-	ID       int
-	Gateway  string
-	Dev      string
-	Scope    string
-	Protocol string
-	Flags    []string
-}
-
-// RouteCmdInfo structure
-type RouteCmdInfo struct {
-	Type     string
-	Dst      string
-	Nhid     int
-	Gateway  string
-	Dev      string
-	Protocol string
-	Scope    string
-	Prefsrc  string
-	Metric   int
-	Flags    []string
-	Weight   int
-	VRF      *infradb.Vrf
-	Table    int
-	NhInfo   NHRouteInfo // {id gateway Dev scope protocol flags}
-}
-
 // preFilterMac filter the mac
 func preFilterMac(f FdbEntryStruct) bool {
 	// TODO m.nexthop.dst
@@ -1345,16 +1334,16 @@ func preFilterMac(f FdbEntryStruct) bool {
 }
 
 // cmdProcessRt process the route command
-func cmdProcessRt(v *infradb.Vrf, r string, t int) RouteList {
-	var RouteData []RouteCmdInfo
+func cmdProcessRt(v *infradb.Vrf, r string, t int) routeList {
+	var RouteData []*routeCmdInfo
 	if len(r) <= 3 {
 		log.Println("netlink: Error in the cmd:", r)
-		var route RouteList
+		var route routeList
 		return route
 	}
 	CPs := strings.Split(r[2:len(r)-3], "},{")
 	for i := 0; i < len(CPs); i++ {
-		var ri RouteCmdInfo
+		var ri *routeCmdInfo
 		log.Println(CPs[i])
 		err := json.Unmarshal([]byte(fmt.Sprintf("{%v}", CPs[i])), &ri)
 		if err != nil {
@@ -1368,8 +1357,8 @@ func cmdProcessRt(v *infradb.Vrf, r string, t int) RouteList {
 
 // readRouteFromIP reads the routes from ip
 func readRouteFromIP(v *infradb.Vrf) {
-	var Rl RouteList
-	var rm []RouteCmdInfo
+	var Rl routeList
+	var rm []*routeCmdInfo
 	var Rt1 int
 	for _, routeSt := range v.Metadata.RoutingTable {
 		Rt1 = int(*routeSt)
@@ -1385,7 +1374,7 @@ func readRouteFromIP(v *infradb.Vrf) {
 	}
 	nl := getNeighborRoutes() // Add extra routes for Resolved neighbors on connected subnets
 	for i := 0; i < len(nl); i++ {
-		rm = append(rm, nl[i])
+		rm = append(rm, &nl[i])
 	}
 	nr := ParseRoute(v, rm, 0)
 	for _, r := range nr.RS {
@@ -1403,10 +1392,7 @@ func notifyAddDel(r interface{}, event string) {
 	EventBus.Publish(event, r)
 }
 
-// notifyEvents array
-var notifyEvents = []string{"_added", "_updated", "_deleted"}
-
-//nolint
+// nolint
 func notify_changes(new_db map[interface{}]interface{}, old_db map[interface{}]interface{}, event []string) {
 	DB2 := old_db
 	DB1 := new_db
@@ -1456,7 +1442,7 @@ func notify_changes(new_db map[interface{}]interface{}, old_db map[interface{}]i
 
 // readFDB read the fdb from db
 func readFDB() []FdbEntryStruct {
-	var fdbs []FdbIPStruct
+	var fdbs []fdbIPStruct
 	var macs []FdbEntryStruct
 	var fs FdbEntryStruct
 
@@ -1467,7 +1453,7 @@ func readFDB() []FdbEntryStruct {
 
 	CPs := strings.Split(CP[2:len(CP)-3], "},{")
 	for i := 0; i < len(CPs); i++ {
-		var fi FdbIPStruct
+		var fi fdbIPStruct
 		err := json.Unmarshal([]byte(fmt.Sprintf("{%v}", CPs[i])), &fi)
 		if err != nil {
 			log.Printf("netlink: error-%v", err)
@@ -1503,13 +1489,13 @@ func lookupRoute(dst net.IP, v *infradb.Vrf) RouteStruct {
 	log.Printf("netlink: %+v\n", r)
 	if len(r.RS) != 0 {
 		R1 := r.RS[0]
-		// ###  Search the LatestRoutes DB snapshot if that exists, else
+		// ###  Search the latestRoutes DB snapshot if that exists, else
 		// ###  the current DB Route table.
-		var RouteTable map[RouteKey]RouteStruct
-		if len(LatestRoutes) != 0 {
-			RouteTable = LatestRoutes
+		var RouteTable map[routeKey]RouteStruct
+		if len(latestRoutes) != 0 {
+			RouteTable = latestRoutes
 		} else {
-			RouteTable = Routes
+			RouteTable = routes
 		}
 		RDB := RouteTable[R1.Key]
 		if !reflect.ValueOf(RDB).IsZero() {
@@ -1524,7 +1510,7 @@ func lookupRoute(dst net.IP, v *infradb.Vrf) RouteStruct {
 	return RouteStruct{}
 }
 
-//nolint
+// nolint
 func (nexthop NexthopStruct) annotate() NexthopStruct {
 	nexthop.Metadata = make(map[interface{}]interface{})
 	var phyFlag bool
@@ -1540,7 +1526,7 @@ func (nexthop NexthopStruct) annotate() NexthopStruct {
 		if !reflect.ValueOf(nexthop.Neighbor).IsZero() {
 			if nexthop.Neighbor.Type == SVI {
 				nexthop.NhType = SVI
-				nexthop.Metadata["direction"] = RX 
+				nexthop.Metadata["direction"] = RX
 				nexthop.Metadata["smac"] = link.Attrs().HardwareAddr.String()
 				nexthop.Metadata["dmac"] = nexthop.Neighbor.Neigh0.HardwareAddr.String()
 				nexthop.Metadata["egress_vport"] = nexthop.Neighbor.Metadata["vport_id"]
@@ -1650,13 +1636,13 @@ func (nexthop NexthopStruct) annotate() NexthopStruct {
 		if reflect.ValueOf(nexthop.Vrf.Spec.Vni).IsZero() {
 			nexthop.Metadata["vlanID"] = uint32(4089)
 		} else {
-			nexthop.Metadata["vlanID"] = *nexthop.Vrf.Metadata.RoutingTable[0]//*nexthop.Vrf.Spec.Vni
+			nexthop.Metadata["vlanID"] = *nexthop.Vrf.Metadata.RoutingTable[0] //*nexthop.Vrf.Spec.Vni
 		}
 	}
 	return nexthop
 }
 
-//nolint
+// nolint
 func (l2n L2NexthopStruct) annotate() L2NexthopStruct {
 	// Annotate certain L2 Nexthops with additional information from LB and GRD
 	l2n.Metadata = make(map[interface{}]interface{})
@@ -1665,19 +1651,19 @@ func (l2n L2NexthopStruct) annotate() L2NexthopStruct {
 		if l2n.Type == SVI {
 			l2n.Metadata["vrf_id"] = *LB.Spec.Vni
 		} else if l2n.Type == VXLAN {
-		//# Remote EVPN MAC address learned on the VXLAN interface
-		//# The L2 nexthop must have a destination IP address in dst
+			//# Remote EVPN MAC address learned on the VXLAN interface
+			//# The L2 nexthop must have a destination IP address in dst
 			l2n.Resolved = false
 			l2n.Metadata["local_vtep_ip"] = *LB.Spec.VtepIP
 			l2n.Metadata["remote_vtep_ip"] = l2n.Dst
 			l2n.Metadata["vni"] = *LB.Spec.Vni
-		//# The below physical nexthops are needed to transmit the VXLAN-encapsuleted packets
-		//# directly from the nexthop table to a physical port (and avoid another recirculation
-		//# for route lookup in the GRD table.)
+			//# The below physical nexthops are needed to transmit the VXLAN-encapsuleted packets
+			//# directly from the nexthop table to a physical port (and avoid another recirculation
+			//# for route lookup in the GRD table.)
 			VRF, _ := infradb.GetVrf("//network.opiproject.org/vrfs/GRD")
 			r := lookupRoute(l2n.Dst, VRF)
 			if !reflect.ValueOf(r).IsZero() {
-			//  # For now pick the first physical nexthop (no ECMP yet)
+				//  # For now pick the first physical nexthop (no ECMP yet)
 				phyNh := r.Nexthops[0]
 				link, _ := vn.LinkByName(NameIndex[phyNh.nexthop.LinkIndex])
 				l2n.Metadata["phy_smac"] = link.Attrs().HardwareAddr.String()
@@ -1692,7 +1678,7 @@ func (l2n L2NexthopStruct) annotate() L2NexthopStruct {
 				}
 			}
 		} else if l2n.Type == BRIDGEPORT {
-		// BridgePort as L2 nexthop
+			// BridgePort as L2 nexthop
 			l2n.Metadata["vport_id"] = l2n.bp.Metadata.VPort
 			l2n.Metadata["portType"] = l2n.bp.Spec.Ptype
 		}
@@ -1714,7 +1700,7 @@ func (fdb FdbEntryStruct) annotate() FdbEntryStruct {
 	if !reflect.ValueOf(l2n).IsZero() {
 		fdb.Metadata["nh_id"] = l2n.ID
 		if l2n.Type == VXLAN {
-			fdbEntry := LatestFDB[FDBKey{None, fdb.Mac}]
+			fdbEntry := latestFDB[fdbKey{None, fdb.Mac}]
 			l2n.Dst = fdbEntry.Nexthop.Dst
 		}
 		switch l2n.Type {
@@ -1732,22 +1718,22 @@ func (fdb FdbEntryStruct) annotate() FdbEntryStruct {
 
 // annotateDBEntries annonates the database entries
 func annotateDBEntries() {
-	for _, nexthop := range LatestNexthop {
+	for _, nexthop := range latestNexthop {
 		nexthop = nexthop.annotate()
-		LatestNexthop[nexthop.Key] = nexthop
+		latestNexthop[nexthop.Key] = nexthop
 	}
-	for _, r := range LatestRoutes {
+	for _, r := range latestRoutes {
 		r = r.annotate()
-		LatestRoutes[r.Key] = r
+		latestRoutes[r.Key] = r
 	}
 
-	for _, m := range LatestFDB {
+	for _, m := range latestFDB {
 		m = m.annotate()
-		LatestFDB[m.Key] = m
+		latestFDB[m.Key] = m
 	}
-	for _, l2n := range LatestL2Nexthop {
+	for _, l2n := range latestL2Nexthop {
 		l2n = l2n.annotate()
-		LatestL2Nexthop[l2n.Key] = l2n
+		latestL2Nexthop[l2n.Key] = l2n
 	}
 }
 
@@ -1808,43 +1794,37 @@ func installFilterFDB(fdb FdbEntryStruct) bool {
 func installFilterL2N(l2n L2NexthopStruct) bool {
 	keep := !(reflect.ValueOf(l2n.Type).IsZero() && l2n.Resolved && reflect.ValueOf(l2n.FdbRefs).IsZero())
 	if !keep {
-		log.Printf("netlink: install_filter FDB: dropping {%+v}", l2n)
+		log.Printf("netlink: install_filter fDB: dropping {%+v}", l2n)
 	}
 	return keep
 }
 
-//nolint
+// nolint
 func applyInstallFilters() {
-	for K, r := range LatestRoutes {
+	for K, r := range latestRoutes {
 		if !installFilterRoute(&r) {
 			// Remove route from its nexthop(s)
-			delete(LatestRoutes, K)
+			delete(latestRoutes, K)
 		}
 	}
 
-	for k, nexthop := range LatestNexthop {
+	for k, nexthop := range latestNexthop {
 		if !installFilterNH(nexthop) {
-			delete(LatestNexthop, k)
+			delete(latestNexthop, k)
 		}
 	}
 
-	for k, m := range LatestFDB {
+	for k, m := range latestFDB {
 		if !installFilterFDB(m) {
-			delete(LatestFDB, k)
+			delete(latestFDB, k)
 		}
 	}
-	for k, L2 := range LatestL2Nexthop {
+	for k, L2 := range latestL2Nexthop {
 		if !installFilterL2N(L2) {
-			delete(LatestL2Nexthop, k)
+			delete(latestL2Nexthop, k)
 		}
 	}
 }
-
-// oldgenmap old map
-var oldgenmap = make(map[interface{}]interface{})
-
-// latestgenmap latest map
-var latestgenmap = make(map[interface{}]interface{})
 
 // notifyDBChanges notify the database changes
 func notifyDBChanges() {
@@ -1860,19 +1840,19 @@ func notifyDBChanges() {
 		l2nexthopEventStr = append(l2nexthopEventStr, "l2_nexthop"+s)
 	}
 	type NlDBCopy struct {
-		RDB   map[RouteKey]RouteStruct
-		NDB   map[NexthopKey]NexthopStruct
-		FBDB  map[FDBKey]FdbEntryStruct
-		L2NDB map[L2NexthopKey]L2NexthopStruct
+		RDB   map[routeKey]RouteStruct
+		NDB   map[nexthopKey]NexthopStruct
+		FBDB  map[fdbKey]FdbEntryStruct
+		L2NDB map[l2NexthopKey]L2NexthopStruct
 	}
-	latestdb := NlDBCopy{RDB: LatestRoutes, NDB: LatestNexthop, FBDB: LatestFDB, L2NDB: LatestL2Nexthop}
-	olddb := NlDBCopy{RDB: Routes, NDB: Nexthops, FBDB: FDB, L2NDB: L2Nexthops}
+	latestdb := NlDBCopy{RDB: latestRoutes, NDB: latestNexthop, FBDB: latestFDB, L2NDB: latestL2Nexthop}
+	olddb := NlDBCopy{RDB: routes, NDB: Nexthops, FBDB: fDB, L2NDB: l2Nexthops}
 	var eventStr []interface{}
 	eventStr = append(eventStr, routeEventStr)
 	eventStr = append(eventStr, nexthopEventStr)
 	eventStr = append(eventStr, fdbEventStr)
 	eventStr = append(eventStr, l2nexthopEventStr)
-	// Routes
+	// routes
 	oldgenmap = make(map[interface{}]interface{})
 	latestgenmap = make(map[interface{}]interface{})
 	for k, v := range latestdb.RDB {
@@ -1892,7 +1872,7 @@ func notifyDBChanges() {
 		oldgenmap[k] = v
 	}
 	notify_changes(latestgenmap, oldgenmap, eventStr[1].([]string))
-	// FDB
+	// fDB
 	oldgenmap = make(map[interface{}]interface{})
 	latestgenmap = make(map[interface{}]interface{})
 	for k, v := range latestdb.FBDB {
@@ -1924,25 +1904,25 @@ func resyncWithKernel() {
 	applyInstallFilters()
 	// Compute changes between current and latest DB versions and inform subscribers about the changes
 	notifyDBChanges()
-	Routes = LatestRoutes
-	Nexthops = LatestNexthop
-	Neighbors = LatestNeighbors
-	FDB = LatestFDB
-	L2Nexthops = LatestL2Nexthop
+	routes = latestRoutes
+	Nexthops = latestNexthop
+	Neighbors = latestNeighbors
+	fDB = latestFDB
+	l2Nexthops = latestL2Nexthop
 	DeleteLatestDB()
 }
 
 // DeleteLatestDB deletes the latest db snap
 func DeleteLatestDB() {
-	LatestRoutes = make(map[RouteKey]RouteStruct)
-	LatestNeighbors = make(map[NeighKey]NeighStruct)
-	LatestNexthop = make(map[NexthopKey]NexthopStruct)
-	LatestFDB = make(map[FDBKey]FdbEntryStruct)
-	LatestL2Nexthop = make(map[L2NexthopKey]L2NexthopStruct)
+	latestRoutes = make(map[routeKey]RouteStruct)
+	latestNeighbors = make(map[neighKey]neighStruct)
+	latestNexthop = make(map[nexthopKey]NexthopStruct)
+	latestFDB = make(map[fdbKey]FdbEntryStruct)
+	latestL2Nexthop = make(map[l2NexthopKey]L2NexthopStruct)
 }
 
 // monitorNetlink moniters the netlink
-func monitorNetlink(_ bool) {
+func monitorNetlink() {
 	for !stopMonitoring {
 		log.Printf("netlink: Polling netlink databases.")
 		resyncWithKernel()
@@ -1955,20 +1935,20 @@ func monitorNetlink(_ bool) {
 	resyncWithKernel()
 	// Inform subscribers to delete configuration for any still remaining Netlink DB objects.
 	log.Printf("netlink: Delete any residual objects in DB")
-	for _, r := range Routes {
+	for _, r := range routes {
 		notifyAddDel(r, "route_deleted")
 	}
 	for _, nexthop := range Nexthops {
 		notifyAddDel(nexthop, "nexthop_deleted")
 	}
-	for _, m := range FDB {
+	for _, m := range fDB {
 		notifyAddDel(m, "FDB_entry_deleted")
 	}
 	log.Printf("netlink: DB cleanup completed.")
 }
 
-// Init function intializes config
-func Init() {
+// Initialize function intializes config
+func Initialize() {
 	pollInterval = config.GlobalConfig.Netlink.PollInterval
 	log.Printf("netlink: poll interval: %v", pollInterval)
 	nlEnabled := config.GlobalConfig.Netlink.Enabled
@@ -1982,5 +1962,5 @@ func Init() {
 	getlink()
 	ctx = context.Background()
 	nlink = utils.NewNetlinkWrapper()
-	go monitorNetlink(config.GlobalConfig.P4.Enabled) // monitor Thread started
+	go monitorNetlink() // monitor Thread started
 }

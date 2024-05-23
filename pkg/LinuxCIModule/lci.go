@@ -202,8 +202,8 @@ func tearDownBp(bp *infradb.BridgePort) bool {
 var ctx context.Context
 var nlink utils.Netlink
 
-// Init initializes the config and  subscribers
-func Init() {
+// Initialize initializes the config and  subscribers
+func Initialize() {
 	eb := eventbus.EBus
 	for _, subscriberConfig := range config.GlobalConfig.Subscribers {
 		if subscriberConfig.Name == "lci" {
@@ -216,8 +216,8 @@ func Init() {
 	nlink = utils.NewNetlinkWrapper()
 }
 
-// DeInit function handles stops functionality
-func DeInit() {
+// DeInitialize function handles stops functionality
+func DeInitialize() {
 	// Unsubscribe to InfraDB notifications
 	eb := eventbus.EBus
 	eb.UnsubscribeModule("lci")
