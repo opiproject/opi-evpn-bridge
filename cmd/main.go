@@ -138,10 +138,12 @@ func cleanUp() {
 
 	switch config.GlobalConfig.Buildenv {
 	case intelStr:
+
 		gen_linux.DeInitialize()
 		intel_e2000_linux.DeInitialize()
 		frr.DeInitialize()
 		ipu_vendor.DeInitialize()
+		netlink.DeInitialize()
 	case "ci":
 		gen_linux.DeInitialize()
 		ci_linux.DeInitialize()
@@ -165,7 +167,6 @@ func main() {
 		// log.Println(err)
 		log.Panicf("Error in initialize(): %v", err)
 	}
-
 	// start the main cmd
 	if err := rootCmd.Execute(); err != nil {
 		log.Panicf("Error in Execute(): %v", err)

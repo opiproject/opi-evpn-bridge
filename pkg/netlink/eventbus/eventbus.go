@@ -11,7 +11,7 @@ import (
 // EventBus holds the event bus info
 type EventBus struct {
 	subscribers map[string][]*Subscriber
-	mutex       sync.RWMutex
+	mutex       sync.Mutex
 }
 
 // Subscriber holds the info for each subscriber
@@ -44,8 +44,8 @@ func (e *EventBus) Subscribe(eventType string) *Subscriber {
 
 // Publish api notifies the subscribers with certain eventType
 func (e *EventBus) Publish(eventType string, data interface{}) {
-	e.mutex.RLock()
-	defer e.mutex.RUnlock()
+	e.mutex.Lock()
+	defer e.mutex.Unlock()
 
 	subscribers, ok := e.subscribers[eventType]
 	if !ok {
@@ -57,7 +57,15 @@ func (e *EventBus) Publish(eventType string, data interface{}) {
 	}
 }
 
-// Unsubscribe the subscriber, which delete the subscriber(all resources will be washed out)
-func (s *Subscriber) Unsubscribe() {
-	close(s.Ch)
+// Unsubscribe closes all subscriber channels and empties the subscriber map.
+func (e *EventBus) Unsubscribe() {
+	e.mutex.Lock()
+	defer e.mutex.Unlock()
+
+	for eventName, subs := range e.subscribers {
+		for _, sub := range subs {
+			close(sub.Ch) // Close each channel
+		}
+		delete(e.subscribers, eventName) // Remove the entry from the map
+	}
 }

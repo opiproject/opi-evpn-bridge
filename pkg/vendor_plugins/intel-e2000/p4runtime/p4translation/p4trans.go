@@ -988,20 +988,18 @@ func tearDownSvi(svi *infradb.Svi) bool {
 // Initialize function handles init functionality
 func Initialize() {
 	// Netlink Listener
-	startSubscriber(nm.EventBus, "route_added")
-
-	startSubscriber(nm.EventBus, "route_updated")
-	startSubscriber(nm.EventBus, "route_deleted")
-	startSubscriber(nm.EventBus, "nexthop_added")
-	startSubscriber(nm.EventBus, "nexthop_updated")
-	startSubscriber(nm.EventBus, "nexthop_deleted")
-	startSubscriber(nm.EventBus, "fdb_entry_added")
-	startSubscriber(nm.EventBus, "fdb_entry_updated")
-	startSubscriber(nm.EventBus, "fdb_entry_deleted")
-	startSubscriber(nm.EventBus, "l2_nexthop_added")
-	startSubscriber(nm.EventBus, "l2_nexthop_updated")
-	startSubscriber(nm.EventBus, "l2_nexthop_deleted")
-
+	startSubscriber(nm.EventBus, nm.RouteAdded)
+	startSubscriber(nm.EventBus, nm.RouteUpdated)
+	startSubscriber(nm.EventBus, nm.RouteDeleted)
+	startSubscriber(nm.EventBus, nm.NexthopAdded)
+	startSubscriber(nm.EventBus, nm.NexthopUpdated)
+	startSubscriber(nm.EventBus, nm.NexthopDeleted)
+	startSubscriber(nm.EventBus, nm.FdbEntryAdded)
+	startSubscriber(nm.EventBus, nm.FdbEntryUpdated)
+	startSubscriber(nm.EventBus, nm.FdbEntryDeleted)
+	startSubscriber(nm.EventBus, nm.L2NexthopAdded)
+	startSubscriber(nm.EventBus, nm.L2NexthopUpdated)
+	startSubscriber(nm.EventBus, nm.L2NexthopDeleted)
 	// InfraDB Listener
 
 	eb := eventbus.EBus
@@ -1064,6 +1062,9 @@ func Initialize() {
 
 // DeInitialize function handles stops functionality
 func DeInitialize() {
+	// unsubscriber all the events
+	nm.EventBus.Unsubscribe()
+
 	L3entries := L3.StaticDeletions()
 	for _, entry := range L3entries {
 		if e, ok := entry.(p4client.TableEntry); ok {
