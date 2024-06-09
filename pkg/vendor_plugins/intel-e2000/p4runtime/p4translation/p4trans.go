@@ -553,11 +553,24 @@ func (h *ModuleipuHandler) HandleEvent(eventType string, objectData *eventbus.Ob
 }
 
 // handlevrf  handles the vrf events
+//
+//gocognit:ignore
 func handlevrf(objectData *eventbus.ObjectData) {
 	var comp common.Component
 	vrf, err := infradb.GetVrf(objectData.Name)
 	if err != nil {
 		log.Printf("intel-e2000: GetVRF error: %s %s\n", err, objectData.Name)
+		comp.Name = intele2000Str
+		comp.CompStatus = common.ComponentStatusError
+		if comp.Timer == 0 { // wait timer is 2 powerof natural numbers ex : 1,2,3...
+			comp.Timer = 2 * time.Second
+		} else {
+			comp.Timer *= 2
+		}
+		err = infradb.UpdateVrfStatus(objectData.Name, objectData.ResourceVersion, objectData.NotificationID, nil, comp)
+		if err != nil {
+			log.Printf("error in updating vrf status: %s\n", err)
+		}
 		return
 	}
 
@@ -637,6 +650,17 @@ func handlelb(objectData *eventbus.ObjectData) {
 	lb, err := infradb.GetLB(objectData.Name)
 	if err != nil {
 		log.Printf("intel-e2000: GetLB error: %s %s\n", err, objectData.Name)
+		comp.Name = intele2000Str
+		comp.CompStatus = common.ComponentStatusError
+		if comp.Timer == 0 {
+			comp.Timer = 2 * time.Second
+		} else {
+			comp.Timer *= 2
+		}
+		err = infradb.UpdateLBStatus(objectData.Name, objectData.ResourceVersion, objectData.NotificationID, nil, comp)
+		if err != nil {
+			log.Printf("error in updating lb status: %s\n", err)
+		}
 		return
 	}
 
@@ -697,6 +721,17 @@ func handlebp(objectData *eventbus.ObjectData) {
 	bp, err := infradb.GetBP(objectData.Name)
 	if err != nil {
 		log.Printf("intel-e2000: GetBP error: %s\n", err)
+		comp.Name = intele2000Str
+		comp.CompStatus = common.ComponentStatusError
+		if comp.Timer == 0 {
+			comp.Timer = 2 * time.Second
+		} else {
+			comp.Timer *= 2
+		}
+		err = infradb.UpdateBPStatus(objectData.Name, objectData.ResourceVersion, objectData.NotificationID, nil, comp)
+		if err != nil {
+			log.Printf("error in updating lb status: %s\n", err)
+		}
 		return
 	}
 
@@ -752,11 +787,24 @@ func handlebp(objectData *eventbus.ObjectData) {
 }
 
 // handlesvi  handles the svi events
+//
+//gocognit:ignore
 func handlesvi(objectData *eventbus.ObjectData) {
 	var comp common.Component
 	svi, err := infradb.GetSvi(objectData.Name)
 	if err != nil {
 		log.Printf("intel-e2000: GetSvi error: %s %s\n", err, objectData.Name)
+		comp.Name = intele2000Str
+		comp.CompStatus = common.ComponentStatusError
+		if comp.Timer == 0 {
+			comp.Timer = 2 * time.Second
+		} else {
+			comp.Timer *= 2
+		}
+		err = infradb.UpdateSviStatus(objectData.Name, objectData.ResourceVersion, objectData.NotificationID, nil, comp)
+		if err != nil {
+			log.Printf("error in updating lb status: %s\n", err)
+		}
 		return
 	}
 

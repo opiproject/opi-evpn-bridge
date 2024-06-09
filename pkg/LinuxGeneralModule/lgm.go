@@ -85,11 +85,24 @@ func (h *ModulelgmHandler) HandleEvent(eventType string, objectData *eventbus.Ob
 }
 
 // handleLB handles the logical Bridge
+//
+//gocognit:ignore
 func handleLB(objectData *eventbus.ObjectData) {
 	var comp common.Component
 	lb, err := infradb.GetLB(objectData.Name)
 	if err != nil {
 		log.Printf("LGM: GetLB error: %s %s\n", err, objectData.Name)
+		comp.Name = lgmComp
+		comp.CompStatus = common.ComponentStatusError
+		if comp.Timer == 0 {
+			comp.Timer = 2 * time.Second
+		} else {
+			comp.Timer *= 2
+		}
+		err := infradb.UpdateLBStatus(objectData.Name, objectData.ResourceVersion, objectData.NotificationID, nil, comp)
+		if err != nil {
+			log.Printf("error in updating lb status: %s\n", err)
+		}
 		return
 	}
 	if objectData.ResourceVersion != lb.ResourceVersion {
@@ -157,11 +170,24 @@ func handleLB(objectData *eventbus.ObjectData) {
 }
 
 // handlesvi handles the svi functionality
+//
+//gocognit:ignore
 func handlesvi(objectData *eventbus.ObjectData) {
 	var comp common.Component
 	svi, err := infradb.GetSvi(objectData.Name)
 	if err != nil {
 		log.Printf("LGM: GetSvi error: %s %s\n", err, objectData.Name)
+		comp.Name = lgmComp
+		comp.CompStatus = common.ComponentStatusError
+		if comp.Timer == 0 {
+			comp.Timer = 2 * time.Second
+		} else {
+			comp.Timer *= 2
+		}
+		err := infradb.UpdateSviStatus(objectData.Name, objectData.ResourceVersion, objectData.NotificationID, nil, comp)
+		if err != nil {
+			log.Printf("error in updating svi status: %s\n", err)
+		}
 		return
 	}
 	if objectData.ResourceVersion != svi.ResourceVersion {
@@ -228,11 +254,24 @@ func handlesvi(objectData *eventbus.ObjectData) {
 }
 
 // handlevrf handles the vrf functionality
+//
+//gocognit:ignore
 func handlevrf(objectData *eventbus.ObjectData) {
 	var comp common.Component
 	vrf, err := infradb.GetVrf(objectData.Name)
 	if err != nil {
 		log.Printf("LGM: GetVRF error: %s %s\n", err, objectData.Name)
+		comp.Name = lgmComp
+		comp.CompStatus = common.ComponentStatusError
+		if comp.Timer == 0 { // wait timer is 2 powerof natural numbers ex : 1,2,3...
+			comp.Timer = 2 * time.Second
+		} else {
+			comp.Timer *= 2
+		}
+		err := infradb.UpdateVrfStatus(objectData.Name, objectData.ResourceVersion, objectData.NotificationID, nil, comp)
+		if err != nil {
+			log.Printf("error in updating vrf status: %s\n", err)
+		}
 		return
 	}
 	if objectData.ResourceVersion != vrf.ResourceVersion {

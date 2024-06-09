@@ -69,11 +69,24 @@ func (h *ModulelvmHandler) HandleEvent(eventType string, objectData *eventbus.Ob
 }
 
 // handlebp  handles the bridge port functionality
+//
+//gocognit:ignore
 func handlebp(objectData *eventbus.ObjectData) {
 	var comp common.Component
 	bp, err := infradb.GetBP(objectData.Name)
 	if err != nil {
 		log.Printf("LVM : GetBP error: %s\n", err)
+		comp.Name = lvmComp
+		comp.CompStatus = common.ComponentStatusError
+		if comp.Timer == 0 {
+			comp.Timer = 2 * time.Second
+		} else {
+			comp.Timer *= 2
+		}
+		err := infradb.UpdateBPStatus(objectData.Name, objectData.ResourceVersion, objectData.NotificationID, nil, comp)
+		if err != nil {
+			log.Printf("error in updating bp status: %s\n", err)
+		}
 		return
 	}
 	if objectData.ResourceVersion != bp.ResourceVersion {
@@ -227,11 +240,24 @@ func tearDownBp(bp *infradb.BridgePort) bool {
 }
 
 // handlevrf handles the vrf functionality
+//
+//gocognit:ignore
 func handlevrf(objectData *eventbus.ObjectData) {
 	var comp common.Component
 	vrf, err := infradb.GetVrf(objectData.Name)
 	if err != nil {
 		log.Printf("LVM : GetVrf error: %s\n", err)
+		comp.Name = lvmComp
+		comp.CompStatus = common.ComponentStatusError
+		if comp.Timer == 0 { // wait timer is 2 powerof natural numbers ex : 1,2,3...
+			comp.Timer = 2 * time.Second
+		} else {
+			comp.Timer *= 2
+		}
+		err := infradb.UpdateVrfStatus(objectData.Name, objectData.ResourceVersion, objectData.NotificationID, nil, comp)
+		if err != nil {
+			log.Printf("error updaing vrf status %s\n", err)
+		}
 		return
 	}
 	if objectData.ResourceVersion != vrf.ResourceVersion {

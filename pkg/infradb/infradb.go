@@ -1215,6 +1215,41 @@ func GetAllSvis() ([]*Svi, error) {
 	return svis, nil
 }
 
+// DeleteAllResources deletes all components from infradb
+func DeleteAllResources() error {
+	svis, _ := GetAllSvis()
+	for _, svi := range svis {
+		err := DeleteSvi(svi.Name)
+		if err != nil {
+			return err
+		}
+	}
+
+	vrfs, _ := GetAllVrfs()
+	for _, vrf := range vrfs {
+		err := DeleteVrf(vrf.Name)
+		if err != nil {
+			return err
+		}
+	}
+
+	bps, _ := GetAllBPs()
+	for _, bp := range bps {
+		err := DeleteBP(bp.Name)
+		if err != nil {
+			return err
+		}
+	}
+	lbs, _ := GetAllLBs()
+	for _, lb := range lbs {
+		err := DeleteLB(lb.Name)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // UpdateSvi updates a svi infradb object
 func UpdateSvi(svi *Svi) error {
 	globalLock.Lock()

@@ -14,7 +14,9 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"os/signal"
 	"path/filepath"
+	"syscall"
 	"time"
 
 	pc "github.com/opiproject/opi-api/inventory/v1/gen/go"
@@ -71,6 +73,7 @@ var rootCmd = &cobra.Command{
 			intel_e2000_linux.Initialize()
 			frr.Initialize()
 			ipu_vendor.Initialize()
+			netlink.DeInitialize()
 		case "ci":
 			gen_linux.Initialize()
 			ci_linux.Initialize()
@@ -135,15 +138,15 @@ func cleanUp() {
 	if err := deleteGrdVrf(); err != nil {
 		log.Println("Failed to delete GRD vrf")
 	}
-
+	if err := infradb.DeleteAllResources(); err != nil {
+		log.Println("Failed to delete all the resources: ", err)
+	}
 	switch config.GlobalConfig.Buildenv {
 	case intelStr:
-
 		gen_linux.DeInitialize()
 		intel_e2000_linux.DeInitialize()
 		frr.DeInitialize()
 		ipu_vendor.DeInitialize()
-		netlink.DeInitialize()
 	case "ci":
 		gen_linux.DeInitialize()
 		ci_linux.DeInitialize()
@@ -167,6 +170,32 @@ func main() {
 		// log.Println(err)
 		log.Panicf("Error in initialize(): %v", err)
 	}
+
+	sigChan := make(chan os.Signal, 1)
+	// Notify sigChan on SIGINT or SIGTERM.
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+
+	// This goroutine executes a blocking receive for signals.
+	// When it gets one it will then exit the program.
+	go func() {
+		sig := <-sigChan
+		switch sig {
+		case syscall.SIGINT:
+			cleanUp()
+			fmt.Println("Received SIGINT, shutting down.")
+		case syscall.SIGTERM:
+			cleanUp()
+			fmt.Println("Received SIGTERM, shutting down.")
+		default:
+			fmt.Println("Received unknown signal.")
+		}
+		// Perform any cleanup tasks here.
+		// ...
+
+		// Exit the program.
+		os.Exit(0)
+	}()
+
 	// start the main cmd
 	if err := rootCmd.Execute(); err != nil {
 		log.Panicf("Error in Execute(): %v", err)
