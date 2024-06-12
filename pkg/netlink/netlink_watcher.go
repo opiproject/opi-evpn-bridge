@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"net"
 	"reflect"
+	"sync/atomic"
 
 	"golang.org/x/sys/unix"
 
@@ -47,7 +48,7 @@ var pollInterval int
 var phyPorts = make(map[string]int)
 
 // stopMonitoring variable
-var stopMonitoring bool
+var stopMonitoring atomic.Value
 
 // strNone variable
 var strNone = "NONE"
@@ -303,27 +304,17 @@ type neighList struct {
 
 // netMaskToInt converts a CIDR network mask (e.g., 24 for a /24 subnet) to a 4-octet netmask.
 func netMaskToInt(mask int) (netmaskint [4]uint8) {
-	if mask < 0 || mask > 32 {
-		return netmaskint
+	// Perform initial validation and parse the CIDR using a dummy IP.
+	_, ipv4Net, err := net.ParseCIDR(fmt.Sprintf("0.0.0.0/%d", mask))
+	if err != nil {
+		return [4]uint8{}
 	}
 
-	var binarystring string
-	for i := 0; i < mask; i++ {
-		binarystring += "1"
-	}
-	for i := mask; i < 32; i++ {
-		binarystring += "0"
-	}
+	// Initialize an array to hold the subnet mask.
+	var maskArray [4]uint8
+	copy(maskArray[:], ipv4Net.Mask)
 
-	for i := 0; i < 4; i++ {
-		octet, err := strconv.ParseUint(binarystring[i*8:(i+1)*8], 2, 8)
-		if err != nil {
-			return netmaskint
-		}
-		netmaskint[i] = uint8(octet)
-	}
-
-	return netmaskint
+	return maskArray
 }
 
 // rtnType map of string key as RTN Type
@@ -465,15 +456,12 @@ func getFlag(s string) int {
 }
 
 // getFlagString return flag of type string
-
 func getFlagString(flag int) string {
-	for flg, str := range testFlag {
-		if flg == flag {
-			retStr := str
-			return retStr
-		}
+	str, ok := testFlag[flag]
+	if !ok {
+		return ""
 	}
-	return ""
+	return str
 }
 
 // NHAssignID returns the nexthop id
@@ -946,8 +934,8 @@ func neighborAnnotate(neighbor neighStruct) neighStruct {
 		}
 	} else if path.Base(neighbor.VrfName) == "GRD" && neighbor.Protocol != zebraStr {
 		VRF, _ := infradb.GetVrf("//network.opiproject.org/vrfs/GRD")
-		r := lookupRoute(neighbor.Neigh0.IP, VRF)
-		if !(reflect.ValueOf(r).IsZero()) {
+		r, ok := lookupRoute(neighbor.Neigh0.IP, VRF)
+		if ok {
 			if r.Nexthops[0].nexthop.LinkIndex == neighbor.Neigh0.LinkIndex {
 				neighbor.Type = PHY
 				neighbor.Metadata["vport_id"] = phyPorts[NameIndex[neighbor.Neigh0.LinkIndex]]
@@ -1499,7 +1487,7 @@ func readFDB() []FdbEntryStruct {
 }
 
 // lookupRoute check the routes
-func lookupRoute(dst net.IP, v *infradb.Vrf) RouteStruct {
+func lookupRoute(dst net.IP, v *infradb.Vrf) (RouteStruct, bool) {
 	// FIXME: If the semantic is to return the current entry of the NetlinkDB
 	//  routing table, a direct lookup in Linux should only be done as fallback
 	//  if there is no match in the DB.
@@ -1512,7 +1500,7 @@ func lookupRoute(dst net.IP, v *infradb.Vrf) RouteStruct {
 	}
 	if err != nil {
 		log.Fatal("netlink : Command error \n", err)
-		return RouteStruct{}
+		return RouteStruct{}, false
 	}
 	r := cmdProcessRt(v, CP, int(*v.Metadata.RoutingTable[0]))
 	log.Printf("netlink: %+v\n", r)
@@ -1526,17 +1514,17 @@ func lookupRoute(dst net.IP, v *infradb.Vrf) RouteStruct {
 		} else {
 			RouteTable = routes
 		}
-		RDB := RouteTable[R1.Key]
-		if !reflect.ValueOf(RDB).IsZero() {
+		RDB, ok := RouteTable[R1.Key]
+		if ok {
 			// Return the existing route in the DB
-			return RDB
+			return RDB, ok
 		}
 		// Return the just constructed non-DB route
-		return R1
+		return R1, true
 	}
 
 	log.Printf("netlink: Failed to lookup route %v in VRF %v", dst, v)
-	return RouteStruct{}
+	return RouteStruct{}, false
 }
 
 // nolint
@@ -1633,8 +1621,8 @@ func (nexthop NexthopStruct) annotate() NexthopStruct {
 		if nexthop.Neighbor != nil {
 			nexthop.Metadata["inner_dmac"] = nexthop.Neighbor.Neigh0.HardwareAddr.String()
 			G, _ := infradb.GetVrf("//network.opiproject.org/vrfs/GRD")
-			r := lookupRoute(nexthop.nexthop.Gw, G)
-			if !reflect.ValueOf(r).IsZero() {
+			r, ok := lookupRoute(nexthop.nexthop.Gw, G)
+			if ok {
 				// For now pick the first physical nexthop (no ECMP yet)
 				phyNh := r.Nexthops[0]
 				link, _ := vn.LinkByName(NameIndex[phyNh.nexthop.LinkIndex])
@@ -1690,8 +1678,8 @@ func (l2n L2NexthopStruct) annotate() L2NexthopStruct {
 			//# directly from the nexthop table to a physical port (and avoid another recirculation
 			//# for route lookup in the GRD table.)
 			VRF, _ := infradb.GetVrf("//network.opiproject.org/vrfs/GRD")
-			r := lookupRoute(l2n.Dst, VRF)
-			if !reflect.ValueOf(r).IsZero() {
+			r, ok := lookupRoute(l2n.Dst, VRF)
+			if ok {
 				//  # For now pick the first physical nexthop (no ECMP yet)
 				phyNh := r.Nexthops[0]
 				link, _ := vn.LinkByName(NameIndex[phyNh.nexthop.LinkIndex])
@@ -1821,7 +1809,7 @@ func installFilterFDB(fdb FdbEntryStruct) bool {
 
 // installFilterL2N install the l2 filter
 func installFilterL2N(l2n L2NexthopStruct) bool {
-	keep := !(l2n.Type == 0 && l2n.Resolved && reflect.ValueOf(l2n.FdbRefs).IsZero())
+	keep := !(l2n.Type == 0 && l2n.Resolved && len(l2n.FdbRefs) == 0)
 	if !keep {
 		log.Printf("netlink: install_filter fDB: dropping {%+v}", l2n)
 	}
@@ -1952,7 +1940,7 @@ func DeleteLatestDB() {
 
 // monitorNetlink moniters the netlink
 func monitorNetlink() {
-	for !stopMonitoring {
+	for !stopMonitoring.Load().(bool) {
 		log.Printf("netlink: Polling netlink databases.")
 		resyncWithKernel()
 		log.Printf("netlink: Polling netlink databases completed.")
@@ -1991,10 +1979,13 @@ func Initialize() {
 	getlink()
 	ctx = context.Background()
 	nlink = utils.NewNetlinkWrapper()
+	// stopMonitoring = false
+	stopMonitoring.Store(false)
 	go monitorNetlink() // monitor Thread started
 }
 
 // DeInitialize function handles stops functionality
 func DeInitialize() {
-	stopMonitoring = true
+	// stopMonitoring = true
+	stopMonitoring.Store(true)
 }
