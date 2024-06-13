@@ -363,7 +363,7 @@ func Initialize() {
 	brTenant = "br-tenant"
 	ipMtu = config.GlobalConfig.LinuxFrr.IPMtu
 	ctx = context.Background()
-	nlink = utils.NewNetlinkWrapper()
+	nlink = utils.NewNetlinkWrapperWithArgs(false)
 	// Set up the static configuration parts
 	_, err := nlink.LinkByName(ctx, brTenant)
 	if err != nil {

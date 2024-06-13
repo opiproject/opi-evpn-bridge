@@ -421,7 +421,7 @@ func Initialize() {
 	ipMtu = config.GlobalConfig.LinuxFrr.IPMtu
 	brTenant = "br-tenant"
 	ctx = context.Background()
-	nlink = utils.NewNetlinkWrapper()
+	nlink = utils.NewNetlinkWrapperWithArgs(false)
 }
 
 // DeInitialize function handles stops functionality

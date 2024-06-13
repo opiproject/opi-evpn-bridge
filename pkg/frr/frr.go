@@ -256,7 +256,7 @@ func Initialize() {
 	subscribeInfradb(&config.GlobalConfig)
 
 	ctx = context.Background()
-	Frr = utils.NewFrrWrapper()
+	Frr = utils.NewFrrWrapperWithArgs("localhost", false)
 
 	// Make sure IPv4 forwarding is enabled.
 	detail, flag := run([]string{"sysctl", "-w", " net.ipv4.ip_forward=1"}, false)
