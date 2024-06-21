@@ -44,6 +44,7 @@ import (
 	intel_e2000_linux "github.com/opiproject/opi-evpn-bridge/pkg/LinuxVendorModule/intele2000"
 	frr "github.com/opiproject/opi-evpn-bridge/pkg/frr"
 	netlink "github.com/opiproject/opi-evpn-bridge/pkg/netlink"
+	"github.com/opiproject/opi-evpn-bridge/pkg/vendor_plugins/intel-e2000/p4runtime/p4driverapi"
 	ipu_vendor "github.com/opiproject/opi-evpn-bridge/pkg/vendor_plugins/intel-e2000/p4runtime/p4translation"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 )
@@ -73,7 +74,7 @@ var rootCmd = &cobra.Command{
 			intel_e2000_linux.Initialize()
 			frr.Initialize()
 			ipu_vendor.Initialize()
-			netlink.DeInitialize()
+
 		case "ci":
 			gen_linux.Initialize()
 			ci_linux.Initialize()
@@ -91,7 +92,6 @@ var rootCmd = &cobra.Command{
 			netlink.Initialize()
 		default:
 		}
-
 		runGrpcServer(config.GlobalConfig.GRPCPort, config.GlobalConfig.TLSFiles)
 
 	},
@@ -135,9 +135,6 @@ func setupLogger(filename string) {
 
 func cleanUp() {
 	log.Println("Defer function called")
-	if err := deleteGrdVrf(); err != nil {
-		log.Println("Failed to delete GRD vrf")
-	}
 	if err := infradb.DeleteAllResources(); err != nil {
 		log.Println("Failed to delete all the resources: ", err)
 	}
@@ -146,7 +143,10 @@ func cleanUp() {
 		gen_linux.DeInitialize()
 		intel_e2000_linux.DeInitialize()
 		frr.DeInitialize()
+		netlink.DeInitialize()
 		ipu_vendor.DeInitialize()
+		close(p4driverapi.StopCh)
+
 	case "ci":
 		gen_linux.DeInitialize()
 		ci_linux.DeInitialize()
@@ -205,12 +205,14 @@ func main() {
 
 // runGrpcServer start the grpc server for all the components
 func runGrpcServer(grpcPort uint16, tlsFiles string) {
-	tp := utils.InitTracerProvider("opi-evpn-bridge")
-	defer func() {
-		if err := tp.Shutdown(context.Background()); err != nil {
-			log.Panicf("Tracer Provider Shutdown: %v", err)
-		}
-	}()
+	if config.GlobalConfig.Tracer {
+		tp := utils.InitTracerProvider("opi-evpn-bridge")
+		defer func() {
+			if err := tp.Shutdown(context.Background()); err != nil {
+				log.Panicf("Tracer Provider Shutdown: %v", err)
+			}
+		}()
+	}
 
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", grpcPort))
 	if err != nil {
@@ -308,19 +310,6 @@ func createGrdVrf() error {
 	err = infradb.CreateVrf(grdVrf)
 	if err != nil {
 		log.Printf("CreateGrdVrf(): Error in creating GRD VRF object %+v\n", err)
-		return err
-	}
-
-	return nil
-}
-
-// deleteGrdVrf creates the grd vrf with vni 0
-func deleteGrdVrf() error {
-	log.Printf("DeleteGrdVrf(): deleted GRD VRF object\n")
-
-	err := infradb.DeleteVrf("//network.opiproject.org/vrfs/GRD")
-	if err != nil {
-		log.Printf("CreateGrdVrf(): Error in deleting GRD VRF object %+v\n", err)
 		return err
 	}
 

@@ -391,7 +391,7 @@ func tearDownVrf(vrf *infradb.Vrf) bool {
 	Intf, err := nlink.LinkByName(ctx, vlanIntf)
 	if err != nil {
 		log.Printf("Failed to get link %v: %s\n", vlanIntf, err)
-		return true
+		return false
 	}
 	if err = nlink.LinkDel(ctx, Intf); err != nil {
 		log.Printf("Failed to delete link %v: %s\n", vlanIntf, err)
@@ -421,7 +421,7 @@ func Initialize() {
 	ipMtu = config.GlobalConfig.LinuxFrr.IPMtu
 	brTenant = "br-tenant"
 	ctx = context.Background()
-	nlink = utils.NewNetlinkWrapperWithArgs(false)
+	nlink = utils.NewNetlinkWrapperWithArgs(config.GlobalConfig.Tracer)
 }
 
 // DeInitialize function handles stops functionality

@@ -114,7 +114,7 @@ func startSubscriber(eventBus *eb.EventBus, eventType string) {
 		for {
 			select {
 			case event := <-subscriber.Ch:
-				log.Printf("intel-e2000: Subscriber for %s received event: %s\n", eventType, event)
+				log.Printf("intel-e2000: Subscriber for %s received event\n", eventType)
 				switch eventType {
 				case "route_added":
 					handleRouteAdded(event)
@@ -152,15 +152,17 @@ func startSubscriber(eventBus *eb.EventBus, eventType string) {
 func handleRouteAdded(route interface{}) {
 	var entries []interface{}
 	routeData, _ := route.(*nm.RouteStruct)
-	entries = L3.translateAddedRoute(*routeData)
-	for _, entry := range entries {
-		if e, ok := entry.(p4client.TableEntry); ok {
-			er := p4client.AddEntry(e)
-			if er != nil {
-				log.Printf("intel-e2000: error adding entry for %v error %v\n", e.Tablename, er)
+	if routeData != nil {
+		entries = L3.translateAddedRoute(*routeData)
+		for _, entry := range entries {
+			if e, ok := entry.(p4client.TableEntry); ok {
+				er := p4client.AddEntry(e)
+				if er != nil {
+					log.Printf("intel-e2000: error adding entry for %v error %v\n", e.Tablename, er)
+				}
+			} else {
+				log.Printf("intel-e2000: Entry is not of type p4client.TableEntry:- %v\n", e)
 			}
-		} else {
-			log.Printf("intel-e2000: Entry is not of type p4client.TableEntry:- %v\n", e)
 		}
 	}
 }
@@ -169,26 +171,28 @@ func handleRouteAdded(route interface{}) {
 func handleRouteUpdated(route interface{}) {
 	var entries []interface{}
 	routeData, _ := route.(*nm.RouteStruct)
-	entries = L3.translateDeletedRoute(*routeData)
-	for _, entry := range entries {
-		if e, ok := entry.(p4client.TableEntry); ok {
-			err := p4client.DelEntry(e)
-			if err != nil {
-				log.Printf("intel-e2000: error deleting entry for %v error %v\n", e.Tablename, err)
+	if routeData != nil {
+		entries = L3.translateDeletedRoute(*routeData)
+		for _, entry := range entries {
+			if e, ok := entry.(p4client.TableEntry); ok {
+				err := p4client.DelEntry(e)
+				if err != nil {
+					log.Printf("intel-e2000: error deleting entry for %v error %v\n", e.Tablename, err)
+				}
+			} else {
+				log.Println("intel-e2000: Entry is not of type p4client.TableEntry")
 			}
-		} else {
-			log.Println("intel-e2000: Entry is not of type p4client.TableEntry")
 		}
-	}
-	entries = L3.translateAddedRoute(*routeData)
-	for _, entry := range entries {
-		if e, ok := entry.(p4client.TableEntry); ok {
-			er := p4client.AddEntry(e)
-			if er != nil {
-				log.Printf("intel-e2000: error adding entry for %v error %v\n", e.Tablename, er)
+		entries = L3.translateAddedRoute(*routeData)
+		for _, entry := range entries {
+			if e, ok := entry.(p4client.TableEntry); ok {
+				er := p4client.AddEntry(e)
+				if er != nil {
+					log.Printf("intel-e2000: error adding entry for %v error %v\n", e.Tablename, er)
+				}
+			} else {
+				log.Println("intel-e2000: Entry is not of type p4client.TableEntry")
 			}
-		} else {
-			log.Println("intel-e2000: Entry is not of type p4client.TableEntry")
 		}
 	}
 }
@@ -197,15 +201,17 @@ func handleRouteUpdated(route interface{}) {
 func handleRouteDeleted(route interface{}) {
 	var entries []interface{}
 	routeData, _ := route.(*nm.RouteStruct)
-	entries = L3.translateDeletedRoute(*routeData)
-	for _, entry := range entries {
-		if e, ok := entry.(p4client.TableEntry); ok {
-			er := p4client.DelEntry(e)
-			if er != nil {
-				log.Printf("intel-e2000: error deleting entry for %v error %v\n", e.Tablename, er)
+	if routeData != nil {
+		entries = L3.translateDeletedRoute(*routeData)
+		for _, entry := range entries {
+			if e, ok := entry.(p4client.TableEntry); ok {
+				er := p4client.DelEntry(e)
+				if er != nil {
+					log.Printf("intel-e2000: error deleting entry for %v error %v\n", e.Tablename, er)
+				}
+			} else {
+				log.Println("intel-e2000: Entry is not of type p4client.TableEntry")
 			}
-		} else {
-			log.Println("intel-e2000: Entry is not of type p4client.TableEntry")
 		}
 	}
 }
@@ -214,76 +220,82 @@ func handleRouteDeleted(route interface{}) {
 func handleNexthopAdded(nexthop interface{}) {
 	var entries []interface{}
 	nexthopData, _ := nexthop.(*nm.NexthopStruct)
-	entries = L3.translateAddedNexthop(*nexthopData)
-	for _, entry := range entries {
-		if e, ok := entry.(p4client.TableEntry); ok {
-			er := p4client.AddEntry(e)
-			if er != nil {
-				log.Printf("intel-e2000: error adding entry for %v error %v\n", e.Tablename, er)
+	if nexthopData != nil {
+		entries = L3.translateAddedNexthop(*nexthopData)
+		for _, entry := range entries {
+			if e, ok := entry.(p4client.TableEntry); ok {
+				er := p4client.AddEntry(e)
+				if er != nil {
+					log.Printf("intel-e2000: error adding entry for %v error %v\n", e.Tablename, er)
+				}
+			} else {
+				log.Println("intel-e2000: Entry is not of type p4client.TableEntry")
 			}
-		} else {
-			log.Println("intel-e2000: Entry is not of type p4client.TableEntry")
 		}
-	}
-	entries = Vxlan.translateAddedNexthop(*nexthopData)
-	for _, entry := range entries {
-		if e, ok := entry.(p4client.TableEntry); ok {
-			er := p4client.AddEntry(e)
-			if er != nil {
-				log.Printf("intel-e2000: error adding entry for %v error %v\n", e.Tablename, er)
+		entries = Vxlan.translateAddedNexthop(*nexthopData)
+		for _, entry := range entries {
+			if e, ok := entry.(p4client.TableEntry); ok {
+				er := p4client.AddEntry(e)
+				if er != nil {
+					log.Printf("intel-e2000: error adding entry for %v error %v\n", e.Tablename, er)
+				}
+			} else {
+				log.Println("intel-e2000: Entry is not of type p4client.TableEntry")
 			}
-		} else {
-			log.Println("intel-e2000: Entry is not of type p4client.TableEntry")
 		}
 	}
 }
 
 // handleNexthopUpdated  handles the updated nexthop
+//
+//gocognit:ignore
 func handleNexthopUpdated(nexthop interface{}) {
 	var entries []interface{}
 	nexthopData, _ := nexthop.(*nm.NexthopStruct)
-	entries = L3.translateDeletedNexthop(*nexthopData)
-	for _, entry := range entries {
-		if e, ok := entry.(p4client.TableEntry); ok {
-			er := p4client.DelEntry(e)
-			if er != nil {
-				log.Printf("intel-e2000: error deleting entry for %v error %v\n", e.Tablename, er)
+	if nexthopData != nil {
+		entries = L3.translateDeletedNexthop(*nexthopData)
+		for _, entry := range entries {
+			if e, ok := entry.(p4client.TableEntry); ok {
+				er := p4client.DelEntry(e)
+				if er != nil {
+					log.Printf("intel-e2000: error deleting entry for %v error %v\n", e.Tablename, er)
+				}
+			} else {
+				log.Println("intel-e2000: Entry is not of type p4client.TableEntry")
 			}
-		} else {
-			log.Println("intel-e2000: Entry is not of type p4client.TableEntry")
 		}
-	}
-	entries = Vxlan.translateDeletedNexthop(*nexthopData)
-	for _, entry := range entries {
-		if e, ok := entry.(p4client.TableEntry); ok {
-			er := p4client.DelEntry(e)
-			if er != nil {
-				log.Printf("intel-e2000: error deleting entry for %v error %v\n", e.Tablename, er)
+		entries = Vxlan.translateDeletedNexthop(*nexthopData)
+		for _, entry := range entries {
+			if e, ok := entry.(p4client.TableEntry); ok {
+				er := p4client.DelEntry(e)
+				if er != nil {
+					log.Printf("intel-e2000: error deleting entry for %v error %v\n", e.Tablename, er)
+				}
+			} else {
+				log.Println("intel-e2000: Entry is not of type p4client.TableEntry")
 			}
-		} else {
-			log.Println("intel-e2000: Entry is not of type p4client.TableEntry")
 		}
-	}
-	entries = L3.translateAddedNexthop(*nexthopData)
-	for _, entry := range entries {
-		if e, ok := entry.(p4client.TableEntry); ok {
-			er := p4client.AddEntry(e)
-			if er != nil {
-				log.Printf("intel-e2000: error adding entry for %v error %v\n", e.Tablename, er)
+		entries = L3.translateAddedNexthop(*nexthopData)
+		for _, entry := range entries {
+			if e, ok := entry.(p4client.TableEntry); ok {
+				er := p4client.AddEntry(e)
+				if er != nil {
+					log.Printf("intel-e2000: error adding entry for %v error %v\n", e.Tablename, er)
+				}
+			} else {
+				log.Println("intel-e2000: Entry is not of type p4client.TableEntry")
 			}
-		} else {
-			log.Println("intel-e2000: Entry is not of type p4client.TableEntry")
 		}
-	}
-	entries = Vxlan.translateAddedNexthop(*nexthopData)
-	for _, entry := range entries {
-		if e, ok := entry.(p4client.TableEntry); ok {
-			er := p4client.AddEntry(e)
-			if er != nil {
-				log.Printf("intel-e2000: error adding entry for %v error %v\n", e.Tablename, er)
+		entries = Vxlan.translateAddedNexthop(*nexthopData)
+		for _, entry := range entries {
+			if e, ok := entry.(p4client.TableEntry); ok {
+				er := p4client.AddEntry(e)
+				if er != nil {
+					log.Printf("intel-e2000: error adding entry for %v error %v\n", e.Tablename, er)
+				}
+			} else {
+				log.Println("intel-e2000: Entry is not of type p4client.TableEntry")
 			}
-		} else {
-			log.Println("intel-e2000: Entry is not of type p4client.TableEntry")
 		}
 	}
 }
@@ -292,26 +304,28 @@ func handleNexthopUpdated(nexthop interface{}) {
 func handleNexthopDeleted(nexthop interface{}) {
 	var entries []interface{}
 	nexthopData, _ := nexthop.(*nm.NexthopStruct)
-	entries = L3.translateDeletedNexthop(*nexthopData)
-	for _, entry := range entries {
-		if e, ok := entry.(p4client.TableEntry); ok {
-			er := p4client.DelEntry(e)
-			if er != nil {
-				log.Printf("intel-e2000: error deleting entry for %v error %v\n", e.Tablename, er)
+	if nexthopData != nil {
+		entries = L3.translateDeletedNexthop(*nexthopData)
+		for _, entry := range entries {
+			if e, ok := entry.(p4client.TableEntry); ok {
+				er := p4client.DelEntry(e)
+				if er != nil {
+					log.Printf("intel-e2000: error deleting entry for %v error %v\n", e.Tablename, er)
+				}
+			} else {
+				log.Println("intel-e2000: Entry is not of type p4client.TableEntry")
 			}
-		} else {
-			log.Println("intel-e2000: Entry is not of type p4client.TableEntry")
 		}
-	}
-	entries = Vxlan.translateDeletedNexthop(*nexthopData)
-	for _, entry := range entries {
-		if e, ok := entry.(p4client.TableEntry); ok {
-			er := p4client.DelEntry(e)
-			if er != nil {
-				log.Printf("intel-e2000: error deleting entry for %v error %v\n", e.Tablename, er)
+		entries = Vxlan.translateDeletedNexthop(*nexthopData)
+		for _, entry := range entries {
+			if e, ok := entry.(p4client.TableEntry); ok {
+				er := p4client.DelEntry(e)
+				if er != nil {
+					log.Printf("intel-e2000: error deleting entry for %v error %v\n", e.Tablename, er)
+				}
+			} else {
+				log.Println("intel-e2000: Entry is not of type p4client.TableEntry")
 			}
-		} else {
-			log.Println("intel-e2000: Entry is not of type p4client.TableEntry")
 		}
 	}
 }
@@ -320,77 +334,83 @@ func handleNexthopDeleted(nexthop interface{}) {
 func handleFbdEntryAdded(fbdEntry interface{}) {
 	var entries []interface{}
 	fbdEntryData, _ := fbdEntry.(*nm.FdbEntryStruct)
-	entries = Vxlan.translateAddedFdb(*fbdEntryData)
-	for _, entry := range entries {
-		if e, ok := entry.(p4client.TableEntry); ok {
-			er := p4client.AddEntry(e)
-			if er != nil {
-				log.Printf("intel-e2000: error adding entry for %v error %v\n", e.Tablename, er)
+	if fbdEntryData != nil {
+		entries = Vxlan.translateAddedFdb(*fbdEntryData)
+		for _, entry := range entries {
+			if e, ok := entry.(p4client.TableEntry); ok {
+				er := p4client.AddEntry(e)
+				if er != nil {
+					log.Printf("intel-e2000: error adding entry for %v error %v\n", e.Tablename, er)
+				}
+			} else {
+				log.Println("intel-e2000: Entry is not of type p4client.TableEntry")
 			}
-		} else {
-			log.Println("intel-e2000: Entry is not of type p4client.TableEntry")
 		}
-	}
-	entries = Pod.translateAddedFdb(*fbdEntryData)
-	for _, entry := range entries {
-		if e, ok := entry.(p4client.TableEntry); ok {
-			er := p4client.AddEntry(e)
-			if er != nil {
-				log.Printf("intel-e2000: error adding entry for %v error %v\n", e.Tablename, er)
+		entries = Pod.translateAddedFdb(*fbdEntryData)
+		for _, entry := range entries {
+			if e, ok := entry.(p4client.TableEntry); ok {
+				er := p4client.AddEntry(e)
+				if er != nil {
+					log.Printf("intel-e2000: error adding entry for %v error %v\n", e.Tablename, er)
+				}
+			} else {
+				log.Println("intel-e2000: Entry is not of type p4client.TableEntry")
 			}
-		} else {
-			log.Println("intel-e2000: Entry is not of type p4client.TableEntry")
 		}
 	}
 }
 
 // handleFbdEntryUpdated  handles the updated fdb entry
+//
+//gocognit:ignore
 func handleFbdEntryUpdated(fdbEntry interface{}) {
 	var entries []interface{}
 	fbdEntryData, _ := fdbEntry.(*nm.FdbEntryStruct)
-	entries = Vxlan.translateDeletedFdb(*fbdEntryData)
-	for _, entry := range entries {
-		if e, ok := entry.(p4client.TableEntry); ok {
-			er := p4client.DelEntry(e)
-			if er != nil {
-				log.Printf("intel-e2000: error deleting entry for %v error %v\n", e.Tablename, er)
+	if fbdEntryData != nil {
+		entries = Vxlan.translateDeletedFdb(*fbdEntryData)
+		for _, entry := range entries {
+			if e, ok := entry.(p4client.TableEntry); ok {
+				er := p4client.DelEntry(e)
+				if er != nil {
+					log.Printf("intel-e2000: error deleting entry for %v error %v\n", e.Tablename, er)
+				}
+			} else {
+				log.Println("intel-e2000: Entry is not of type p4client.TableEntry")
 			}
-		} else {
-			log.Println("intel-e2000: Entry is not of type p4client.TableEntry")
 		}
-	}
-	entries = Pod.translateDeletedFdb(*fbdEntryData)
-	for _, entry := range entries {
-		if e, ok := entry.(p4client.TableEntry); ok {
-			er := p4client.DelEntry(e)
-			if er != nil {
-				log.Printf("intel-e2000: error deleting entry for %v error %v\n", e.Tablename, er)
+		entries = Pod.translateDeletedFdb(*fbdEntryData)
+		for _, entry := range entries {
+			if e, ok := entry.(p4client.TableEntry); ok {
+				er := p4client.DelEntry(e)
+				if er != nil {
+					log.Printf("intel-e2000: error deleting entry for %v error %v\n", e.Tablename, er)
+				}
+			} else {
+				log.Println("intel-e2000: Entry is not of type p4client.TableEntry")
 			}
-		} else {
-			log.Println("intel-e2000: Entry is not of type p4client.TableEntry")
 		}
-	}
 
-	entries = Vxlan.translateAddedFdb(*fbdEntryData)
-	for _, entry := range entries {
-		if e, ok := entry.(p4client.TableEntry); ok {
-			er := p4client.AddEntry(e)
-			if er != nil {
-				log.Printf("intel-e2000: error adding entry for %v error %v\n", e.Tablename, er)
+		entries = Vxlan.translateAddedFdb(*fbdEntryData)
+		for _, entry := range entries {
+			if e, ok := entry.(p4client.TableEntry); ok {
+				er := p4client.AddEntry(e)
+				if er != nil {
+					log.Printf("intel-e2000: error adding entry for %v error %v\n", e.Tablename, er)
+				}
+			} else {
+				log.Println("intel-e2000: Entry is not of type p4client.TableEntry")
 			}
-		} else {
-			log.Println("intel-e2000: Entry is not of type p4client.TableEntry")
 		}
-	}
-	entries = Pod.translateAddedFdb(*fbdEntryData)
-	for _, entry := range entries {
-		if e, ok := entry.(p4client.TableEntry); ok {
-			er := p4client.AddEntry(e)
-			if er != nil {
-				log.Printf("intel-e2000: error adding entry for %v error %v\n", e.Tablename, er)
+		entries = Pod.translateAddedFdb(*fbdEntryData)
+		for _, entry := range entries {
+			if e, ok := entry.(p4client.TableEntry); ok {
+				er := p4client.AddEntry(e)
+				if er != nil {
+					log.Printf("intel-e2000: error adding entry for %v error %v\n", e.Tablename, er)
+				}
+			} else {
+				log.Println("intel-e2000: Entry is not of type p4client.TableEntry")
 			}
-		} else {
-			log.Println("intel-e2000: Entry is not of type p4client.TableEntry")
 		}
 	}
 }
@@ -399,26 +419,28 @@ func handleFbdEntryUpdated(fdbEntry interface{}) {
 func handleFbdEntryDeleted(fdbEntry interface{}) {
 	var entries []interface{}
 	fbdEntryData, _ := fdbEntry.(*nm.FdbEntryStruct)
-	entries = Vxlan.translateDeletedFdb(*fbdEntryData)
-	for _, entry := range entries {
-		if e, ok := entry.(p4client.TableEntry); ok {
-			er := p4client.DelEntry(e)
-			if er != nil {
-				log.Printf("intel-e2000: error deleting entry for %v error %v\n", e.Tablename, er)
+	if fbdEntryData != nil {
+		entries = Vxlan.translateDeletedFdb(*fbdEntryData)
+		for _, entry := range entries {
+			if e, ok := entry.(p4client.TableEntry); ok {
+				er := p4client.DelEntry(e)
+				if er != nil {
+					log.Printf("intel-e2000: error deleting entry for %v error %v\n", e.Tablename, er)
+				}
+			} else {
+				log.Println("intel-e2000: Entry is not of type p4client.TableEntry")
 			}
-		} else {
-			log.Println("intel-e2000: Entry is not of type p4client.TableEntry")
 		}
-	}
-	entries = Pod.translateDeletedFdb(*fbdEntryData)
-	for _, entry := range entries {
-		if e, ok := entry.(p4client.TableEntry); ok {
-			er := p4client.DelEntry(e)
-			if er != nil {
-				log.Printf("intel-e2000: error deleting entry for %v error %v\n", e.Tablename, er)
+		entries = Pod.translateDeletedFdb(*fbdEntryData)
+		for _, entry := range entries {
+			if e, ok := entry.(p4client.TableEntry); ok {
+				er := p4client.DelEntry(e)
+				if er != nil {
+					log.Printf("intel-e2000: error deleting entry for %v error %v\n", e.Tablename, er)
+				}
+			} else {
+				log.Println("intel-e2000: Entry is not of type p4client.TableEntry")
 			}
-		} else {
-			log.Println("intel-e2000: Entry is not of type p4client.TableEntry")
 		}
 	}
 }
@@ -427,77 +449,82 @@ func handleFbdEntryDeleted(fdbEntry interface{}) {
 func handleL2NexthopAdded(l2NextHop interface{}) {
 	var entries []interface{}
 	l2NextHopData, _ := l2NextHop.(*nm.L2NexthopStruct)
-
-	entries = Vxlan.translateAddedL2Nexthop(*l2NextHopData)
-	for _, entry := range entries {
-		if e, ok := entry.(p4client.TableEntry); ok {
-			er := p4client.AddEntry(e)
-			if er != nil {
-				log.Printf("intel-e2000: error adding entry for %v error %v\n", e.Tablename, er)
+	if l2NextHopData != nil {
+		entries = Vxlan.translateAddedL2Nexthop(*l2NextHopData)
+		for _, entry := range entries {
+			if e, ok := entry.(p4client.TableEntry); ok {
+				er := p4client.AddEntry(e)
+				if er != nil {
+					log.Printf("intel-e2000: error adding entry for %v error %v\n", e.Tablename, er)
+				}
+			} else {
+				log.Println("intel-e2000: Entry is not of type p4client.TableEntry")
 			}
-		} else {
-			log.Println("intel-e2000: Entry is not of type p4client.TableEntry")
 		}
-	}
-	entries = Pod.translateAddedL2Nexthop(*l2NextHopData)
-	for _, entry := range entries {
-		if e, ok := entry.(p4client.TableEntry); ok {
-			er := p4client.AddEntry(e)
-			if er != nil {
-				log.Printf("intel-e2000: error adding entry for %v error %v\n", e.Tablename, er)
+		entries = Pod.translateAddedL2Nexthop(*l2NextHopData)
+		for _, entry := range entries {
+			if e, ok := entry.(p4client.TableEntry); ok {
+				er := p4client.AddEntry(e)
+				if er != nil {
+					log.Printf("intel-e2000: error adding entry for %v error %v\n", e.Tablename, er)
+				}
+			} else {
+				log.Println("intel-e2000: Entry is not of type p4client.TableEntry")
 			}
-		} else {
-			log.Println("intel-e2000: Entry is not of type p4client.TableEntry")
 		}
 	}
 }
 
 // handleL2NexthopUpdated  handles the updated l2 nexthop
+//
+//gocognit:ignore
 func handleL2NexthopUpdated(l2NextHop interface{}) {
 	var entries []interface{}
 	l2NextHopData, _ := l2NextHop.(*nm.L2NexthopStruct)
-	entries = Vxlan.translateDeletedL2Nexthop(*l2NextHopData)
-	for _, entry := range entries {
-		if e, ok := entry.(p4client.TableEntry); ok {
-			er := p4client.DelEntry(e)
-			if er != nil {
-				log.Printf("intel-e2000: error deleting entry for %v error %v\n", e.Tablename, er)
+	if l2NextHopData != nil {
+		entries = Vxlan.translateDeletedL2Nexthop(*l2NextHopData)
+		for _, entry := range entries {
+			if e, ok := entry.(p4client.TableEntry); ok {
+				er := p4client.DelEntry(e)
+				if er != nil {
+					log.Printf("intel-e2000: error deleting entry for %v error %v\n", e.Tablename, er)
+				}
+			} else {
+				log.Println("intel-e2000: Entry is not of type p4client.TableEntry")
 			}
-		} else {
-			log.Println("intel-e2000: Entry is not of type p4client.TableEntry")
 		}
-	}
-	entries = Pod.translateDeletedL2Nexthop(*l2NextHopData)
-	for _, entry := range entries {
-		if e, ok := entry.(p4client.TableEntry); ok {
-			er := p4client.DelEntry(e)
-			if er != nil {
-				log.Printf("intel-e2000: error deleting entry for %v error %v\n", e.Tablename, er)
+		entries = Pod.translateDeletedL2Nexthop(*l2NextHopData)
+		for _, entry := range entries {
+			if e, ok := entry.(p4client.TableEntry); ok {
+				er := p4client.DelEntry(e)
+				if er != nil {
+					log.Printf("intel-e2000: error deleting entry for %v error %v\n", e.Tablename, er)
+				}
+			} else {
+				log.Println("intel-e2000: Entry is not of type p4client.TableEntry")
 			}
-		} else {
-			log.Println("intel-e2000: Entry is not of type p4client.TableEntry")
 		}
-	}
-	entries = Vxlan.translateAddedL2Nexthop(*l2NextHopData)
-	for _, entry := range entries {
-		if e, ok := entry.(p4client.TableEntry); ok {
-			er := p4client.AddEntry(e)
-			if er != nil {
-				log.Printf("intel-e2000: error adding entry for %v error %v\n", e.Tablename, er)
+		entries = Vxlan.translateAddedL2Nexthop(*l2NextHopData)
+		for _, entry := range entries {
+			if e, ok := entry.(p4client.TableEntry); ok {
+				er := p4client.AddEntry(e)
+				if er != nil {
+					log.Printf("intel-e2000: error adding entry for %v error %v\n", e.Tablename, er)
+				}
+			} else {
+				log.Println("intel-e2000: Entry is not of type p4client.TableEntry")
 			}
-		} else {
-			log.Println("intel-e2000: Entry is not of type p4client.TableEntry")
 		}
-	}
-	entries = Pod.translateAddedL2Nexthop(*l2NextHopData)
-	for _, entry := range entries {
-		if e, ok := entry.(p4client.TableEntry); ok {
-			er := p4client.AddEntry(e)
-			if er != nil {
-				log.Printf("intel-e2000: error adding entry for %v error %v\n", e.Tablename, er)
+		entries = Pod.translateAddedL2Nexthop(*l2NextHopData)
+		for _, entry := range entries {
+			if e, ok := entry.(p4client.TableEntry); ok {
+				er := p4client.AddEntry(e)
+				if er != nil {
+					log.Printf("intel-e2000: error adding entry for %v error %v\n", e.Tablename, er)
+				}
+			} else {
+				log.Println("iintel-e2000: Entry is not of type p4client.TableEntry")
 			}
-		} else {
-			log.Println("iintel-e2000: Entry is not of type p4client.TableEntry")
 		}
 	}
 }
@@ -506,26 +533,28 @@ func handleL2NexthopUpdated(l2NextHop interface{}) {
 func handleL2NexthopDeleted(l2NextHop interface{}) {
 	var entries []interface{}
 	l2NextHopData, _ := l2NextHop.(*nm.L2NexthopStruct)
-	entries = Vxlan.translateDeletedL2Nexthop(*l2NextHopData)
-	for _, entry := range entries {
-		if e, ok := entry.(p4client.TableEntry); ok {
-			err := p4client.DelEntry(e)
-			if err != nil {
-				log.Printf("intel-e2000: error deleting entry for %v error %v\n", e.Tablename, err)
+	if l2NextHopData != nil {
+		entries = Vxlan.translateDeletedL2Nexthop(*l2NextHopData)
+		for _, entry := range entries {
+			if e, ok := entry.(p4client.TableEntry); ok {
+				err := p4client.DelEntry(e)
+				if err != nil {
+					log.Printf("intel-e2000: error deleting entry for %v error %v\n", e.Tablename, err)
+				}
+			} else {
+				log.Println("intel-e2000: Entry is not of type p4client.TableEntry")
 			}
-		} else {
-			log.Println("intel-e2000: Entry is not of type p4client.TableEntry")
 		}
-	}
-	entries = Pod.translateDeletedL2Nexthop(*l2NextHopData)
-	for _, entry := range entries {
-		if e, ok := entry.(p4client.TableEntry); ok {
-			er := p4client.DelEntry(e)
-			if er != nil {
-				log.Printf("intel-e2000: error deleting entry for %v error %v\n", e.Tablename, er)
+		entries = Pod.translateDeletedL2Nexthop(*l2NextHopData)
+		for _, entry := range entries {
+			if e, ok := entry.(p4client.TableEntry); ok {
+				er := p4client.DelEntry(e)
+				if er != nil {
+					log.Printf("intel-e2000: error deleting entry for %v error %v\n", e.Tablename, er)
+				}
+			} else {
+				log.Println("intel-e2000: Entry is not of type p4client.TableEntry")
 			}
-		} else {
-			log.Println("intel-e2000: Entry is not of type p4client.TableEntry")
 		}
 	}
 }
@@ -1109,9 +1138,6 @@ func Initialize() {
 
 // DeInitialize function handles stops functionality
 func DeInitialize() {
-	// unsubscriber all the events
-	nm.EventBus.Unsubscribe()
-
 	L3entries := L3.StaticDeletions()
 	for _, entry := range L3entries {
 		if e, ok := entry.(p4client.TableEntry); ok {
@@ -1134,4 +1160,7 @@ func DeInitialize() {
 			log.Println("intel-e2000: Entry is not of type p4client.TableEntry")
 		}
 	}
+
+	// unsubscriber all the events
+	nm.EventBus.Unsubscribe()
 }

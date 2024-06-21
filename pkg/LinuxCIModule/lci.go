@@ -226,7 +226,7 @@ func Initialize() {
 		}
 	}
 	ctx = context.Background()
-	nlink = utils.NewNetlinkWrapperWithArgs(false)
+	nlink = utils.NewNetlinkWrapperWithArgs(config.GlobalConfig.Tracer)
 }
 
 // DeInitialize function handles stops functionality

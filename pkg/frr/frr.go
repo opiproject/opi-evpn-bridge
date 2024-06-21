@@ -48,11 +48,24 @@ func (h *ModulefrrHandler) HandleEvent(eventType string, objectData *eventbus.Ob
 }
 
 // handlesvi handles the svi functionality
+//
+//nolint:funlen,gocognit
 func handlesvi(objectData *eventbus.ObjectData) {
 	var comp common.Component
 	svi, err := infradb.GetSvi(objectData.Name)
 	if err != nil {
 		log.Printf("GetSvi error: %s %s\n", err, objectData.Name)
+		comp.Name = frrComp
+		comp.CompStatus = common.ComponentStatusError
+		if comp.Timer == 0 {
+			comp.Timer = 2 * time.Second
+		} else {
+			comp.Timer *= 2
+		}
+		err := infradb.UpdateSviStatus(objectData.Name, objectData.ResourceVersion, objectData.NotificationID, nil, comp)
+		if err != nil {
+			log.Printf("error in updating svi status: %s\n", err)
+		}
 		return
 	}
 
@@ -127,6 +140,17 @@ func handlevrf(objectData *eventbus.ObjectData) {
 	vrf, err := infradb.GetVrf(objectData.Name)
 	if err != nil {
 		log.Printf("GetVRF error: %s %s\n", err, objectData.Name)
+		comp.Name = frrComp
+		comp.CompStatus = common.ComponentStatusError
+		if comp.Timer == 0 { // wait timer is 2 powerof natural numbers ex : 1,2,3...
+			comp.Timer = 2 * time.Second
+		} else {
+			comp.Timer *= 2
+		}
+		err := infradb.UpdateVrfStatus(objectData.Name, objectData.ResourceVersion, objectData.NotificationID, nil, comp)
+		if err != nil {
+			log.Printf("error in updating vrf status: %s\n", err)
+		}
 		return
 	}
 
@@ -256,7 +280,7 @@ func Initialize() {
 	subscribeInfradb(&config.GlobalConfig)
 
 	ctx = context.Background()
-	Frr = utils.NewFrrWrapperWithArgs("localhost", false)
+	Frr = utils.NewFrrWrapperWithArgs("localhost", config.GlobalConfig.Tracer)
 
 	// Make sure IPv4 forwarding is enabled.
 	detail, flag := run([]string{"sysctl", "-w", " net.ipv4.ip_forward=1"}, false)

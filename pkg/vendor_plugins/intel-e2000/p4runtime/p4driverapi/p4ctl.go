@@ -24,7 +24,6 @@ import (
 	p4_v1 "github.com/p4lang/p4runtime/go/p4/v1"
 
 	"github.com/antoninbas/p4runtime-go-client/pkg/client"
-	"github.com/antoninbas/p4runtime-go-client/pkg/signals"
 )
 
 const (
@@ -237,12 +236,18 @@ func AddEntry(entry TableEntry) error {
 	return P4RtC.InsertTableEntry(Ctx, entryP)
 }
 
-/*// encodeMac encodes the mac from string
-func encodeMac(macAddrString string) []byte {
-	str := strings.Replace(macAddrString, ":", "", -1)
-	decoded, _ := hex.DecodeString(str)
-	return decoded
-}*/
+/*
+// encodeMac encodes the mac from string
+
+	func encodeMac(macAddrString string) []byte {
+		str := strings.Replace(macAddrString, ":", "", -1)
+		decoded, _ := hex.DecodeString(str)
+		return decoded
+	}
+*/
+
+// StopCh is used to when to stop the p4rtc when a terminate signal is generated
+var StopCh = make(chan struct{})
 
 // NewP4RuntimeClient get the p4 runtime client
 func NewP4RuntimeClient(binPath string, p4infoPath string, conn *grpc.ClientConn) error {
@@ -255,8 +260,6 @@ func NewP4RuntimeClient(binPath string, p4infoPath string, conn *grpc.ClientConn
 	}
 	logr.Infof("intel-e2000: P4Runtime server version is %s", resp.P4RuntimeApiVersion)
 
-	stopCh := signals.RegisterSignalHandlers()
-
 	electionID := &p4_v1.Uint128{High: 0, Low: 1}
 
 	P4RtC = client.NewClient(c, defaultDeviceID, electionID)
@@ -264,7 +267,7 @@ func NewP4RuntimeClient(binPath string, p4infoPath string, conn *grpc.ClientConn
 
 	errs := make(chan error, 1)
 	go func() {
-		errs <- P4RtC.Run(stopCh, arbitrationCh, nil)
+		errs <- P4RtC.Run(StopCh, arbitrationCh, nil)
 	}()
 
 	waitCh := make(chan struct{})

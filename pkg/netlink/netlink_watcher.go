@@ -834,7 +834,6 @@ func readLatestNetlinkState() {
 		readRoutes(v)    // Viswantha library
 	}
 	m := readFDB()
-	log.Printf("netlink: len(m) :%v\n", len(m))
 	for i := 0; i < len(m); i++ {
 		addFdbEntry(m[i])
 	}
@@ -1236,7 +1235,6 @@ func cmdProcessNb(nb string, v string) neighList {
 	CPs := strings.Split(nb[2:len(nb)-3], "},{")
 	for i := 0; i < len(CPs); i++ {
 		var ni neighIPStruct
-		log.Println(CPs[i])
 		err := json.Unmarshal([]byte(fmt.Sprintf("{%v}", CPs[i])), &ni)
 		if err != nil {
 			log.Println("netlink: error-", err)
@@ -1349,7 +1347,6 @@ func readNeighbors(v *infradb.Vrf) {
 func preFilterMac(f *FdbEntryStruct) bool {
 	// TODO m.nexthop.dst
 	if f.VlanID != 0 || (f.Nexthop.Dst != nil && !f.Nexthop.Dst.IsUnspecified()) {
-		log.Printf("netlink: %d vlan \n", len(f.Nexthop.Dst.String()))
 		return true
 	}
 	return false
@@ -1360,16 +1357,15 @@ func cmdProcessRt(v *infradb.Vrf, r string, t int) routeList {
 	var RouteData []routeCmdInfo
 	if len(r) <= 3 {
 		log.Println("netlink: Error in the cmd:", r)
-		var route routeList
-		return route
+		return routeList{}
 	}
 	CPs := strings.Split(r[2:len(r)-3], "},{")
 	for i := 0; i < len(CPs); i++ {
 		var ri routeCmdInfo
-		log.Println(CPs[i])
 		err := json.Unmarshal([]byte(fmt.Sprintf("{%v}", CPs[i])), &ri)
 		if err != nil {
 			log.Println("error-", err)
+			return routeList{}
 		}
 		RouteData = append(RouteData, ri)
 	}
@@ -1600,7 +1596,6 @@ func lookupRoute(dst net.IP, v *infradb.Vrf) (*RouteStruct, bool) {
 		return &RouteStruct{}, false
 	}
 	r := cmdProcessRt(v, CP, int(*v.Metadata.RoutingTable[0]))
-	log.Printf("netlink: %+v\n", r)
 	if len(r.RS) != 0 {
 		R1 := r.RS[0]
 		// ###  Search the latestRoutes DB snapshot if that exists, else
@@ -1717,20 +1712,24 @@ func (nexthop *NexthopStruct) annotate() *NexthopStruct {
 		nexthop.Metadata["vni"] = *nexthop.Vrf.Spec.Vni
 		if nexthop.Neighbor != nil {
 			nexthop.Metadata["inner_dmac"] = nexthop.Neighbor.Neigh0.HardwareAddr.String()
-			G, _ := infradb.GetVrf("//network.opiproject.org/vrfs/GRD")
-			r, ok := lookupRoute(nexthop.nexthop.Gw, G)
-			if ok {
-				// For now pick the first physical nexthop (no ECMP yet)
-				phyNh := r.Nexthops[0]
-				link, _ := vn.LinkByName(NameIndex[phyNh.nexthop.LinkIndex])
-				nexthop.Metadata["phy_smac"] = link.Attrs().HardwareAddr.String()
-				nexthop.Metadata["egress_vport"] = phyPorts[NameIndex[phyNh.nexthop.LinkIndex]]
-				if phyNh.Neighbor != nil {
-					nexthop.Metadata["phy_dmac"] = phyNh.Neighbor.Neigh0.HardwareAddr.String()
-				} else {
-					// The VXLAN nexthop can only be installed when the phy_nexthops are Resolved.
-					nexthop.Resolved = false
+			G, err := infradb.GetVrf("//network.opiproject.org/vrfs/GRD")
+			if err == nil {
+				r, ok := lookupRoute(nexthop.nexthop.Gw, G)
+				if ok {
+					// For now pick the first physical nexthop (no ECMP yet)
+					phyNh := r.Nexthops[0]
+					link, _ := vn.LinkByName(NameIndex[phyNh.nexthop.LinkIndex])
+					nexthop.Metadata["phy_smac"] = link.Attrs().HardwareAddr.String()
+					nexthop.Metadata["egress_vport"] = phyPorts[NameIndex[phyNh.nexthop.LinkIndex]]
+					if phyNh.Neighbor != nil {
+						nexthop.Metadata["phy_dmac"] = phyNh.Neighbor.Neigh0.HardwareAddr.String()
+					} else {
+						// The VXLAN nexthop can only be installed when the phy_nexthops are Resolved.
+						nexthop.Resolved = false
+					}
 				}
+			} else {
+				log.Printf("netlink: No GRD found :%v\n", err)
 			}
 		} else {
 			nexthop.Resolved = false
@@ -1898,18 +1897,12 @@ func installFilterFDB(fdb *FdbEntryStruct) bool {
 	// ... other than with L2 nexthops of type VXLAN and BridgePort ...
 	// ... and VXLAN entries with unresolved underlay nextop.
 	keep := fdb.VlanID != 0 && fdb.lb != nil && checkFdbType(fdb.Type) && fdb.Nexthop.Resolved
-	if !keep {
-		log.Printf("netlink: install_filter: dropping {%v}", fdb)
-	}
 	return keep
 }
 
 // installFilterL2N install the l2 filter
 func installFilterL2N(l2n *L2NexthopStruct) bool {
 	keep := !(l2n.Type == 0 && l2n.Resolved && len(l2n.FdbRefs) == 0)
-	if !keep {
-		log.Printf("netlink: install_filter fDB: dropping {%+v}", l2n)
-	}
 	return keep
 }
 
@@ -2038,25 +2031,24 @@ func DeleteLatestDB() {
 // monitorNetlink moniters the netlink
 func monitorNetlink() {
 	for !stopMonitoring.Load().(bool) {
-		log.Printf("netlink: Polling netlink databases.")
 		resyncWithKernel()
-		log.Printf("netlink: Polling netlink databases completed.")
 		time.Sleep(time.Duration(pollInterval) * time.Second)
 	}
 	log.Printf("netlink: Stopped periodic polling. Waiting for Infra DB cleanup to finish")
 	time.Sleep(2 * time.Second)
 	log.Printf("netlink: One final netlink poll to identify what's still left.")
-	resyncWithKernel()
 	// Inform subscribers to delete configuration for any still remaining Netlink DB objects.
 	log.Printf("netlink: Delete any residual objects in DB")
 	for _, r := range routes {
-		notifyAddDel(r, "RouteDeleted")
+		notifyAddDel(r, RouteDeleted)
 	}
+
 	for _, nexthop := range Nexthops {
-		notifyAddDel(nexthop, "NexthopDeleted")
+		notifyAddDel(nexthop, NexthopDeleted)
 	}
+
 	for _, m := range fDB {
-		notifyAddDel(m, "fdb_entry_deleted")
+		notifyAddDel(m, FdbEntryDeleted)
 	}
 	log.Printf("netlink: DB cleanup completed.")
 }
@@ -2075,7 +2067,7 @@ func Initialize() {
 	}
 	getlink()
 	ctx = context.Background()
-	nlink = utils.NewNetlinkWrapperWithArgs(false)
+	nlink = utils.NewNetlinkWrapperWithArgs(config.GlobalConfig.Tracer)
 	// stopMonitoring = false
 	stopMonitoring.Store(false)
 	go monitorNetlink() // monitor Thread started
