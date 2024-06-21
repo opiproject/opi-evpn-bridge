@@ -85,6 +85,7 @@ type Config struct {
 	Database    string             `yaml:"database"`
 	DBAddress   string             `yaml:"dbaddress"`
 	Buildenv    string             `yaml:"buildenv"`
+	Tracer      bool               `yaml:"tracer"`
 	Subscribers []SubscriberConfig `yaml:"subscribers"`
 	LinuxFrr    LinuxFrrConfig     `yaml:"linuxfrr"`
 	Netlink     NetlinkConfig      `yaml:"netlink"`
