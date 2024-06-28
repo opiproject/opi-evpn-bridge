@@ -79,10 +79,24 @@ const ( // NexthopStruct TYPE & L2NEXTHOP TYPE & FDBentry
 	IGNORE
 )
 
+// Event Types
+const (
+	ROUTE = iota
+	NEXTHOP
+	FDB
+	L2NEXTHOP
+)
+
 // rtNNeighbor
 const (
 	rtNNeighbor = 1111
 )
+
+// Event Structure
+type Event struct {
+	EventType int
+	Operation [3]string
+}
 
 // neighKey strcture of neighbor
 type neighKey struct {
@@ -394,9 +408,6 @@ var oldgenmap = make(map[interface{}]interface{})
 
 // latestgenmap latest map
 var latestgenmap = make(map[interface{}]interface{})
-
-// notifyEvents array
-var notifyEvents = []string{"_added", "_updated", "_deleted"}
 
 //--------------------------------------------------------------------------
 //###  NexthopStruct Database Entries
@@ -1410,143 +1421,123 @@ func notifyAddDel(r interface{}, event string) {
 	EventBus.Publish(event, r)
 }
 
-func deepEqualN(n1 *NexthopStruct, n2 *NexthopStruct, nc bool) bool {
-	if !reflect.DeepEqual(n1.Vrf.Name, n2.Vrf.Name) {
+func (nexthop *NexthopStruct) deepEqual(nhOld *NexthopStruct, nc bool) bool {
+	switch {
+	case nexthop.Vrf.Name != nhOld.Vrf.Name:
 		return false
-	}
-	if !reflect.DeepEqual(n1.Weight, n2.Weight) {
+	case nexthop.Weight != nhOld.Weight:
 		return false
-	}
-	if !reflect.DeepEqual(n1.ID, n2.ID) {
+	case nexthop.ID != nhOld.ID:
 		return false
-	}
-	if !reflect.DeepEqual(n1.nexthop, n2.nexthop) {
+	case nexthop.Key != nhOld.Key:
 		return false
-	}
-	if !reflect.DeepEqual(n1.Key, n2.Key) {
+	case nexthop.Local != nhOld.Local:
 		return false
-	}
-	if !reflect.DeepEqual(n1.Local, n2.Local) {
+	case !reflect.DeepEqual(nexthop.Metadata, nhOld.Metadata):
 		return false
-	}
-	if !reflect.DeepEqual(n1.Metadata, n2.Metadata) {
+	case nexthop.Metric != nhOld.Metric:
 		return false
-	}
-	if !reflect.DeepEqual(n1.Metric, n2.Metric) {
+	case nexthop.Scope != nhOld.Scope:
 		return false
-	}
-	if !reflect.DeepEqual(n1.Scope, n2.Scope) {
+	case nexthop.Resolved != nhOld.Resolved:
 		return false
-	}
-	if !reflect.DeepEqual(n1.Resolved, n2.Resolved) {
+	case nexthop.Protocol != nhOld.Protocol:
 		return false
-	}
-	if !reflect.DeepEqual(n1.Protocol, n2.Protocol) {
+	case nexthop.NhType != nhOld.NhType:
 		return false
-	}
-	if !reflect.DeepEqual(n1.NhType, n2.NhType) {
+	case !reflect.DeepEqual(nexthop.nexthop, nhOld.nexthop):
 		return false
 	}
 	if nc {
-		if len(n1.RouteRefs) != len(n2.RouteRefs) {
+		if len(nexthop.RouteRefs) != len(nhOld.RouteRefs) {
 			return false
 		}
-		for i := range n1.RouteRefs {
-			ret := deepEqualR(n1.RouteRefs[i], n2.RouteRefs[i], false)
+		for i := range nexthop.RouteRefs {
+			ret := nexthop.RouteRefs[i].deepEqual(nhOld.RouteRefs[i], false)
 			if !ret {
 				return false
 			}
 		}
 	}
-	/*if !reflect.DeepEqual(N1.Neighbor, N2.Neighbor) {
-		return false
-	}*/
 	return true
 }
 
-func deepEqualR(r1 *RouteStruct, r2 *RouteStruct, nc bool) bool {
-	if !reflect.DeepEqual(r1.Vrf.Name, r2.Vrf.Name) {
+func (route *RouteStruct) deepEqual(routeOld *RouteStruct, nc bool) bool {
+	switch {
+	case route.Vrf.Name != routeOld.Vrf.Name:
 		return false
-	}
-	if !reflect.DeepEqual(r1.Route0, r2.Route0) {
+	case !reflect.DeepEqual(route.Route0, routeOld.Route0):
 		return false
-	}
-	if !reflect.DeepEqual(r1.Key, r2.Key) {
+	case route.Key != routeOld.Key:
 		return false
-	}
-	if !reflect.DeepEqual(r1.NlType, r2.NlType) {
+	case route.NlType != routeOld.NlType:
 		return false
-	}
-	if !reflect.DeepEqual(r1.Metadata, r2.Metadata) {
+	case !reflect.DeepEqual(route.Metadata, routeOld.Metadata):
 		return false
 	}
 	if nc {
-		if len(r1.Nexthops) != len(r2.Nexthops) {
+		if len(route.Nexthops) != len(routeOld.Nexthops) {
 			return false
 		}
-		return deepEqualN(r1.Nexthops[0], r2.Nexthops[0], false)
+		return route.Nexthops[0].deepEqual(routeOld.Nexthops[0], false)
 	}
 	return true
 }
 
-func deepCheck(v1 interface{}, v2 interface{}, event []string) bool {
-	if strings.HasPrefix(event[1], "route") {
-		r1 := v1.(*RouteStruct)
-		r2 := v2.(*RouteStruct)
-		return deepEqualR(r1, r2, true)
-	} else if strings.HasPrefix(event[1], "nexthop") {
-		n1 := v1.(*NexthopStruct)
-		n2 := v2.(*NexthopStruct)
-		return deepEqualN(n1, n2, true)
+func deepCheck(v1 interface{}, v2 interface{}) bool {
+	switch t := v1.(type) {
+	case *RouteStruct:
+		return t.deepEqual(v2.(*RouteStruct), true)
+	case *NexthopStruct:
+		return t.deepEqual(v2.(*NexthopStruct), true)
 	}
 	return true
 }
 
 // nolint
-func notify_changes(new_db map[interface{}]interface{}, old_db map[interface{}]interface{}, event []string) {
+func notify_changes(new_db map[interface{}]interface{}, old_db map[interface{}]interface{}, event Event) {
 	DB2 := old_db
 	DB1 := new_db
 	/* Checking the Updated entries in the netlink db by comparing the individual keys and their corresponding values in old and new db copies
 	   entries with same keys with different values and send the notification to vendor specific module */
 	for k1, v1 := range DB1 {
-		for k2, v2 := range DB2 {
-			if k1 == k2 {
-				if !deepCheck(v1, v2, event) {
-					// To Avoid in-correct update notification due to race condition in which metadata is nil in new entry and crashing in dcgw module
-					if strings.Contains(event[1], "route") || strings.HasPrefix(event[1], "nexthop") {
-						var rv *RouteStruct
-						var nv *NexthopStruct
-						if strings.Contains(event[1], "route") {
-							rv = v1.(*RouteStruct)
-							if rv.Vrf.Status.VrfOperStatus == infradb.VrfOperStatusToBeDeleted {
-								notifyAddDel(rv, event[2])
-								delete(new_db, k1)
-								delete(old_db, k2)
-								break
-							}
-						} else if strings.Contains(event[1], "nexthop") {
-							nv = v1.(*NexthopStruct)
-							if nv.Vrf.Status.VrfOperStatus == infradb.VrfOperStatusToBeDeleted {
-								notifyAddDel(nv, event[2])
-								delete(new_db, k1)
-								delete(old_db, k2)
-								break
-							}
-						}
-					}
-					notifyAddDel(v1, event[1])
-				}
-				delete(new_db, k1)
-				delete(old_db, k2)
-				break
-			}
+		v2, ok := DB2[k1]
+		if !ok {
+			continue
 		}
+		if !deepCheck(v1, v2) {
+			// To Avoid in-correct update notification due to race condition in which metadata is nil in new entry and crashing in dcgw module
+			if event.EventType == ROUTE || event.EventType == NEXTHOP {
+				var rv *RouteStruct
+				var nv *NexthopStruct
+				if event.EventType == ROUTE {
+					rv = v1.(*RouteStruct)
+					if rv.Vrf.Status.VrfOperStatus == infradb.VrfOperStatusToBeDeleted {
+						notifyAddDel(rv, event.Operation[2])
+						delete(new_db, k1)
+						delete(old_db, k1)
+						continue
+					}
+				} else if event.EventType == NEXTHOP {
+					nv = v1.(*NexthopStruct)
+					if nv.Vrf.Status.VrfOperStatus == infradb.VrfOperStatusToBeDeleted {
+						notifyAddDel(nv, event.Operation[2])
+						delete(new_db, k1)
+						delete(old_db, k1)
+						continue
+					}
+				}
+			}
+			notifyAddDel(v1, event.Operation[1])
+		}
+		delete(new_db, k1)
+		delete(old_db, k1)
 	}
 	for _, r := range new_db { // Added entries notification cases
-		notifyAddDel(r, event[0])
+		notifyAddDel(r, event.Operation[0])
 	}
 	for _, r := range old_db { // Deleted entires notification cases
-		notifyAddDel(r, event[2])
+		notifyAddDel(r, event.Operation[2])
 	}
 }
 
@@ -1935,17 +1926,6 @@ func applyInstallFilters() {
 
 // notifyDBChanges notify the database changes
 func notifyDBChanges() {
-	var routeEventStr = make([]string, 0)
-	var nexthopEventStr = make([]string, 0)
-	var fdbEventStr = make([]string, 0)
-	var l2nexthopEventStr = make([]string, 0)
-
-	for _, s := range notifyEvents {
-		routeEventStr = append(routeEventStr, "route"+s)
-		nexthopEventStr = append(nexthopEventStr, "nexthop"+s)
-		fdbEventStr = append(fdbEventStr, "fdb_entry"+s)
-		l2nexthopEventStr = append(l2nexthopEventStr, "l2_nexthop"+s)
-	}
 	type NlDBCopy struct {
 		RDB   map[routeKey]*RouteStruct
 		NDB   map[nexthopKey]*NexthopStruct
@@ -1954,11 +1934,6 @@ func notifyDBChanges() {
 	}
 	latestdb := NlDBCopy{RDB: latestRoutes, NDB: latestNexthop, FBDB: latestFDB, L2NDB: latestL2Nexthop}
 	olddb := NlDBCopy{RDB: routes, NDB: Nexthops, FBDB: fDB, L2NDB: l2Nexthops}
-	var eventStr []interface{}
-	eventStr = append(eventStr, routeEventStr)
-	eventStr = append(eventStr, nexthopEventStr)
-	eventStr = append(eventStr, fdbEventStr)
-	eventStr = append(eventStr, l2nexthopEventStr)
 	// routes
 	oldgenmap = make(map[interface{}]interface{})
 	latestgenmap = make(map[interface{}]interface{})
@@ -1968,7 +1943,8 @@ func notifyDBChanges() {
 	for k, v := range olddb.RDB {
 		oldgenmap[k] = v
 	}
-	notify_changes(latestgenmap, oldgenmap, eventStr[0].([]string))
+	event := Event{EventType: ROUTE, Operation: [3]string{RouteAdded, RouteUpdated, RouteDeleted}}
+	notify_changes(latestgenmap, oldgenmap, event)
 	// Nexthops
 	oldgenmap = make(map[interface{}]interface{})
 	latestgenmap = make(map[interface{}]interface{})
@@ -1978,7 +1954,8 @@ func notifyDBChanges() {
 	for k, v := range olddb.NDB {
 		oldgenmap[k] = v
 	}
-	notify_changes(latestgenmap, oldgenmap, eventStr[1].([]string))
+	event = Event{EventType: NEXTHOP, Operation: [3]string{NexthopAdded, NexthopUpdated, NexthopDeleted}}
+	notify_changes(latestgenmap, oldgenmap, event)
 	// fDB
 	oldgenmap = make(map[interface{}]interface{})
 	latestgenmap = make(map[interface{}]interface{})
@@ -1988,7 +1965,8 @@ func notifyDBChanges() {
 	for k, v := range olddb.FBDB {
 		oldgenmap[k] = v
 	}
-	notify_changes(latestgenmap, oldgenmap, eventStr[2].([]string))
+	event = Event{EventType: FDB, Operation: [3]string{FdbEntryAdded, FdbEntryUpdated, FdbEntryDeleted}}
+	notify_changes(latestgenmap, oldgenmap, event)
 	// L2Nexthop
 	oldgenmap = make(map[interface{}]interface{})
 	latestgenmap = make(map[interface{}]interface{})
@@ -1998,7 +1976,8 @@ func notifyDBChanges() {
 	for k, v := range olddb.L2NDB {
 		oldgenmap[k] = v
 	}
-	notify_changes(latestgenmap, oldgenmap, eventStr[3].([]string))
+	event = Event{EventType: L2NEXTHOP, Operation: [3]string{L2NexthopAdded, L2NexthopUpdated, L2NexthopDeleted}}
+	notify_changes(latestgenmap, oldgenmap, event)
 }
 
 // resyncWithKernel fun resyncs with kernal db
