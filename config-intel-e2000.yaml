@@ -4,6 +4,7 @@ tlsfiles:
 database: redis
 dbaddress: 127.0.0.1:6379
 buildenv: intel_e2000
+tracer: false
 subscribers:
  - name: "lvm"
    priority: 2
