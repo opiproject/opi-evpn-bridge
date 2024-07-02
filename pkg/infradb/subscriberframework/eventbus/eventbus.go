@@ -66,6 +66,7 @@ func (e *EventBus) StartSubscriber(moduleName, eventType string, priority int, e
 						subscriber.Ch <- "error: no event handler found"
 					}
 				case <-subscriber.Quit:
+					log.Printf("\nSubscriber %s  quit \n", subscriber.Name)
 					close(subscriber.Ch)
 					return
 				}
@@ -115,6 +116,7 @@ func (e *EventBus) GetSubscribers(eventType string) []*Subscriber {
 	return e.subscribers[eventType]
 }
 
+// subscriberExist checks if the subscriber exist
 func (e *EventBus) subscriberExist(eventType string, moduleName string) bool {
 	subList := e.GetSubscribers(eventType)
 	if len(subList) != 0 {
@@ -124,6 +126,24 @@ func (e *EventBus) subscriberExist(eventType string, moduleName string) bool {
 			}
 		}
 	}
+	return false
+}
+
+// UnsubscribeModule unsubs the whole module
+func (e *EventBus) UnsubscribeModule(moduleName string) bool {
+	for eventName, subs := range e.subscribers {
+		if len(subs) != 0 {
+			for i, sub := range subs {
+				if sub.Name == moduleName {
+					sub.Quit <- true
+					e.subscribers[eventName] = append(subs[:i], subs[i+1:]...)
+					e.eventHandlers[moduleName+"."+eventName] = nil
+					log.Printf("\n Module %s is unsubscribed for event %s", sub.Name, eventName)
+				}
+			}
+		}
+	}
+	log.Printf("\nSubscriber %s is unsubscribed for all events\n", moduleName)
 	return false
 }
 

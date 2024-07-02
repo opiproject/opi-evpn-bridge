@@ -14,8 +14,10 @@ import (
 	"net"
 
 	pb "github.com/opiproject/opi-api/network/evpn-gw/v1alpha1/gen/go"
+	"github.com/opiproject/opi-evpn-bridge/pkg/config"
 	"github.com/opiproject/opi-evpn-bridge/pkg/infradb/common"
 	"github.com/opiproject/opi-evpn-bridge/pkg/infradb/subscriberframework/eventbus"
+	"github.com/opiproject/opi-evpn-bridge/pkg/utils"
 )
 
 // LogicalBridgeOperStatus operational Status for Logical Bridges
@@ -73,6 +75,9 @@ func NewLogicalBridge(in *pb.LogicalBridge) (*LogicalBridge, error) {
 		vtepip := make(net.IP, 4)
 		binary.BigEndian.PutUint32(vtepip, in.Spec.VtepIpPrefix.Addr.GetV4Addr())
 		vip = &net.IPNet{IP: vtepip, Mask: net.CIDRMask(int(in.Spec.VtepIpPrefix.Len), 32)}
+	} else {
+		tmpVtepIP := utils.GetIPAddress(config.GlobalConfig.LinuxFrr.DefaultVtep)
+		vip = &tmpVtepIP
 	}
 
 	subscribers := eventbus.EBus.GetSubscribers("logical-bridge")

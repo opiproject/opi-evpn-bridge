@@ -4,6 +4,7 @@ tlsfiles:
 database: redis
 dbaddress: 127.0.0.1:6379
 buildenv: ci
+tracer: true
 subscribers:
  - name: "lgm"
    priority: 1
