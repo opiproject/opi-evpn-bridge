@@ -248,10 +248,17 @@ const (
 	L2NexthopDeleted = "l2_nexthop_deleted"
 )
 
+// Operate Structure
+type Operate struct {
+	toAdd    string
+	toUpdate string
+	toDelete string
+}
+
 // Event Structure
 type Event struct {
 	EventType int
-	Operation [3]string
+	Operation Operate
 }
 
 // neighKey strcture of neighbor
@@ -689,12 +696,44 @@ func getState(s string) int {
 	return neighState[s]
 }
 
+func (l2n *L2NexthopStruct) deepEqual(l2nOld *L2NexthopStruct, nc bool) bool {
+	if l2n.Dev != l2nOld.Dev || !l2n.Dst.Equal(l2nOld.Dst) || l2n.ID != l2nOld.ID || l2n.Key != l2nOld.Key || l2n.Type != l2nOld.Type {
+		return false
+	}
+	if nc {
+		if len(l2n.FdbRefs) != len(l2nOld.FdbRefs) {
+			return false
+		}
+		for i := range l2n.FdbRefs {
+			ret := l2n.FdbRefs[i].deepEqual(l2nOld.FdbRefs[i], false)
+			if !ret {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+func (fdb *FdbEntryStruct) deepEqual(fdbOld *FdbEntryStruct, nc bool) bool {
+	if fdb.VlanID != fdbOld.VlanID || fdb.Mac != fdbOld.Mac || fdb.Key != fdbOld.Key || fdb.Type != fdbOld.Type {
+		return false
+	}
+	if nc {
+		if fdb.Nexthop != nil || fdbOld != nil {
+			ret := fdb.Nexthop.deepEqual(fdbOld.Nexthop, false)
+			if !ret {
+				return false
+			}
+		}
+	}
+	return true
+}
+
 func (nexthop *NexthopStruct) deepEqual(nhOld *NexthopStruct, nc bool) bool {
-	switch {
-	case nexthop.Vrf.Name != nhOld.Vrf.Name, nexthop.Weight != nhOld.Weight, nexthop.ID != nhOld.ID, nexthop.Key != nhOld.Key,
-		nexthop.Local != nhOld.Local, !reflect.DeepEqual(nexthop.Metadata, nhOld.Metadata), nexthop.Metric != nhOld.Metric,
-		nexthop.Scope != nhOld.Scope, nexthop.Resolved != nhOld.Resolved, nexthop.Protocol != nhOld.Protocol, nexthop.NhType != nhOld.NhType,
-		!reflect.DeepEqual(nexthop.nexthop, nhOld.nexthop):
+	if nexthop.Vrf.Name != nhOld.Vrf.Name || nexthop.Weight != nhOld.Weight || nexthop.ID != nhOld.ID || nexthop.Key != nhOld.Key || nexthop.Local != nhOld.Local ||
+		!reflect.DeepEqual(nexthop.Metadata, nhOld.Metadata) || nexthop.Metric != nhOld.Metric ||
+		nexthop.Scope != nhOld.Scope || nexthop.Resolved != nhOld.Resolved || nexthop.Protocol != nhOld.Protocol || nexthop.NhType != nhOld.NhType ||
+		!reflect.DeepEqual(nexthop.nexthop, nhOld.nexthop) {
 		return false
 	}
 	if nc {
@@ -712,9 +751,8 @@ func (nexthop *NexthopStruct) deepEqual(nhOld *NexthopStruct, nc bool) bool {
 }
 
 func (route *RouteStruct) deepEqual(routeOld *RouteStruct, nc bool) bool {
-	switch {
-	case route.Vrf.Name != routeOld.Vrf.Name, !reflect.DeepEqual(route.Route0, routeOld.Route0), route.Key != routeOld.Key,
-		route.NlType != routeOld.NlType, !reflect.DeepEqual(route.Metadata, routeOld.Metadata):
+	if route.Vrf.Name != routeOld.Vrf.Name || !reflect.DeepEqual(route.Route0, routeOld.Route0) || route.Key != routeOld.Key ||
+		route.NlType != routeOld.NlType || !reflect.DeepEqual(route.Metadata, routeOld.Metadata) {
 		return false
 	}
 	if nc {
@@ -1093,15 +1131,20 @@ func notifyAddDel(r interface{}, event string) {
 
 func deepCheck(v1 interface{}, v2 interface{}) bool {
 	if reflect.TypeOf(v1) != reflect.TypeOf(v2) {
-		return false
+		return true
 	}
 	switch t := v1.(type) {
 	case *RouteStruct:
 		return t.deepEqual(v2.(*RouteStruct), true)
 	case *NexthopStruct:
 		return t.deepEqual(v2.(*NexthopStruct), true)
+	case *FdbEntryStruct:
+		return t.deepEqual(v2.(*FdbEntryStruct), true)
+	case *L2NexthopStruct:
+		return t.deepEqual(v2.(*L2NexthopStruct), true)
+	default:
+		return true
 	}
-	return true
 }
 
 func checkFdbType(fdbtype int) bool {
@@ -1153,10 +1196,19 @@ func lookupRoute(dst net.IP, v *infradb.Vrf) (*RouteStruct, bool) {
 		log.Printf("netlink : Command error %v\n", err)
 		return &RouteStruct{}, false
 	}
-	CPs := strings.Split(CP[2:len(CP)-3], "},{")
+	var rawMessages []json.RawMessage
+	err = json.Unmarshal([]byte(CP), &rawMessages)
+	if err != nil {
+		log.Printf("JSON unmarshal error: %v", err)
+		return &RouteStruct{}, false
+	}
+	CPs := make([]string, 0, len(rawMessages))
+	for _, rawMsg := range rawMessages {
+		CPs = append(CPs, string(rawMsg))
+	}
 	for i := 0; i < len(CPs); i++ {
 		var ri routeCmdInfo
-		err := json.Unmarshal([]byte(fmt.Sprintf("{%v}", CPs[i])), &ri)
+		err := json.Unmarshal([]byte(CPs[i]), &ri)
 		if err != nil {
 			log.Println("error-", err)
 			return &RouteStruct{}, false
@@ -1350,10 +1402,19 @@ func readRouteFromIP(v *infradb.Vrf) {
 			log.Printf("netlink: Err Command route\n")
 			return
 		}
-		CPs := strings.Split(Raw[2:len(Raw)-3], "},{")
+		var rawMessages []json.RawMessage
+		err = json.Unmarshal([]byte(Raw), &rawMessages)
+		if err != nil {
+			log.Printf("JSON unmarshal error: %v", err)
+			return
+		}
+		CPs := make([]string, 0, len(rawMessages))
+		for _, rawMsg := range rawMessages {
+			CPs = append(CPs, string(rawMsg))
+		}
 		for i := 0; i < len(CPs); i++ {
 			var ri routeCmdInfo
-			err := json.Unmarshal([]byte(fmt.Sprintf("{%v}", CPs[i])), &ri)
+			err := json.Unmarshal([]byte(CPs[i]), &ri)
 			if err != nil {
 				log.Println("error-", err)
 				return
@@ -1388,19 +1449,24 @@ func addNeigh(dump neighList) {
 }
 
 // cmdProcessNb process the neighbor command
-func cmdProcessNb(nb string, v string) neighList {
-	var nbs []neighIPStruct
-	CPs := strings.Split(nb[2:len(nb)-3], "},{")
-	for i := 0; i < len(CPs); i++ {
-		var ni neighIPStruct
-		err := json.Unmarshal([]byte(fmt.Sprintf("{%v}", CPs[i])), &ni)
-		if err != nil {
-			log.Println("netlink: error-", err)
-		}
-		nbs = append(nbs, ni)
-	}
+func cmdProcessNb(nbs []neighIPStruct, v string) neighList {
 	Neigh := parseNeigh(nbs, v)
 	return Neigh
+}
+
+// VrfStatusGetter gets vrf status
+type VrfStatusGetter interface {
+	GetVrfOperStatus() infradb.VrfOperStatus
+}
+
+// GetVrfOperStatus gets route vrf operation status
+func (route *RouteStruct) GetVrfOperStatus() infradb.VrfOperStatus {
+	return route.Vrf.Status.VrfOperStatus
+}
+
+// GetVrfOperStatus gets nexthop vrf opration status
+func (nexthop *NexthopStruct) GetVrfOperStatus() infradb.VrfOperStatus {
+	return nexthop.Vrf.Status.VrfOperStatus
 }
 
 // nolint
@@ -1417,44 +1483,36 @@ func notify_changes(new_db map[interface{}]interface{}, old_db map[interface{}]i
 		if !deepCheck(v1, v2) {
 			// To Avoid in-correct update notification due to race condition in which metadata is nil in new entry and crashing in dcgw module
 			if event.EventType == ROUTE || event.EventType == NEXTHOP {
-				var rv *RouteStruct
-				var nv *NexthopStruct
-				if event.EventType == ROUTE {
-					rv, ok = v1.(*RouteStruct)
-					if !ok {
-						log.Printf("Netlink: Type mismatch")
-						continue
-					}
-					if rv.Vrf.Status.VrfOperStatus == infradb.VrfOperStatusToBeDeleted {
-						notifyAddDel(rv, event.Operation[2])
-						delete(new_db, k1)
-						delete(old_db, k1)
-						continue
-					}
-				} else if event.EventType == NEXTHOP {
-					nv, ok = v1.(*NexthopStruct)
-					if !ok {
-						log.Printf("Netlink: Type mismatch")
-						continue
-					}
-					if nv.Vrf.Status.VrfOperStatus == infradb.VrfOperStatusToBeDeleted {
-						notifyAddDel(nv, event.Operation[2])
-						delete(new_db, k1)
-						delete(old_db, k1)
-						continue
-					}
+				var status VrfStatusGetter
+				var ok bool
+				switch event.EventType {
+				case ROUTE:
+					status, ok = v1.(VrfStatusGetter)
+				case NEXTHOP:
+					status, ok = v1.(VrfStatusGetter)
+				default:
+				}
+				if !ok {
+					log.Printf("Netlink: Invalid Type")
+					continue
+				}
+				if status.GetVrfOperStatus() == infradb.VrfOperStatusToBeDeleted {
+					notifyAddDel(status, event.Operation.toDelete)
+					delete(new_db, k1)
+					delete(old_db, k1)
+					continue
 				}
 			}
-			notifyAddDel(v1, event.Operation[1])
+			notifyAddDel(v1, event.Operation.toUpdate)
 		}
 		delete(new_db, k1)
 		delete(old_db, k1)
 	}
 	for _, r := range new_db { // Added entries notification cases
-		notifyAddDel(r, event.Operation[0])
+		notifyAddDel(r, event.Operation.toAdd)
 	}
 	for _, r := range old_db { // Deleted entires notification cases
-		notifyAddDel(r, event.Operation[2])
+		notifyAddDel(r, event.Operation.toDelete)
 	}
 }
 
@@ -1789,10 +1847,19 @@ func readFDB() []*FdbEntryStruct {
 		return macs
 	}
 
-	CPs := strings.Split(CP[2:len(CP)-3], "},{")
+	var rawMessages []json.RawMessage
+	err = json.Unmarshal([]byte(CP), &rawMessages)
+	if err != nil {
+		log.Printf("JSON unmarshal error: %v", err)
+		return macs
+	}
+	CPs := make([]string, 0, len(rawMessages))
+	for _, rawMsg := range rawMessages {
+		CPs = append(CPs, string(rawMsg))
+	}
 	for i := 0; i < len(CPs); i++ {
 		var fi fdbIPStruct
-		err := json.Unmarshal([]byte(fmt.Sprintf("{%v}", CPs[i])), &fi)
+		err := json.Unmarshal([]byte(CPs[i]), &fi)
 		if err != nil {
 			log.Printf("netlink: error-%v", err)
 		}
@@ -1817,6 +1884,7 @@ func readNeighbors(v *infradb.Vrf) {
 	var N neighList
 	var err error
 	var Nb string
+	var nbs []neighIPStruct
 	if v.Spec.Vni == nil {
 		/* No support for "ip neighbor show" command in netlink library Raised ticket https://github.com/vishvananda/netlink/issues/913 ,
 		   so using ip command as WA */
@@ -1824,9 +1892,28 @@ func readNeighbors(v *infradb.Vrf) {
 	} else {
 		Nb, err = nlink.ReadNeigh(ctx, path.Base(v.Name))
 	}
-	if len(Nb) != 3 && err == nil {
-		N = cmdProcessNb(Nb, v.Name)
+	if len(Nb) <= 3 && err == nil {
+		return
 	}
+	var rawMessages []json.RawMessage
+	err = json.Unmarshal([]byte(Nb), &rawMessages)
+	if err != nil {
+		log.Printf("JSON unmarshal error: %v", err)
+		return
+	}
+	CPs := make([]string, 0, len(rawMessages))
+	for _, rawMsg := range rawMessages {
+		CPs = append(CPs, string(rawMsg))
+	}
+	for i := 0; i < len(CPs); i++ {
+		var ni neighIPStruct
+		err := json.Unmarshal([]byte(CPs[i]), &ni)
+		if err != nil {
+			log.Println("netlink: error-", err)
+		}
+		nbs = append(nbs, ni)
+	}
+	N = cmdProcessNb(nbs, v.Name)
 	addNeigh(N)
 }
 
@@ -1858,7 +1945,7 @@ func notifyDBChanges() {
 	for k, v := range olddb.RDB {
 		oldgenmap[k] = v
 	}
-	event := Event{EventType: ROUTE, Operation: [3]string{RouteAdded, RouteUpdated, RouteDeleted}}
+	event := Event{EventType: ROUTE, Operation: Operate{toAdd: RouteAdded, toUpdate: RouteUpdated, toDelete: RouteDeleted}}
 	notify_changes(latestgenmap, oldgenmap, event)
 	// Nexthops
 	oldgenmap = make(map[interface{}]interface{})
@@ -1869,7 +1956,7 @@ func notifyDBChanges() {
 	for k, v := range olddb.NDB {
 		oldgenmap[k] = v
 	}
-	event = Event{EventType: NEXTHOP, Operation: [3]string{NexthopAdded, NexthopUpdated, NexthopDeleted}}
+	event = Event{EventType: NEXTHOP, Operation: Operate{toAdd: NexthopAdded, toUpdate: NexthopUpdated, toDelete: NexthopDeleted}}
 	notify_changes(latestgenmap, oldgenmap, event)
 	// fDB
 	oldgenmap = make(map[interface{}]interface{})
@@ -1880,7 +1967,7 @@ func notifyDBChanges() {
 	for k, v := range olddb.FBDB {
 		oldgenmap[k] = v
 	}
-	event = Event{EventType: FDB, Operation: [3]string{FdbEntryAdded, FdbEntryUpdated, FdbEntryDeleted}}
+	event = Event{EventType: FDB, Operation: Operate{toAdd: FdbEntryAdded, toUpdate: FdbEntryUpdated, toDelete: FdbEntryDeleted}}
 	notify_changes(latestgenmap, oldgenmap, event)
 	// L2Nexthop
 	oldgenmap = make(map[interface{}]interface{})
@@ -1891,7 +1978,7 @@ func notifyDBChanges() {
 	for k, v := range olddb.L2NDB {
 		oldgenmap[k] = v
 	}
-	event = Event{EventType: L2NEXTHOP, Operation: [3]string{L2NexthopAdded, L2NexthopUpdated, L2NexthopDeleted}}
+	event = Event{EventType: L2NEXTHOP, Operation: Operate{toAdd: L2NexthopAdded, toUpdate: L2NexthopUpdated, toDelete: L2NexthopDeleted}}
 	notify_changes(latestgenmap, oldgenmap, event)
 }
 
