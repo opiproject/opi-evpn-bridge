@@ -6,6 +6,7 @@
 package eventbus
 
 import (
+	"fmt"
 	"log"
 	"sort"
 	"sync"
@@ -89,7 +90,7 @@ func (e *EventBus) Subscribe(moduleName, eventType string, priority int, eventHa
 
 	subscriber := &Subscriber{
 		Name:     moduleName,
-		Ch:       make(chan interface{}, 1),
+		Ch:       make(chan interface{}),
 		Quit:     make(chan bool),
 		Priority: priority,
 	}
@@ -128,10 +129,20 @@ func (e *EventBus) subscriberExist(eventType string, moduleName string) bool {
 }
 
 // Publish api notifies the subscribers with certain eventType
-func (e *EventBus) Publish(objectData *ObjectData, subscriber *Subscriber) {
+func (e *EventBus) Publish(objectData *ObjectData, subscriber *Subscriber) error {
 	e.publishL.RLock()
 	defer e.publishL.RUnlock()
-	subscriber.Ch <- objectData
+	var err error
+	// We need the default case here as if the subscriber is busy then we will not be able to sent to the subscriber channel
+	// and the Publish function will stuck. So the default case serves exctly this purpose.
+	select {
+	case subscriber.Ch <- objectData:
+		log.Printf("Publish(): Notification is sent to subscriber %s\n", subscriber.Name)
+	default:
+		log.Printf("Publish(): Channel for subsriber %s is busy. Notification not sent", subscriber.Name)
+		err = fmt.Errorf("channel is busy")
+	}
+	return err
 }
 
 // Unsubscribe the subscriber, which delete the subscriber(all resources will be washed out)
