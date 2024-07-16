@@ -14,16 +14,87 @@ import (
 	vn "github.com/vishvananda/netlink"
 
 	"github.com/opiproject/opi-evpn-bridge/pkg/config"
+	"github.com/opiproject/opi-evpn-bridge/pkg/infradb"
 	"github.com/opiproject/opi-evpn-bridge/pkg/utils"
 )
 
-// DeleteLatestDB deletes the latest db snap
-func DeleteLatestDB() {
-	latestRoutes = make(map[routeKey]*RouteStruct)
-	latestNeighbors = make(map[neighKey]neighStruct)
-	latestNexthop = make(map[nexthopKey]*NexthopStruct)
-	latestFDB = make(map[fdbKey]*FdbEntryStruct)
-	latestL2Nexthop = make(map[l2NexthopKey]*L2NexthopStruct)
+// deleteLatestDB deletes the latest db snap
+func deleteLatestDB() {
+	latestRoutes = make(map[RouteKey]*RouteStruct)
+	latestNeighbors = make(map[NeighKey]NeighStruct)
+	latestNexthop = make(map[NexthopKey]*NexthopStruct)
+	latestFDB = make(map[FdbKey]*FdbEntryStruct)
+	latestL2Nexthop = make(map[L2NexthopKey]*L2NexthopStruct)
+}
+
+// notifyDBChanges notify the database changes
+func notifyDBChanges() {
+	processAndnotify[RouteKey, *RouteStruct](latestRoutes, routes, ROUTE, routeOperations)
+	processAndnotify[NexthopKey, *NexthopStruct](latestNexthop, nexthops, NEXTHOP, nexthopOperations)
+	processAndnotify[FdbKey, *FdbEntryStruct](latestFDB, fDB, FDB, fdbOperations)
+	processAndnotify[L2NexthopKey, *L2NexthopStruct](latestL2Nexthop, l2Nexthops, L2NEXTHOP, l2NexthopOperations)
+}
+
+// nolint
+func applyInstallFilters() {
+	for K, r := range latestRoutes {
+		if !installFilterRoute(r) {
+			// Remove route from its nexthop(s)
+			delete(latestRoutes, K)
+		}
+	}
+
+	for k, nexthop := range latestNexthop {
+		if !installFilterNH(nexthop) {
+			delete(latestNexthop, k)
+		}
+	}
+
+	for k, m := range latestFDB {
+		if !installFilterFDB(m) {
+			delete(latestFDB, k)
+		}
+	}
+	for k, L2 := range latestL2Nexthop {
+		if !installFilterL2N(L2) {
+			delete(latestL2Nexthop, k)
+		}
+	}
+}
+
+// annotateDBEntries annonates the database entries
+func annotateDBEntries() {
+	for _, nexthop := range latestNexthop {
+		nexthop.annotate()
+		latestNexthop[nexthop.Key] = nexthop
+	}
+	for _, r := range latestRoutes {
+		r.annotate()
+		latestRoutes[r.Key] = r
+	}
+
+	for _, m := range latestFDB {
+		m.annotate()
+		latestFDB[m.Key] = m
+	}
+	for _, l2n := range latestL2Nexthop {
+		l2n.annotate()
+		latestL2Nexthop[l2n.Key] = l2n
+	}
+}
+
+// readLatestNetlinkState reads the latest netlink state
+func readLatestNetlinkState() {
+	vrfs, _ := infradb.GetAllVrfs()
+	for _, v := range vrfs {
+		readNeighbors(v) // viswanantha library
+		readRoutes(v)    // Viswantha library
+	}
+	m := readFDB()
+	for i := 0; i < len(m); i++ {
+		addFdbEntry(m[i])
+	}
+	dumpDBs()
 }
 
 // resyncWithKernel fun resyncs with kernal db
@@ -37,16 +108,15 @@ func resyncWithKernel() {
 	// Compute changes between current and latest DB versions and inform subscribers about the changes
 	notifyDBChanges()
 	routes = latestRoutes
-	Nexthops = latestNexthop
-	Neighbors = latestNeighbors
+	nexthops = latestNexthop
 	fDB = latestFDB
 	l2Nexthops = latestL2Nexthop
-	DeleteLatestDB()
+	deleteLatestDB()
 }
 
 // monitorNetlink moniters the netlink
 func monitorNetlink() {
-	for !stopMonitoring.Load().(bool) {
+	for !stopMonitoring.Load() {
 		resyncWithKernel()
 		time.Sleep(time.Duration(pollInterval) * time.Second)
 	}
@@ -59,7 +129,7 @@ func monitorNetlink() {
 		notifyAddDel(r, RouteDeleted)
 	}
 
-	for _, nexthop := range Nexthops {
+	for _, nexthop := range nexthops {
 		notifyAddDel(nexthop, NexthopDeleted)
 	}
 
@@ -77,7 +147,7 @@ func getlink() {
 	}
 	for i := 0; i < len(links); i++ {
 		linkTable = append(linkTable, links[i])
-		NameIndex[links[i].Attrs().Index] = links[i].Attrs().Name
+		nameIndex[links[i].Attrs().Index] = links[i].Attrs().Name
 		switch links[i].Type() {
 		case "vrf":
 			vrfList = append(vrfList, links[i])
