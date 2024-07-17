@@ -131,7 +131,8 @@ func (t *TaskManager) processTasks() {
 				NotificationID: uuid.NewString(),
 			}
 			if err := eventbus.EBus.Publish(objectData, sub); err != nil {
-				log.Printf("processTasks(): Notification not sent to subscriber %+v with data %+v. Subscriber is busy. The Task %+v will be requeued.\n", sub, objectData, task)
+				log.Printf("processTasks(): Failed to sent notification: %+v\n", err)
+				log.Printf("processTasks(): Notification not sent to subscriber %+v with data %+v. The Task %+v will be requeued.\n", sub, objectData, task)
 				// We keep this subIndex in order to know from which subscriber to start iterating after the requeue of the Task
 				// so we do start again from the subscriber that returned an error or was unavailable for any reason.
 				task.subIndex += i

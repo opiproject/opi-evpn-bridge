@@ -130,17 +130,15 @@ func (e *EventBus) subscriberExist(eventType string, moduleName string) bool {
 
 // Publish api notifies the subscribers with certain eventType
 func (e *EventBus) Publish(objectData *ObjectData, subscriber *Subscriber) error {
-	e.publishL.RLock()
-	defer e.publishL.RUnlock()
+	e.publishL.Lock()
+	defer e.publishL.Unlock()
 	var err error
-	// We need the default case here as if the subscriber is busy then we will not be able to sent to the subscriber channel
-	// and the Publish function will stuck. So the default case serves exctly this purpose.
+
 	select {
 	case subscriber.Ch <- objectData:
 		log.Printf("Publish(): Notification is sent to subscriber %s\n", subscriber.Name)
 	default:
-		log.Printf("Publish(): Channel for subsriber %s is busy. Notification not sent", subscriber.Name)
-		err = fmt.Errorf("channel is busy")
+		err = fmt.Errorf("channel for subscriber %s is busy", subscriber.Name)
 	}
 	return err
 }
