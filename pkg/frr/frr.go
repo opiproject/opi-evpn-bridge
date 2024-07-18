@@ -14,6 +14,7 @@ import (
 	"net"
 	"os"
 	"os/exec"
+	"os/user"
 	"path"
 	"reflect"
 	"strconv"
@@ -23,6 +24,7 @@ import (
 	"github.com/opiproject/opi-evpn-bridge/pkg/config"
 	"github.com/opiproject/opi-evpn-bridge/pkg/infradb"
 	"github.com/opiproject/opi-evpn-bridge/pkg/infradb/common"
+	"github.com/opiproject/opi-evpn-bridge/pkg/infradb/subscriberframework/actionbus"
 	"github.com/opiproject/opi-evpn-bridge/pkg/infradb/subscriberframework/eventbus"
 	"github.com/opiproject/opi-evpn-bridge/pkg/utils"
 )
@@ -30,8 +32,22 @@ import (
 // frrComp string constant
 const frrComp string = "frr"
 
+// runningFrrConfFile holds the running configuration of FRR daemon
+const runningFrrConfFile = "/etc/frr/frr.conf"
+
+// basicFrrConfFile holds the basic/initial configuration of FRR daemon
+const basicFrrConfFile = "/etc/frr/frr-basic.conf"
+
+// backupFrrConfFile holds the backup configuration the current running config of FRR daemon
+const backupFrrConfFile = "/etc/frr/frr.conf.bak"
+
+const replayThreshold = 64 * time.Second
+
 // ModulefrrHandler empty structure
 type ModulefrrHandler struct{}
+
+// ModuleFrrActionHandler empty structure
+type ModuleFrrActionHandler struct{}
 
 // HandleEvent handles the events
 func (h *ModulefrrHandler) HandleEvent(eventType string, objectData *eventbus.ObjectData) {
@@ -45,6 +61,76 @@ func (h *ModulefrrHandler) HandleEvent(eventType string, objectData *eventbus.Ob
 	default:
 		log.Printf("error: Unknown event type %s", eventType)
 	}
+}
+
+// HandleAction handles the actions
+func (h *ModuleFrrActionHandler) HandleAction(actionType string, actionData *actionbus.ActionData) {
+	switch actionType {
+	case "preReplay":
+		log.Printf("Module FRR received %s\n", actionType)
+		handlePreReplay(actionData)
+	default:
+		log.Printf("error: Unknown action type %s", actionType)
+	}
+}
+
+func handlePreReplay(actionData *actionbus.ActionData) {
+	var deferErr error
+
+	defer func() {
+		// The ErrCh is used in order to notify the sender that the preReplay step has
+		// been executed successfully.
+		actionData.ErrCh <- deferErr
+	}()
+
+	// Backup the current running config
+	if err := os.Rename(runningFrrConfFile, backupFrrConfFile); err != nil {
+		log.Printf("FRR: handlePreReplay(): Failed to backup running config of FRR: %s\n", err)
+		deferErr = err
+		return
+	}
+
+	// Create a new running config based on the basic/initial FRR config
+	input, err := os.ReadFile(basicFrrConfFile)
+	if err != nil {
+		log.Printf("FRR: handlePreReplay(): Failed to read content of %s: %s\n", basicFrrConfFile, err)
+		deferErr = err
+		return
+	}
+
+	if err := os.WriteFile(runningFrrConfFile, input, 0600); err != nil {
+		log.Printf("FRR: handlePreReplay(): Failed to write content to %s: %s\n", runningFrrConfFile, err)
+		deferErr = err
+		return
+	}
+
+	// Change ownership of the frr.conf to frr:frr
+	group, err := user.Lookup("frr")
+	if err != nil {
+		log.Printf("FRR: handlePreReplay(): Failed to lookup user frr %s\n", err)
+		deferErr = err
+		return
+	}
+
+	uid, _ := strconv.Atoi(group.Uid)
+	gid, _ := strconv.Atoi(group.Gid)
+
+	if err := os.Chown(runningFrrConfFile, uid, gid); err != nil {
+		log.Printf("FRR: handlePreReplay(): Failed to chown of %s to frr:frr : %s\n", runningFrrConfFile, err)
+		deferErr = err
+		return
+	}
+
+	// Restart FRR daemon
+	_, errCmd := utils.Run([]string{"systemctl", "restart", "frr"}, false)
+	if errCmd != 0 {
+		log.Println("FRR: handlePreReplay(): Failed to restart FRR daemon")
+		err := fmt.Errorf("restart FRR daemon failed")
+		deferErr = err
+		return
+	}
+
+	log.Println("FRR: handlePreReplay(): The pre-replay procedure has executed successfully")
 }
 
 // handlesvi handles the svi functionality
@@ -106,6 +192,12 @@ func handlesvi(objectData *eventbus.ObjectData) {
 			comp.CompStatus = common.ComponentStatusError
 		}
 		log.Printf("%+v\n", comp)
+
+		// Checking the timer to decide if we need to replay or not
+		if comp.Timer > replayThreshold {
+			comp.Replay = true
+		}
+
 		err := infradb.UpdateSviStatus(objectData.Name, objectData.ResourceVersion, objectData.NotificationID, nil, comp)
 		if err != nil {
 			log.Printf("error in updating svi status: %s\n", err)
@@ -125,6 +217,12 @@ func handlesvi(objectData *eventbus.ObjectData) {
 			comp.CompStatus = common.ComponentStatusError
 		}
 		log.Printf("%+v\n", comp)
+
+		// Checking the timer to decide if we need to replay or not
+		if comp.Timer > replayThreshold {
+			comp.Replay = true
+		}
+
 		err := infradb.UpdateSviStatus(objectData.Name, objectData.ResourceVersion, objectData.NotificationID, nil, comp)
 		if err != nil {
 			log.Printf("error in updating svi status: %s\n", err)
@@ -199,6 +297,12 @@ func handlevrf(objectData *eventbus.ObjectData) {
 			comp.CompStatus = common.ComponentStatusError
 		}
 		log.Printf("%+v\n", comp)
+
+		// Checking the timer to decide if we need to replay or not
+		if comp.Timer > replayThreshold {
+			comp.Replay = true
+		}
+
 		err := infradb.UpdateVrfStatus(objectData.Name, objectData.ResourceVersion, objectData.NotificationID, nil, comp)
 		if err != nil {
 			log.Printf("error in updating vrf status: %s\n", err)
@@ -218,6 +322,12 @@ func handlevrf(objectData *eventbus.ObjectData) {
 			comp.CompStatus = common.ComponentStatusError
 		}
 		log.Printf("%+v\n", comp)
+
+		// Checking the timer to decide if we need to replay or not
+		if comp.Timer > replayThreshold {
+			comp.Replay = true
+		}
+
 		err := infradb.UpdateVrfStatus(objectData.Name, objectData.ResourceVersion, objectData.NotificationID, nil, comp)
 		if err != nil {
 			log.Printf("error in updating vrf status: %s\n", err)
@@ -252,6 +362,7 @@ var localas int
 // subscribeInfradb function handles the infradb subscriptions
 func subscribeInfradb(config *config.Config) {
 	eb := eventbus.EBus
+	ab := actionbus.ABus
 	for _, subscriberConfig := range config.Subscribers {
 		if subscriberConfig.Name == frrComp {
 			for _, eventType := range subscriberConfig.Events {
@@ -259,6 +370,7 @@ func subscribeInfradb(config *config.Config) {
 			}
 		}
 	}
+	ab.StartSubscriber(frrComp, "preReplay", &ModuleFrrActionHandler{})
 }
 
 // ctx variable of type context

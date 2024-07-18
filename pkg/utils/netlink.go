@@ -10,7 +10,6 @@ import (
 	"context"
 	"fmt"
 	"net"
-	"os/exec"
 
 	"github.com/vishvananda/netlink"
 
@@ -56,22 +55,6 @@ type Netlink interface {
 	ReadRoute(context.Context, string) (string, error)
 	ReadFDB(context.Context) (string, error)
 	RouteLookup(context.Context, string, string) (string, error)
-}
-
-// run function run the commands
-func run(cmd []string, _ bool) (string, int) {
-	var out []byte
-	var err error
-	out, err = exec.Command(cmd[0], cmd[1:]...).CombinedOutput() //nolint:gosec
-	if err != nil {
-		/*if flag {
-			// panic(fmt.Sprintf("Command %s': exit code %s;", out, err.Error()))
-		}
-		// fmt.Printf("Command %s': exit code %s;\n", out, err)*/
-		return "Error in running command", -1
-	}
-	output := string(out)
-	return output, 0
 }
 
 // NetlinkWrapper wrapper for netlink package
@@ -295,7 +278,7 @@ func (n *NetlinkWrapper) RouteAdd(ctx context.Context, route *netlink.Route) err
 
 // RouteFlushTable is a wrapper for netlink.RouteFlushTable
 func (n *NetlinkWrapper) RouteFlushTable(_ context.Context, routingTable string) error {
-	_, err := run([]string{"ip", "route", "flush", "table", routingTable}, false)
+	_, err := Run([]string{"ip", "route", "flush", "table", routingTable}, false)
 	if err != 0 {
 		return fmt.Errorf("lgm: Error in executing command ip route flush table %s", routingTable)
 	}
@@ -304,13 +287,13 @@ func (n *NetlinkWrapper) RouteFlushTable(_ context.Context, routingTable string)
 
 // RouteListIPTable is a wrapper for netlink.RouteListIPTable
 func (n *NetlinkWrapper) RouteListIPTable(_ context.Context, vtip string) bool {
-	_, err := run([]string{"ip", "route", "list", "exact", vtip, "table", "local"}, false)
+	_, err := Run([]string{"ip", "route", "list", "exact", vtip, "table", "local"}, false)
 	return err == 0
 }
 
 // BridgeFdbAdd is a wrapper for netlink.BridgeFdbAdd
 func (n *NetlinkWrapper) BridgeFdbAdd(_ context.Context, link string, macAddress string) error {
-	_, err := run([]string{"bridge", "fdb", "add", macAddress, "dev", link, "master", "static", "extern_learn"}, false)
+	_, err := Run([]string{"bridge", "fdb", "add", macAddress, "dev", link, "master", "static", "extern_learn"}, false)
 	if err != 0 {
 		return errors.New("failed to add fdb entry")
 	}
@@ -322,9 +305,9 @@ func (n *NetlinkWrapper) ReadNeigh(_ context.Context, link string) (string, erro
 	var out string
 	var err int
 	if link == "" {
-		out, err = run([]string{"ip", "-j", "-d", "neighbor", "show"}, false)
+		out, err = Run([]string{"ip", "-j", "-d", "neighbor", "show"}, false)
 	} else {
-		out, err = run([]string{"ip", "-j", "-d", "neighbor", "show", "vrf", link}, false)
+		out, err = Run([]string{"ip", "-j", "-d", "neighbor", "show", "vrf", link}, false)
 	}
 	if err != 0 {
 		return "", errors.New("failed routelookup")
@@ -334,7 +317,7 @@ func (n *NetlinkWrapper) ReadNeigh(_ context.Context, link string) (string, erro
 
 // ReadRoute is a wrapper for netlink.ReadRoute
 func (n *NetlinkWrapper) ReadRoute(_ context.Context, table string) (string, error) {
-	out, err := run([]string{"ip", "-j", "-d", "route", "show", "table", table}, false)
+	out, err := Run([]string{"ip", "-j", "-d", "route", "show", "table", table}, false)
 	if err != 0 {
 		return "", errors.New("failed to read route")
 	}
@@ -343,7 +326,7 @@ func (n *NetlinkWrapper) ReadRoute(_ context.Context, table string) (string, err
 
 // ReadFDB is a wrapper for netlink.ReadFDB
 func (n *NetlinkWrapper) ReadFDB(_ context.Context) (string, error) {
-	out, err := run([]string{"bridge", "-d", "-j", "fdb", "show", "br", "br-tenant", "dynamic"}, false)
+	out, err := Run([]string{"bridge", "-d", "-j", "fdb", "show", "br", "br-tenant", "dynamic"}, false)
 	if err != 0 {
 		return "", errors.New("failed to read fdb")
 	}
@@ -355,9 +338,9 @@ func (n *NetlinkWrapper) RouteLookup(_ context.Context, dst string, link string)
 	var out string
 	var err int
 	if link == "" {
-		out, err = run([]string{"ip", "-j", "route", "get", dst, "fibmatch"}, false)
+		out, err = Run([]string{"ip", "-j", "route", "get", dst, "fibmatch"}, false)
 	} else {
-		out, err = run([]string{"ip", "-j", "route", "get", dst, "vrf", link, "fibmatch"}, false)
+		out, err = Run([]string{"ip", "-j", "route", "get", dst, "vrf", link, "fibmatch"}, false)
 	}
 	if err != 0 {
 		return "", errors.New("failed routelookup")

@@ -8,6 +8,7 @@ import (
 	"context"
 	"log"
 	"net"
+	"os/exec"
 	"regexp"
 
 	"github.com/vishvananda/netlink"
@@ -20,6 +21,22 @@ import (
 // in the update grpc request based on the provided field mask
 func ApplyMaskToStoredPbObject[T proto.Message](updateMask *fieldmaskpb.FieldMask, dst, src T) {
 	fieldmask.Update(updateMask, dst, src)
+}
+
+// Run function run the commands
+func Run(cmd []string, _ bool) (string, int) {
+	var out []byte
+	var err error
+	out, err = exec.Command(cmd[0], cmd[1:]...).CombinedOutput() //nolint:gosec
+	if err != nil {
+		/*if flag {
+			// panic(fmt.Sprintf("Command %s': exit code %s;", out, err.Error()))
+		}
+		// fmt.Printf("Command %s': exit code %s;\n", out, err)*/
+		return "Error in running command", -1
+	}
+	output := string(out)
+	return output, 0
 }
 
 // ValidateMacAddress validates if a passing MAC address

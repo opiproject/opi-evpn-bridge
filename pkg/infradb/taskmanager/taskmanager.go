@@ -23,6 +23,7 @@ var TaskMan = newTaskManager()
 type TaskManager struct {
 	taskQueue      *TaskQueue
 	taskStatusChan chan *TaskStatus
+	replayChan     chan struct{}
 }
 
 // Task corresponds to an onject to be realized
@@ -50,6 +51,7 @@ func newTaskManager() *TaskManager {
 	return &TaskManager{
 		taskQueue:      NewTaskQueue(),
 		taskStatusChan: make(chan *TaskStatus),
+		replayChan:     make(chan struct{}),
 	}
 }
 
@@ -103,6 +105,12 @@ func (t *TaskManager) StatusUpdated(name, objectType, resourceVersion, notificat
 	log.Printf("StatusUpdated(): New Task Status has been created and sent to channel: %+v\n", taskStatus)
 }
 
+// ReplayFinished notifies that the replay of objects has finished
+func (t *TaskManager) ReplayFinished() {
+	close(t.replayChan)
+	log.Println("ReplayFinished(): Replay has finished.")
+}
+
 // processTasks processes the task
 func (t *TaskManager) processTasks() {
 	var taskStatus *TaskStatus
@@ -154,7 +162,18 @@ func (t *TaskManager) processTasks() {
 
 			// This check is needed in order to move to the next task if the status channel has timed out or we need to drop the task in case that
 			// the task of the object is referring to an old already updated object or the object is no longer in the database (has been deleted).
-			if taskStatus == nil || taskStatus.dropTask {
+			if taskStatus == nil {
+				log.Println("processTasks(): Move to the next Task in the queue")
+				break loopTwo
+			}
+
+			if taskStatus.dropTask {
+				if taskStatus.component.Replay {
+					log.Println("processTasks(): Wait for the replay DB procedure to finish and move to the next Task in the queue")
+					<-t.replayChan
+					log.Println("processTasks(): Replay has finished. Continuing processing tasks")
+				}
+
 				log.Println("processTasks(): Move to the next Task in the queue")
 				break loopTwo
 			}

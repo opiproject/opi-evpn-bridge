@@ -34,6 +34,8 @@ type Component struct {
 	// Free format json string
 	Details string
 	Timer   time.Duration
+	// Replay is used when the module wants to trigger replay action
+	Replay bool
 }
 
 func ip4ToInt(ip net.IP) uint32 {
