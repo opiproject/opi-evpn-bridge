@@ -14,10 +14,64 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-// deleteNH deletes the neighbor
-func deleteNH(nexthop []*NexthopStruct) []*NexthopStruct {
-	return nexthop[:0]
+// NexthopKey structure of nexthop
+type NexthopKey struct {
+	VrfName string
+	Dst     string
+	Dev     int
+	Local   bool
 }
+
+// NexthopStruct contains nexthop structure
+type NexthopStruct struct {
+	nexthop   vn.NexthopInfo
+	Vrf       *infradb.Vrf
+	Local     bool
+	Weight    int
+	Metric    int
+	ID        int
+	Scope     int
+	Protocol  int
+	RouteRefs []*RouteStruct
+	Key       NexthopKey
+	Resolved  bool
+	Neighbor  *NeighStruct
+	NhType    int
+	Metadata  map[interface{}]interface{}
+}
+
+// nexthopOperations add, update, delete
+var nexthopOperations = Operations{Add: NexthopAdded, Update: NexthopUpdated, Delete: NexthopDeleted}
+
+// nhNextID Variable
+var nhNextID = 16
+
+// Nexthops Variable
+var nexthops = make(map[NexthopKey]*NexthopStruct)
+
+// latestNexthop Variable
+var latestNexthop = make(map[NexthopKey]*NexthopStruct)
+
+// Event Operations
+const (
+	// NexthopAdded event const
+	NexthopAdded = "nexthop_added"
+	// NexthopUpdated event const
+	NexthopUpdated = "nexthop_updated"
+	// NexthopDeleted event const
+	NexthopDeleted = "nexthop_deleted"
+)
+
+// Nexthop type
+const ( // NexthopStruct TYPE & L2NEXTHOP TYPE & FDBentry
+	PHY = iota
+	SVI
+	ACC
+	VXLAN
+	BRIDGEPORT
+	OTHER
+	IGNORE
+)
 
 // checkNhDB checks the neighbor database
 func checkNhDB(nhKey NexthopKey) bool {
@@ -30,22 +84,22 @@ func checkNhDB(nhKey NexthopKey) bool {
 }
 
 // tryResolve resolves the neighbor
-func tryResolve(nexhthopSt *NexthopStruct) *NexthopStruct {
-	if nexhthopSt.nexthop.Gw != nil {
+func (nexthop *NexthopStruct) tryResolve() *NexthopStruct {
+	if nexthop.nexthop.Gw != nil {
 		// Nexthops with a gateway IP need resolution of that IP
-		neighborKey := NeighKey{Dst: nexhthopSt.nexthop.Gw.String(), VrfName: nexhthopSt.Vrf.Name, Dev: nexhthopSt.nexthop.LinkIndex}
+		neighborKey := NeighKey{Dst: nexthop.nexthop.Gw.String(), VrfName: nexthop.Vrf.Name, Dev: nexthop.nexthop.LinkIndex}
 		ch := checkNeigh(neighborKey)
 		if ch && latestNeighbors[neighborKey].Type != IGNORE {
-			nexhthopSt.Resolved = true
+			nexthop.Resolved = true
 			nh := latestNeighbors[neighborKey]
-			nexhthopSt.Neighbor = &nh
+			nexthop.Neighbor = &nh
 		} else {
-			nexhthopSt.Resolved = false
+			nexthop.Resolved = false
 		}
 	} else {
-		nexhthopSt.Resolved = true
+		nexthop.Resolved = true
 	}
-	return nexhthopSt
+	return nexthop
 }
 
 // NHAssignID returns the nexthop id
@@ -61,7 +115,7 @@ func NHAssignID(key NexthopKey) int {
 }
 
 // addNexthop adds the nexthop
-func addNexthop(nexthop *NexthopStruct, r *RouteStruct) *RouteStruct {
+func (nexthop *NexthopStruct) addNexthop(r *RouteStruct) *RouteStruct {
 	ch := checkNhDB(nexthop.Key)
 	if ch {
 		nh0 := latestNexthop[nexthop.Key]
@@ -72,51 +126,49 @@ func addNexthop(nexthop *NexthopStruct, r *RouteStruct) *RouteStruct {
 		// Create a new nexthop entry
 		nexthop.RouteRefs = append(nexthop.RouteRefs, r)
 		nexthop.ID = NHAssignID(nexthop.Key)
-		nexthop = tryResolve(nexthop)
+		nexthop = nexthop.tryResolve()
 		latestNexthop[nexthop.Key] = nexthop
 		r.Nexthops = append(r.Nexthops, nexthop)
 	}
 	return r
 }
 
-// NHParse parses the neighbor
-func NHParse(v *infradb.Vrf, rc RouteCmdInfo) *NexthopStruct {
-	var nh NexthopStruct
-	nh.Weight = 1
-	nh.Vrf = v
+// ParseNexthop parses the neighbor
+func (nexthop *NexthopStruct) ParseNexthop(v *infradb.Vrf, rc RouteCmdInfo) {
+	nexthop.Weight = 1
+	nexthop.Vrf = v
 	if rc.Dev != "" {
 		vrf, _ := vn.LinkByName(rc.Dev)
-		nh.nexthop.LinkIndex = vrf.Attrs().Index
-		nameIndex[nh.nexthop.LinkIndex] = vrf.Attrs().Name
+		nexthop.nexthop.LinkIndex = vrf.Attrs().Index
+		nameIndex[nexthop.nexthop.LinkIndex] = vrf.Attrs().Name
 	}
 	if len(rc.Flags) != 0 {
-		nh.nexthop.Flags = getFlag(rc.Flags[0])
+		nexthop.nexthop.Flags = getFlag(rc.Flags[0])
 	}
 	if rc.Gateway != "" {
 		nIP := &net.IPNet{
 			IP: net.ParseIP(rc.Gateway),
 		}
-		nh.nexthop.Gw = nIP.IP
+		nexthop.nexthop.Gw = nIP.IP
 	}
 	if rc.Protocol != "" {
-		nh.Protocol = rtnProto[rc.Protocol]
+		nexthop.Protocol = rtnProto[rc.Protocol]
 	}
 	if rc.Scope != "" {
-		nh.Scope = rtnScope[rc.Scope]
+		nexthop.Scope = rtnScope[rc.Scope]
 	}
 	if rc.Type != "" {
-		nh.NhType = rtnType[rc.Type]
-		if nh.NhType == unix.RTN_LOCAL {
-			nh.Local = true
+		nexthop.NhType = rtnType[rc.Type]
+		if nexthop.NhType == unix.RTN_LOCAL {
+			nexthop.Local = true
 		} else {
-			nh.Local = false
+			nexthop.Local = false
 		}
 	}
 	if rc.Weight >= 0 {
-		nh.Weight = rc.Weight
+		nexthop.Weight = rc.Weight
 	}
-	nh.Key = NexthopKey{nh.Vrf.Name, nh.nexthop.Gw.String(), nh.nexthop.LinkIndex, nh.Local}
-	return &nh
+	nexthop.Key = NexthopKey{nexthop.Vrf.Name, nexthop.nexthop.Gw.String(), nexthop.nexthop.LinkIndex, nexthop.Local}
 }
 
 // nolint
@@ -187,7 +239,7 @@ func (nexthop *NexthopStruct) annotate() {
 		nexthop.NhType = VXLAN
 		v, _ := infradb.GetVrf(nexthop.Vrf.Name)
 		var detail map[string]interface{}
-		var Rmac net.HardwareAddr
+		var rmac net.HardwareAddr
 		for _, com := range v.Status.Components {
 			if com.Name == "frr" {
 				err := json.Unmarshal([]byte(com.Details), &detail)
@@ -195,20 +247,25 @@ func (nexthop *NexthopStruct) annotate() {
 					log.Printf("netlink nexthop: Error: %v %v : %v", err, com.Details, detail)
 					break
 				}
-				rmac, found := detail["rmac"].(string)
-				if !found || rmac == "" {
+				mac, ok := detail["rmac"]
+				if !ok {
 					log.Printf("netlink: Key 'rmac' not found")
 					break
 				}
-				Rmac, err = net.ParseMAC(rmac)
+				strRmac, found := mac.(string)
+				if !found || strRmac == "" {
+					log.Printf("netlink: key 'rmac' is empty")
+					break
+				}
+				rmac, err = net.ParseMAC(strRmac)
 				if err != nil {
 					log.Printf("netlink: Error parsing MAC address: %v", err)
 				}
 			}
 		}
 		nexthop.Metadata["direction"] = TX
-		nexthop.Metadata["inner_smac"] = Rmac.String()
-		if len(Rmac) == 0 {
+		nexthop.Metadata["inner_smac"] = rmac.String()
+		if len(rmac) == 0 {
 			nexthop.Resolved = false
 		}
 		vtepip := v.Spec.VtepIP.IP
@@ -269,9 +326,9 @@ func checkNhType(nType int) bool {
 }
 
 // installFilterNH install the neighbor filter
-func installFilterNH(nh *NexthopStruct) bool {
-	check := checkNhType(nh.NhType)
-	keep := check && nh.Resolved && len(nh.RouteRefs) != 0
+func (nexthop *NexthopStruct) installFilterNH() bool {
+	check := checkNhType(nexthop.NhType)
+	keep := check && nexthop.Resolved && len(nexthop.RouteRefs) != 0
 	return keep
 }
 
@@ -299,4 +356,20 @@ func (nexthop *NexthopStruct) deepEqual(nhOld *NexthopStruct, nc bool) bool {
 // GetVrfOperStatus gets nexthop vrf opration status
 func (nexthop *NexthopStruct) GetVrfOperStatus() infradb.VrfOperStatus {
 	return nexthop.Vrf.Status.VrfOperStatus
+}
+
+// dumpNexthDB dump the nexthop entries
+func dumpNexthDB() string {
+	var s string
+	log.Printf("netlink: Dump Nexthop table:\n")
+	s = "Nexthop table:\n"
+	for _, n := range latestNexthop {
+		str := fmt.Sprintf("Nexthop(id=%d vrf=%s dst=%s dev=%s Local=%t weight=%d flags=[%s] #routes=%d Resolved=%t neighbor=%s) ", n.ID, n.Vrf.Name, n.nexthop.Gw.String(), nameIndex[n.nexthop.LinkIndex], n.Local, n.Weight, getFlagString(n.nexthop.Flags), len(n.RouteRefs), n.Resolved, n.Neighbor.printNeigh())
+		log.Println(str)
+		s += str
+		s += "\n"
+	}
+	log.Printf("\n\n\n")
+	s += "\n\n"
+	return s
 }

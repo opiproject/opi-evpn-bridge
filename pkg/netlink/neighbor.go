@@ -14,9 +14,64 @@ import (
 	vn "github.com/vishvananda/netlink"
 )
 
+// NeighKey strcture of neighbor
+type NeighKey struct {
+	Dst     string
+	VrfName string
+	Dev     int
+}
+
+// NeighIPStruct nighbor ip structure
+type NeighIPStruct struct {
+	Dst         string
+	Dev         string
+	Lladdr      string
+	ExternLearn string
+	State       []string
+	Protocol    string
+}
+
+// NhRouteInfo neighbor route info
+type NhRouteInfo struct {
+	ID       int
+	Gateway  string
+	Dev      string
+	Scope    string
+	Protocol string
+	Flags    []string
+}
+
+// NeighStruct structure
+type NeighStruct struct {
+	Neigh0   vn.Neigh
+	Protocol string
+	VrfName  string
+	Type     int
+	Dev      string
+	Err      error
+	Key      NeighKey
+	Metadata map[interface{}]interface{}
+}
+
+// NeighList structure
+type NeighList struct {
+	NS []NeighStruct
+}
+
+// latestNeighbors Variable
+var latestNeighbors = make(map[NeighKey]NeighStruct)
+
+// nhIDCache Variable
+var nhIDCache = make(map[NexthopKey]int)
+
+// rtNNeighbor
+const (
+	rtNNeighbor = 1111
+)
+
 // preFilterNeighbor pre filter the neighbors
-func preFilterNeighbor(n NeighStruct) bool {
-	if n.Neigh0.State != vn.NUD_NONE && n.Neigh0.State != vn.NUD_INCOMPLETE && n.Neigh0.State != vn.NUD_FAILED && nameIndex[n.Neigh0.LinkIndex] != "lo" {
+func (neigh NeighStruct) preFilterNeighbor() bool {
+	if neigh.Neigh0.State != vn.NUD_NONE && neigh.Neigh0.State != vn.NUD_INCOMPLETE && neigh.Neigh0.State != vn.NUD_FAILED && nameIndex[neigh.Neigh0.LinkIndex] != "lo" {
 		return true
 	}
 
@@ -50,7 +105,7 @@ func parseNeigh(nm []NeighIPStruct, v string) NeighList {
 			ns.Protocol = nd.Protocol
 		}
 		ns.Key = NeighKey{VrfName: v, Dst: ns.Neigh0.IP.String(), Dev: ns.Neigh0.LinkIndex}
-		if preFilterNeighbor(ns) {
+		if ns.preFilterNeighbor() {
 			nl.NS = append(nl.NS, ns)
 		}
 	}
@@ -66,7 +121,7 @@ func cmdProcessNb(nbs []NeighIPStruct, v string) NeighList {
 // addNeigh adds the neigh
 func addNeigh(dump NeighList) {
 	for _, n := range dump.NS {
-		n = neighborAnnotate(n)
+		n.neighborAnnotate()
 		if len(latestNeighbors) == 0 {
 			latestNeighbors[n.Key] = n
 		} else if !CheckNdup(n.Key) {
@@ -97,13 +152,13 @@ func readNeighbors(v *infradb.Vrf) {
 		log.Printf("netlink nb: JSON unmarshal error: %v %v : %v\n", err, nb, rawMessages)
 		return
 	}
-	CPs := make([]string, 0, len(rawMessages))
+	cps := make([]string, 0, len(rawMessages))
 	for _, rawMsg := range rawMessages {
-		CPs = append(CPs, string(rawMsg))
+		cps = append(cps, string(rawMsg))
 	}
-	for i := 0; i < len(CPs); i++ {
+	for i := 0; i < len(cps); i++ {
 		var ni NeighIPStruct
-		err := json.Unmarshal([]byte(CPs[i]), &ni)
+		err := json.Unmarshal([]byte(cps[i]), &ni)
 		if err != nil {
 			log.Println("netlink: error-", err)
 		}
@@ -135,7 +190,7 @@ func checkNeigh(nk NeighKey) bool {
 	return false
 }
 
-func printNeigh(neigh *NeighStruct) string {
+func (neigh *NeighStruct) printNeigh() string {
 	var Proto string
 	if neigh == nil {
 		return strNone
@@ -150,19 +205,19 @@ func printNeigh(neigh *NeighStruct) string {
 }
 
 // nolint
-func neighborAnnotate(neighbor NeighStruct) NeighStruct {
-	neighbor.Metadata = make(map[interface{}]interface{})
+func (neigh NeighStruct) neighborAnnotate() NeighStruct {
+	neigh.Metadata = make(map[interface{}]interface{})
 	var phyFlag bool
 	phyFlag = false
 	for k := range phyPorts {
-		if nameIndex[neighbor.Neigh0.LinkIndex] == k {
+		if nameIndex[neigh.Neigh0.LinkIndex] == k {
 			phyFlag = true
 		}
 	}
-	if strings.HasPrefix(nameIndex[neighbor.Neigh0.LinkIndex], path.Base(neighbor.VrfName)) && neighbor.Protocol != zebraStr {
-		pattern := fmt.Sprintf(`%s-\d+$`, path.Base(neighbor.VrfName))
+	if strings.HasPrefix(nameIndex[neigh.Neigh0.LinkIndex], path.Base(neigh.VrfName)) && neigh.Protocol != zebraStr {
+		pattern := fmt.Sprintf(`%s-\d+$`, path.Base(neigh.VrfName))
 		mustcompile := regexp.MustCompile(pattern)
-		s := mustcompile.FindStringSubmatch(nameIndex[neighbor.Neigh0.LinkIndex])
+		s := mustcompile.FindStringSubmatch(nameIndex[neigh.Neigh0.LinkIndex])
 		var lb *infradb.LogicalBridge
 		var bp *infradb.BridgePort
 		vID := strings.Split(s[0], "-")[1]
@@ -178,23 +233,23 @@ func neighborAnnotate(neighbor NeighStruct) NeighStruct {
 			}
 		}
 		if lb != nil {
-			bP := lb.MacTable[neighbor.Neigh0.HardwareAddr.String()]
+			bP := lb.MacTable[neigh.Neigh0.HardwareAddr.String()]
 			if bP != "" {
 				bp, _ = infradb.GetBP(bP)
 			}
 		}
 		if bp != nil {
-			neighbor.Type = SVI
-			neighbor.Metadata["vport_id"] = bp.Metadata.VPort
-			neighbor.Metadata["vlanID"] = uint32(vlanID)
-			neighbor.Metadata["portType"] = bp.Spec.Ptype
+			neigh.Type = SVI
+			neigh.Metadata["vport_id"] = bp.Metadata.VPort
+			neigh.Metadata["vlanID"] = uint32(vlanID)
+			neigh.Metadata["portType"] = bp.Spec.Ptype
 		} else {
-			neighbor.Type = IGNORE
+			neigh.Type = IGNORE
 		}
-	} else if strings.HasPrefix(nameIndex[neighbor.Neigh0.LinkIndex], path.Base(neighbor.VrfName)) && neighbor.Protocol == zebraStr {
-		pattern := fmt.Sprintf(`%s-\d+$`, path.Base(neighbor.VrfName))
+	} else if strings.HasPrefix(nameIndex[neigh.Neigh0.LinkIndex], path.Base(neigh.VrfName)) && neigh.Protocol == zebraStr {
+		pattern := fmt.Sprintf(`%s-\d+$`, path.Base(neigh.VrfName))
 		mustcompile := regexp.MustCompile(pattern)
-		s := mustcompile.FindStringSubmatch(neighbor.Dev)
+		s := mustcompile.FindStringSubmatch(neigh.Dev)
 		var lb *infradb.LogicalBridge
 		vID := strings.Split(s[0], "-")[1]
 		lbs, _ := infradb.GetAllLBs()
@@ -213,23 +268,44 @@ func neighborAnnotate(neighbor NeighStruct) NeighStruct {
 			if err != nil {
 				panic(err)
 			}
-			fdbEntry := latestFDB[FdbKey{vid, neighbor.Neigh0.HardwareAddr.String()}]
-			neighbor.Metadata["l2_nh"] = fdbEntry.Nexthop
-			neighbor.Type = VXLAN // confirm this later
+			fdbEntry := latestFDB[FdbKey{vid, neigh.Neigh0.HardwareAddr.String()}]
+			neigh.Metadata["l2_nh"] = fdbEntry.Nexthop
+			neigh.Type = VXLAN // confirm this later
 		}
-	} else if path.Base(neighbor.VrfName) == "GRD" && phyFlag && neighbor.Protocol != zebraStr {
+	} else if path.Base(neigh.VrfName) == "GRD" && phyFlag && neigh.Protocol != zebraStr {
 		vrf, _ := infradb.GetVrf("//network.opiproject.org/vrfs/GRD")
-		r, ok := lookupRoute(neighbor.Neigh0.IP, vrf)
+		r, ok := lookupRoute(neigh.Neigh0.IP, vrf)
 		if ok {
-			if r.Nexthops[0].nexthop.LinkIndex == neighbor.Neigh0.LinkIndex {
-				neighbor.Type = PHY
-				neighbor.Metadata["vport_id"] = phyPorts[nameIndex[neighbor.Neigh0.LinkIndex]]
+			if r.Nexthops[0].nexthop.LinkIndex == neigh.Neigh0.LinkIndex {
+				neigh.Type = PHY
+				neigh.Metadata["vport_id"] = phyPorts[nameIndex[neigh.Neigh0.LinkIndex]]
 			} else {
-				neighbor.Type = IGNORE
+				neigh.Type = IGNORE
 			}
 		} else {
-			neighbor.Type = OTHER
+			neigh.Type = OTHER
 		}
 	}
-	return neighbor
+	return neigh
+}
+
+// dumpNeighDB dump the neighbor entries
+func dumpNeighDB() string {
+	var s string
+	log.Printf("netlink: Dump Neighbor table:\n")
+	s = "Neighbor table:\n"
+	for _, n := range latestNeighbors {
+		var Proto string
+		if n.Protocol == "" {
+			Proto = strNone
+		} else {
+			Proto = n.Protocol
+		}
+		str := fmt.Sprintf("Neighbor(vrf=%s dst=%s lladdr=%s dev=%s proto=%s state=%s Type : %d) ", n.VrfName, n.Neigh0.IP.String(), n.Neigh0.HardwareAddr.String(), nameIndex[n.Neigh0.LinkIndex], Proto, getStateStr(n.Neigh0.State), n.Type)
+		log.Println(str)
+		s += str
+		s += "\n"
+	}
+	s += "\n\n"
+	return s
 }
