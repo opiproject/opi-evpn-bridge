@@ -110,7 +110,7 @@ var logger *log.Logger
 func setupLogger(filename string) {
 	var err error
 	filename = filepath.Clean(filename)
-	out, err := os.OpenFile(filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0600)
+	out, err := os.OpenFile(filename, os.O_TRUNC|os.O_CREATE|os.O_WRONLY, 0600)
 	if err != nil {
 		log.Panic(err)
 	}
