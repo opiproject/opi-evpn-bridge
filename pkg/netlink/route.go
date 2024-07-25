@@ -265,14 +265,14 @@ func ParseRoute(v *infradb.Vrf, rc []RouteCmdInfo, t int) RouteList {
 			rs.Route0.LinkIndex = dev.Attrs().Index
 		}
 		if r0.Dst != "" {
-			var Mask int
+			var mask int
 			split := r0.Dst
 			if strings.Contains(r0.Dst, "/") {
 				split4 := strings.Split(r0.Dst, "/")
-				Mask, _ = strconv.Atoi(split4[1])
+				mask, _ = strconv.Atoi(split4[1])
 				split = split4[0]
 			} else {
-				Mask = 32
+				mask = 32
 			}
 			var nIP *net.IPNet
 			if r0.Dst == "default" {
@@ -281,7 +281,7 @@ func ParseRoute(v *infradb.Vrf, rc []RouteCmdInfo, t int) RouteList {
 					Mask: net.IPv4Mask(0, 0, 0, 0),
 				}
 			} else {
-				mtoip := netMaskToInt(Mask)
+				mtoip := netMaskToInt(mask)
 				b3 := make([]byte, 8) // Converting int64 to byte
 				binary.LittleEndian.PutUint64(b3, uint64(mtoip[3]))
 				b2 := make([]byte, 8)
@@ -357,24 +357,24 @@ func readRouteFromIP(v *infradb.Vrf) {
 	var routeData []RouteCmdInfo
 	for _, route := range v.Metadata.RoutingTable {
 		rt = int(*route)
-		Raw, err := nlink.ReadRoute(ctx, strconv.Itoa(rt))
-		if err != nil || len(Raw) <= 3 {
+		raw, err := nlink.ReadRoute(ctx, strconv.Itoa(rt))
+		if err != nil || len(raw) <= 3 {
 			log.Printf("netlink: Err Command route\n")
 			continue
 		}
 		var rawMessages []json.RawMessage
-		err = json.Unmarshal([]byte(Raw), &rawMessages)
+		err = json.Unmarshal([]byte(raw), &rawMessages)
 		if err != nil {
-			log.Printf("netlink route: JSON unmarshal error: %v %v : %v", err, Raw, rawMessages)
+			log.Printf("netlink route: JSON unmarshal error: %v %v : %v", err, raw, rawMessages)
 			continue
 		}
-		CPs := make([]string, 0, len(rawMessages))
+		cps := make([]string, 0, len(rawMessages))
 		for _, rawMsg := range rawMessages {
-			CPs = append(CPs, string(rawMsg))
+			cps = append(cps, string(rawMsg))
 		}
-		for i := 0; i < len(CPs); i++ {
+		for i := 0; i < len(cps); i++ {
 			var ri RouteCmdInfo
-			err := json.Unmarshal([]byte(CPs[i]), &ri)
+			err := json.Unmarshal([]byte(cps[i]), &ri)
 			if err != nil {
 				log.Println("error-", err)
 				continue
@@ -497,16 +497,16 @@ func lookupRoute(dst net.IP, v *infradb.Vrf) (*RouteStruct, bool) {
 		r0 := r.RS[0]
 		// ###  Search the latestRoutes DB snapshot if that exists, else
 		// ###  the current DB Route table.
-		var RouteTable map[RouteKey]*RouteStruct
+		var routeTable map[RouteKey]*RouteStruct
 		if len(latestRoutes) != 0 {
-			RouteTable = latestRoutes
+			routeTable = latestRoutes
 		} else {
-			RouteTable = routes
+			routeTable = routes
 		}
-		RDB, ok := RouteTable[r0.Key]
+		rDB, ok := routeTable[r0.Key]
 		if ok {
 			// Return the existing route in the DB
-			return RDB, ok
+			return rDB, ok
 		}
 		// Return the just constructed non-DB route
 		return r0, true
@@ -518,8 +518,8 @@ func lookupRoute(dst net.IP, v *infradb.Vrf) (*RouteStruct, bool) {
 
 // checkRtype checks the route type
 func checkRtype(rType string) bool {
-	var Types = map[string]struct{}{routeTypeConnected: {}, routeTypeEvpnVxlan: {}, routeTypeStatic: {}, routeTypeBgp: {}, routeTypeLocal: {}, routeTypeNeighbor: {}}
-	if _, ok := Types[rType]; ok {
+	var types = map[string]struct{}{routeTypeConnected: {}, routeTypeEvpnVxlan: {}, routeTypeStatic: {}, routeTypeBgp: {}, routeTypeLocal: {}, routeTypeNeighbor: {}}
+	if _, ok := types[rType]; ok {
 		return true
 	}
 	return false
