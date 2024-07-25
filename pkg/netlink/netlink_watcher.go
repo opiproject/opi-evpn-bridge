@@ -125,16 +125,16 @@ func monitorNetlink() {
 	log.Printf("netlink: One final netlink poll to identify what's still left.")
 	// Inform subscribers to delete configuration for any still remaining Netlink DB objects.
 	log.Printf("netlink: Delete any residual objects in DB")
-	for _, r := range routes {
-		notifyAddDel(r, RouteDeleted)
+	for _, route := range routes {
+		notifyAddDel(route, RouteDeleted)
 	}
 
 	for _, nexthop := range nexthops {
 		notifyAddDel(nexthop, NexthopDeleted)
 	}
 
-	for _, m := range fDB {
-		notifyAddDel(m, FdbEntryDeleted)
+	for _, fdb := range fDB {
+		notifyAddDel(fdb, FdbEntryDeleted)
 	}
 	log.Printf("netlink: DB cleanup completed.")
 }

@@ -20,8 +20,8 @@ var ctx context.Context
 
 var nlink utils.Netlink
 
-// EventBus variable
-var EventBus = eb.NewEventBus()
+// eventBus variable
+var eventBus = eb.NewEventBus()
 
 // pollInterval variable
 var pollInterval int
@@ -270,5 +270,5 @@ func deepCheck(v1 interface{}, v2 interface{}) bool {
 
 func notifyAddDel(r interface{}, event string) {
 	log.Printf("netlink: Notify event: %s\n", event)
-	EventBus.Publish(event, r)
+	eventBus.Publish(event, r)
 }
