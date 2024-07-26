@@ -2,9 +2,60 @@ package netlink
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 
 	"github.com/opiproject/opi-evpn-bridge/pkg/infradb"
+)
+
+// FdbKey structure key for sorting theFDB entries
+type FdbKey struct {
+	VlanID int
+	Mac    string
+}
+
+// FdbIPStruct fdb ip structure
+type FdbIPStruct struct {
+	Mac    string
+	Ifname string
+	Vlan   int
+	Flags  []string
+	Master string
+	State  string
+	Dst    string
+}
+
+// FdbEntryStruct structure
+type FdbEntryStruct struct {
+	VlanID   int
+	Mac      string
+	Key      FdbKey
+	State    string
+	lb       *infradb.LogicalBridge
+	bp       *infradb.BridgePort
+	Nexthop  *L2NexthopStruct
+	Type     int
+	Metadata map[interface{}]interface{}
+	Err      error
+}
+
+// fdbOperations add, update, delete
+var fdbOperations = Operations{Add: FdbEntryAdded, Update: FdbEntryUpdated, Delete: FdbEntryDeleted}
+
+// fDB Variable
+var fDB = make(map[FdbKey]*FdbEntryStruct)
+
+// latestFDB Variable
+var latestFDB = make(map[FdbKey]*FdbEntryStruct)
+
+// Event Operations
+const (
+	// FdbEntryAdded event const
+	FdbEntryAdded = "fdb_entry_added"
+	// FdbEntryUpdated event const
+	FdbEntryUpdated = "fdb_entry_updated"
+	// FdbEntryDeleted event const
+	FdbEntryDeleted = "fdb_entry_deleted"
 )
 
 // ParseFdb parse the fdb
@@ -36,9 +87,9 @@ func ParseFdb(fdbIP FdbIPStruct) *FdbEntryStruct {
 }
 
 // preFilterMac filter the mac
-func preFilterMac(f *FdbEntryStruct) bool {
+func (fdb *FdbEntryStruct) preFilterMac() bool {
 	// TODO m.nexthop.dst
-	if f.VlanID != 0 || (f.Nexthop.Dst != nil && !f.Nexthop.Dst.IsUnspecified()) {
+	if fdb.VlanID != 0 || (fdb.Nexthop.Dst != nil && !fdb.Nexthop.Dst.IsUnspecified()) {
 		return true
 	}
 	return false
@@ -75,7 +126,7 @@ func readFDB() []*FdbEntryStruct {
 	}
 	for _, m := range fdbs {
 		fs = ParseFdb(m)
-		if preFilterMac(fs) {
+		if fs.preFilterMac() {
 			macs = append(macs, fs)
 		}
 	}
@@ -83,11 +134,11 @@ func readFDB() []*FdbEntryStruct {
 }
 
 // addFdbEntry add fdb entries
-func addFdbEntry(m *FdbEntryStruct) {
-	m = addL2Nexthop(m)
+func (fdb *FdbEntryStruct) addFdbEntry() {
+	fdb.addL2Nexthop()
 	// TODO
 	// logger.debug(f"Adding {m.format()}.")
-	latestFDB[m.Key] = m
+	latestFDB[fdb.Key] = fdb
 }
 
 // annotate the route
@@ -125,7 +176,7 @@ func checkFdbType(fdbtype int) bool {
 }
 
 // installFilterFDB install fdb filer
-func installFilterFDB(fdb *FdbEntryStruct) bool {
+func (fdb *FdbEntryStruct) installFilterFDB() bool {
 	// Drop entries w/o VLAN ID or associated LogicalBridge ...
 	// ... other than with L2 nexthops of type VXLAN and BridgePort ...
 	// ... and VXLAN entries with unresolved underlay nextop.
@@ -146,4 +197,20 @@ func (fdb *FdbEntryStruct) deepEqual(fdbOld *FdbEntryStruct, nc bool) bool {
 		}
 	}
 	return true
+}
+
+// dumpFDB dump the fdb entries
+func dumpFDB() string {
+	var s string
+	log.Printf("netlink: Dump fDB table:\n")
+	s = "fDB table:\n"
+	for _, n := range latestFDB {
+		str := fmt.Sprintf("MacAddr(vlan=%d mac=%s state=%s type=%d l2nh_id=%d) ", n.VlanID, n.Mac, n.State, n.Type, n.Nexthop.ID)
+		log.Println(str)
+		s += str
+		s += "\n"
+	}
+	log.Printf("\n\n\n")
+	s += "\n\n"
+	return s
 }

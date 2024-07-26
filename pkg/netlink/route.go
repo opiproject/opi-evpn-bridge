@@ -3,6 +3,7 @@ package netlink
 import (
 	"encoding/binary"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net"
 	"path"
@@ -15,14 +16,154 @@ import (
 	"golang.org/x/sys/unix"
 )
 
+// routes Variable
+var routes = make(map[RouteKey]*RouteStruct)
+
+// latestRoutes Variable
+var latestRoutes = make(map[RouteKey]*RouteStruct)
+
+// routeOperations add, update, delete
+var routeOperations = Operations{Add: RouteAdded, Update: RouteUpdated, Delete: RouteDeleted}
+
+// rtnType map of string key as RTN Type
+var rtnType = map[string]int{
+	"unspec":      unix.RTN_UNSPEC,
+	"unicast":     unix.RTN_UNICAST,
+	"local":       unix.RTN_LOCAL,
+	"broadcast":   unix.RTN_BROADCAST,
+	"anycast":     unix.RTN_ANYCAST,
+	"multicast":   unix.RTN_MULTICAST,
+	"blackhole":   unix.RTN_BLACKHOLE,
+	"unreachable": unix.RTN_UNREACHABLE,
+	"prohibit":    unix.RTN_PROHIBIT,
+	"throw":       unix.RTN_THROW,
+	"nat":         unix.RTN_NAT,
+	"xresolve":    unix.RTN_XRESOLVE,
+	"neighbor":    rtNNeighbor,
+}
+
+// rtnProto map of string key as RTN Type
+var rtnProto = map[string]int{
+	"unspec":        unix.RTPROT_UNSPEC,
+	"redirect":      unix.RTPROT_REDIRECT,
+	"kernel":        unix.RTPROT_KERNEL,
+	"boot":          unix.RTPROT_BOOT,
+	"static":        unix.RTPROT_STATIC,
+	"bgp":           int('B'),
+	"ipu_infra_mgr": int('I'),
+	"196":           196,
+}
+
+// rtnScope map of string key as RTN scope
+var rtnScope = map[string]int{
+	"global":  unix.RT_SCOPE_UNIVERSE,
+	"site":    unix.RT_SCOPE_SITE,
+	"link":    unix.RT_SCOPE_LINK,
+	"local":   unix.RT_SCOPE_HOST,
+	"nowhere": unix.RT_SCOPE_NOWHERE,
+}
+
+var testFlag = map[int]string{
+	unix.RTNH_F_ONLINK:    "onlink",
+	unix.RTNH_F_PERVASIVE: "pervasive",
+}
+
+const (
+	// Define each route type as a constant
+	routeTypeConnected = "connected"
+	routeTypeEvpnVxlan = "evpn-vxlan"
+	routeTypeStatic    = "static"
+	routeTypeBgp       = "bgp"
+	routeTypeLocal     = "local"
+	routeTypeNeighbor  = "neighbor"
+)
+
+// Event Operations
+const (
+	// RouteAdded event const
+	RouteAdded = "route_added"
+	// RouteUpdated event const
+	RouteUpdated = "route_updated"
+	// RouteDeleted event const
+	RouteDeleted = "route_deleted"
+)
+
+// Route Direction
+const ( // Route direction
+	None int = iota
+	RX
+	TX
+	RXTX
+)
+
+// RouteKey structure of route description
+type RouteKey struct {
+	Table int
+	Dst   string
+}
+
+// RouteCmdInfo structure
+type RouteCmdInfo struct {
+	Type     string
+	Dst      string
+	Nhid     int
+	Gateway  string
+	Dev      string
+	Protocol string
+	Scope    string
+	Prefsrc  string
+	Metric   int
+	Flags    []string
+	Weight   int
+	VRF      *infradb.Vrf
+	Table    int
+	NhInfo   NhRouteInfo // {id gateway Dev scope protocol flags}
+}
+
+/*--------------------------------------------------------------------------
+###  Route Database Entries
+###
+###  In the internal Route table, there is one entry per VRF and IP prefix
+###  to be installed in the routing table of the P4 pipeline. If there are
+###  multiple routes in the Linux  route database for the same VRF and
+###  prefix, we pick the one with the lowest metric (as does the Linux
+###  forwarding plane).
+###  The key of the internal Route table consists of (vrf, dst prefix) and
+###  corresponds to the match fields in the P4 routing table. The rx/tx
+###  direction match field of the MEV P4 pipeline and the necessary
+###  duplication of some route entries is a technicality the MEV P4 pipeline
+###  and must be handled by the p4ctrl module.
+--------------------------------------------------------------------------*/
+
+// RouteStruct structure has route info
+type RouteStruct struct {
+	Route0   vn.Route
+	Vrf      *infradb.Vrf
+	Nexthops []*NexthopStruct
+	Metadata map[interface{}]interface{}
+	NlType   string
+	Key      RouteKey
+	Err      error
+}
+
+// RouteList list has route info
+type RouteList struct {
+	RS []*RouteStruct
+}
+
+// VrfStatusGetter gets vrf status
+type VrfStatusGetter interface {
+	GetVrfOperStatus() infradb.VrfOperStatus
+}
+
 // readRoutes reads the routes
 func readRoutes(v *infradb.Vrf) {
 	readRouteFromIP(v)
 }
 
 // checkRoute checks the route
-func checkRoute(r *RouteStruct) bool {
-	rk := r.Key
+func (route *RouteStruct) checkRoute() bool {
+	rk := route.Key
 	for k := range latestRoutes {
 		if k == rk {
 			return true
@@ -32,16 +173,16 @@ func checkRoute(r *RouteStruct) bool {
 }
 
 // nolint
-func setRouteType(rs *RouteStruct, v *infradb.Vrf) string {
-	if rs.Route0.Type == unix.RTN_UNICAST && rs.Route0.Protocol == unix.RTPROT_KERNEL && rs.Route0.Scope == unix.RT_SCOPE_LINK && len(rs.Nexthops) == 1 {
+func (route *RouteStruct) setRouteType(v *infradb.Vrf) string {
+	if route.Route0.Type == unix.RTN_UNICAST && route.Route0.Protocol == unix.RTPROT_KERNEL && route.Route0.Scope == unix.RT_SCOPE_LINK && len(route.Nexthops) == 1 {
 		// Connected routes are proto=kernel and scope=link with a netdev as single nexthop
 		return routeTypeConnected
-	} else if rs.Route0.Type == unix.RTN_UNICAST && int(rs.Route0.Protocol) == int('B') && rs.Route0.Scope == unix.RT_SCOPE_UNIVERSE {
+	} else if route.Route0.Type == unix.RTN_UNICAST && int(route.Route0.Protocol) == int('B') && route.Route0.Scope == unix.RT_SCOPE_UNIVERSE {
 		// EVPN routes to remote destinations are proto=bgp, scope global withipu_infra_mgr_db
 		// all Nexthops residing on the br-<VRF name> bridge interface of the VRF.
 		var devs []string
-		if len(rs.Nexthops) != 0 {
-			for _, d := range rs.Nexthops {
+		if len(route.Nexthops) != 0 {
+			for _, d := range route.Nexthops {
 				devs = append(devs, nameIndex[d.nexthop.LinkIndex])
 			}
 			if len(devs) == 1 && devs[0] == "br-"+v.Name {
@@ -49,11 +190,11 @@ func setRouteType(rs *RouteStruct, v *infradb.Vrf) string {
 			}
 			return routeTypeBgp
 		}
-	} else if rs.Route0.Type == unix.RTN_UNICAST && checkProto(int(rs.Route0.Protocol)) && rs.Route0.Scope == unix.RT_SCOPE_UNIVERSE {
+	} else if route.Route0.Type == unix.RTN_UNICAST && checkProto(int(route.Route0.Protocol)) && route.Route0.Scope == unix.RT_SCOPE_UNIVERSE {
 		return routeTypeStatic
-	} else if rs.Route0.Type == unix.RTN_LOCAL {
+	} else if route.Route0.Type == unix.RTN_LOCAL {
 		return routeTypeLocal
-	} else if rs.Route0.Type == rtNNeighbor {
+	} else if route.Route0.Type == rtNNeighbor {
 		// Special /32 or /128 routes for Resolved neighbors on connected subnets
 		return routeTypeNeighbor
 	}
@@ -61,23 +202,23 @@ func setRouteType(rs *RouteStruct, v *infradb.Vrf) string {
 }
 
 // addRoute add the route
-func addRoute(r *RouteStruct) {
-	ch := checkRoute(r)
+func (route *RouteStruct) addRoute() {
+	ch := route.checkRoute()
 	if ch {
-		r0 := latestRoutes[r.Key]
-		if r.Route0.Priority >= r0.Route0.Priority {
+		r0 := latestRoutes[route.Key]
+		if route.Route0.Priority >= r0.Route0.Priority {
 			// Route with lower metric exists and takes precedence
-			log.Printf("netlink: Ignoring %+v  with higher metric than %+v\n", r, r0)
+			log.Printf("netlink: Ignoring %+v  with higher metric than %+v\n", route, r0)
 		} else {
-			log.Printf("netlink: conflicts %+v with higher metric %+v. Will ignore it", r, r0)
+			log.Printf("netlink: conflicts %+v with higher metric %+v. Will ignore it", route, r0)
 		}
 	} else {
-		nexthops := r.Nexthops
-		r.Nexthops = deleteNH(r.Nexthops)
+		nexthops := route.Nexthops
+		route.Nexthops = []*NexthopStruct{}
 		for _, nexthop := range nexthops {
-			r = addNexthop(nexthop, r)
+			route = nexthop.addNexthop(route)
 		}
-		latestRoutes[r.Key] = r
+		latestRoutes[route.Key] = route
 	}
 }
 
@@ -110,9 +251,11 @@ func ParseRoute(v *infradb.Vrf, rc []RouteCmdInfo, t int) RouteList {
 			r0.Type = routeTypeLocal
 		}
 		var rs RouteStruct
+		var nh NexthopStruct
 		rs.Vrf = v
 		if r0.Nhid != 0 || r0.Gateway != "" || r0.Dev != "" {
-			rs.Nexthops = append(rs.Nexthops, NHParse(v, r0))
+			nh.ParseNexthop(v, r0)
+			rs.Nexthops = append(rs.Nexthops, &nh)
 		}
 		rs.NlType = "unknown"
 		rs.Route0.Table = t
@@ -122,14 +265,14 @@ func ParseRoute(v *infradb.Vrf, rc []RouteCmdInfo, t int) RouteList {
 			rs.Route0.LinkIndex = dev.Attrs().Index
 		}
 		if r0.Dst != "" {
-			var Mask int
+			var mask int
 			split := r0.Dst
 			if strings.Contains(r0.Dst, "/") {
 				split4 := strings.Split(r0.Dst, "/")
-				Mask, _ = strconv.Atoi(split4[1])
+				mask, _ = strconv.Atoi(split4[1])
 				split = split4[0]
 			} else {
-				Mask = 32
+				mask = 32
 			}
 			var nIP *net.IPNet
 			if r0.Dst == "default" {
@@ -138,7 +281,7 @@ func ParseRoute(v *infradb.Vrf, rc []RouteCmdInfo, t int) RouteList {
 					Mask: net.IPv4Mask(0, 0, 0, 0),
 				}
 			} else {
-				mtoip := netMaskToInt(Mask)
+				mtoip := netMaskToInt(mask)
 				b3 := make([]byte, 8) // Converting int64 to byte
 				binary.LittleEndian.PutUint64(b3, uint64(mtoip[3]))
 				b2 := make([]byte, 8)
@@ -191,9 +334,9 @@ func ParseRoute(v *infradb.Vrf, rc []RouteCmdInfo, t int) RouteList {
 		if r0.Table != 0 {
 			rs.Route0.Table = r0.Table
 		}
-		rs.NlType = setRouteType(&rs, v)
+		rs.NlType = rs.setRouteType(v)
 		rs.Key = RouteKey{Table: rs.Route0.Table, Dst: rs.Route0.Dst.String()}
-		if preFilterRoute(&rs) {
+		if rs.preFilterRoute() {
 			route.RS = append(route.RS, &rs)
 		}
 	}
@@ -212,26 +355,26 @@ func readRouteFromIP(v *infradb.Vrf) {
 	var rm []RouteCmdInfo
 	var rt int
 	var routeData []RouteCmdInfo
-	for _, routeSt := range v.Metadata.RoutingTable {
-		rt = int(*routeSt)
-		Raw, err := nlink.ReadRoute(ctx, strconv.Itoa(rt))
-		if err != nil || len(Raw) <= 3 {
+	for _, route := range v.Metadata.RoutingTable {
+		rt = int(*route)
+		raw, err := nlink.ReadRoute(ctx, strconv.Itoa(rt))
+		if err != nil || len(raw) <= 3 {
 			log.Printf("netlink: Err Command route\n")
 			continue
 		}
 		var rawMessages []json.RawMessage
-		err = json.Unmarshal([]byte(Raw), &rawMessages)
+		err = json.Unmarshal([]byte(raw), &rawMessages)
 		if err != nil {
-			log.Printf("netlink route: JSON unmarshal error: %v %v : %v", err, Raw, rawMessages)
+			log.Printf("netlink route: JSON unmarshal error: %v %v : %v", err, raw, rawMessages)
 			continue
 		}
-		CPs := make([]string, 0, len(rawMessages))
+		cps := make([]string, 0, len(rawMessages))
 		for _, rawMsg := range rawMessages {
-			CPs = append(CPs, string(rawMsg))
+			cps = append(cps, string(rawMsg))
 		}
-		for i := 0; i < len(CPs); i++ {
+		for i := 0; i < len(cps); i++ {
 			var ri RouteCmdInfo
-			err := json.Unmarshal([]byte(CPs[i]), &ri)
+			err := json.Unmarshal([]byte(cps[i]), &ri)
 			if err != nil {
 				log.Println("error-", err)
 				continue
@@ -240,7 +383,7 @@ func readRouteFromIP(v *infradb.Vrf) {
 		}
 		rl = cmdProcessRt(v, routeData, rt)
 		for _, r := range rl.RS {
-			addRoute(r)
+			r.addRoute()
 		}
 	}
 	nl := getNeighborRoutes() // Add extra routes for Resolved neighbors on connected subnets
@@ -249,14 +392,14 @@ func readRouteFromIP(v *infradb.Vrf) {
 	}
 	nr := ParseRoute(v, rm, 0)
 	for _, r := range nr.RS {
-		addRoute(r)
+		r.addRoute()
 	}
 }
 
 // getProto gets the route protocol
-func getProto(n *RouteStruct) string {
+func (route *RouteStruct) getProto() string {
 	for p, i := range rtnProto {
-		if i == int(n.Route0.Protocol) {
+		if i == int(route.Route0.Protocol) {
 			return p
 		}
 	}
@@ -354,16 +497,16 @@ func lookupRoute(dst net.IP, v *infradb.Vrf) (*RouteStruct, bool) {
 		r0 := r.RS[0]
 		// ###  Search the latestRoutes DB snapshot if that exists, else
 		// ###  the current DB Route table.
-		var RouteTable map[RouteKey]*RouteStruct
+		var routeTable map[RouteKey]*RouteStruct
 		if len(latestRoutes) != 0 {
-			RouteTable = latestRoutes
+			routeTable = latestRoutes
 		} else {
-			RouteTable = routes
+			routeTable = routes
 		}
-		RDB, ok := RouteTable[r0.Key]
+		rDB, ok := routeTable[r0.Key]
 		if ok {
 			// Return the existing route in the DB
-			return RDB, ok
+			return rDB, ok
 		}
 		// Return the just constructed non-DB route
 		return r0, true
@@ -375,29 +518,29 @@ func lookupRoute(dst net.IP, v *infradb.Vrf) (*RouteStruct, bool) {
 
 // checkRtype checks the route type
 func checkRtype(rType string) bool {
-	var Types = map[string]struct{}{routeTypeConnected: {}, routeTypeEvpnVxlan: {}, routeTypeStatic: {}, routeTypeBgp: {}, routeTypeLocal: {}, routeTypeNeighbor: {}}
-	if _, ok := Types[rType]; ok {
+	var types = map[string]struct{}{routeTypeConnected: {}, routeTypeEvpnVxlan: {}, routeTypeStatic: {}, routeTypeBgp: {}, routeTypeLocal: {}, routeTypeNeighbor: {}}
+	if _, ok := types[rType]; ok {
 		return true
 	}
 	return false
 }
 
 // installFilterRoute install the route filter
-func installFilterRoute(routeSt *RouteStruct) bool {
+func (route *RouteStruct) installFilterRoute() bool {
 	var nh []*NexthopStruct
-	for _, n := range routeSt.Nexthops {
+	for _, n := range route.Nexthops {
 		if n.Resolved {
 			nh = append(nh, n)
 		}
 	}
-	routeSt.Nexthops = nh
-	keep := checkRtype(routeSt.NlType) && len(nh) != 0 && routeSt.Route0.Dst.IP.String() != "0.0.0.0"
+	route.Nexthops = nh
+	keep := checkRtype(route.NlType) && len(nh) != 0 && route.Route0.Dst.IP.String() != "0.0.0.0"
 	return keep
 }
 
 // preFilterRoute pre filter the routes
-func preFilterRoute(r *RouteStruct) bool {
-	if checkRtype(r.NlType) && !r.Route0.Dst.IP.IsLoopback() && r.Route0.Dst.IP.String() != "0.0.0.0" {
+func (route *RouteStruct) preFilterRoute() bool {
+	if checkRtype(route.NlType) && !route.Route0.Dst.IP.IsLoopback() && route.Route0.Dst.IP.String() != "0.0.0.0" {
 		return true
 	}
 
@@ -421,4 +564,26 @@ func (route *RouteStruct) deepEqual(routeOld *RouteStruct, nc bool) bool {
 // GetVrfOperStatus gets route vrf operation status
 func (route *RouteStruct) GetVrfOperStatus() infradb.VrfOperStatus {
 	return route.Vrf.Status.VrfOperStatus
+}
+
+// dumpRouteDB dump the route database
+func dumpRouteDB() string {
+	var s string
+	log.Printf("netlink: Dump Route table:\n")
+	s = "Route table:\n"
+	for _, n := range latestRoutes {
+		var via string
+		if n.Route0.Gw == nil {
+			via = strNone
+		} else {
+			via = n.Route0.Gw.String()
+		}
+		str := fmt.Sprintf("Route(vrf=%s dst=%s type=%s proto=%s metric=%d  via=%s dev=%s nhid= %d Table= %d)", n.Vrf.Name, n.Route0.Dst.String(), n.NlType, n.getProto(), n.Route0.Priority, via, nameIndex[n.Route0.LinkIndex], n.Nexthops[0].ID, n.Route0.Table)
+		log.Println(str)
+		s += str
+		s += "\n"
+	}
+	log.Printf("\n\n\n")
+	s += "\n\n"
+	return s
 }

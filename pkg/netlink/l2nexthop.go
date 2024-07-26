@@ -4,10 +4,56 @@ import (
 	"fmt"
 	"log"
 	"net"
-	"reflect"
 
 	"github.com/opiproject/opi-evpn-bridge/pkg/infradb"
 	vn "github.com/vishvananda/netlink"
+)
+
+// L2NexthopKey is l2 neighbor key
+type L2NexthopKey struct {
+	Dev    string
+	VlanID int
+	Dst    string
+}
+
+// L2NexthopStruct structure
+type L2NexthopStruct struct {
+	Dev      string
+	VlanID   int
+	Dst      net.IP
+	Key      L2NexthopKey
+	lb       *infradb.LogicalBridge
+	bp       *infradb.BridgePort
+	ID       int
+	FdbRefs  []*FdbEntryStruct
+	Resolved bool
+	Type     int
+	Metadata map[interface{}]interface{}
+}
+
+// l2nexthopID
+var l2nexthopID = 16
+
+// l2Nexthops Variable
+var l2Nexthops = make(map[L2NexthopKey]*L2NexthopStruct)
+
+// latestL2Nexthop Variable
+var latestL2Nexthop = make(map[L2NexthopKey]*L2NexthopStruct)
+
+// l2NhIDCache
+var l2NhIDCache = make(map[L2NexthopKey]int)
+
+// l2NexthopOperations add, update, delete
+var l2NexthopOperations = Operations{Add: L2NexthopAdded, Update: L2NexthopUpdated, Delete: L2NexthopDeleted}
+
+// Event Operations
+const (
+	// L2NexthopAdded event const
+	L2NexthopAdded = "l2_nexthop_added"
+	// L2NexthopUpdated event const
+	L2NexthopUpdated = "l2_nexthop_updated"
+	// L2NexthopDeleted event const
+	L2NexthopDeleted = "l2_nexthop_deleted"
 )
 
 // nolint
@@ -44,19 +90,18 @@ func L2NHAssignID(key L2NexthopKey) int {
 }
 
 // addL2Nexthop add the l2 nexthop
-func addL2Nexthop(m *FdbEntryStruct) *FdbEntryStruct {
-	latestNexthops := latestL2Nexthop[m.Nexthop.Key]
-	if !(reflect.ValueOf(latestNexthops).IsZero()) {
-		latestNexthops.FdbRefs = append(latestNexthops.FdbRefs, m)
-		m.Nexthop = latestNexthops
+func (fdb *FdbEntryStruct) addL2Nexthop() {
+	latestNexthop, ok := latestL2Nexthop[fdb.Nexthop.Key]
+	if ok && latestNexthop != nil {
+		latestNexthop.FdbRefs = append(latestNexthop.FdbRefs, fdb)
+		fdb.Nexthop = latestNexthop
 	} else {
-		latestNexthops = m.Nexthop
-		latestNexthops.FdbRefs = append(latestNexthops.FdbRefs, m)
-		latestNexthops.ID = L2NHAssignID(latestNexthops.Key)
-		latestL2Nexthop[latestNexthops.Key] = latestNexthops
-		m.Nexthop = latestNexthops
+		latestNexthop = fdb.Nexthop
+		latestNexthop.FdbRefs = append(latestNexthop.FdbRefs, fdb)
+		latestNexthop.ID = L2NHAssignID(latestNexthop.Key)
+		latestL2Nexthop[latestNexthop.Key] = latestNexthop
+		fdb.Nexthop = latestNexthop
 	}
-	return m
 }
 
 // nolint
@@ -103,7 +148,7 @@ func (l2n *L2NexthopStruct) annotate() {
 }
 
 // installFilterL2N install the l2 filter
-func installFilterL2N(l2n *L2NexthopStruct) bool {
+func (l2n *L2NexthopStruct) installFilterL2N() bool {
 	keep := !(l2n.Type == 0 && l2n.Resolved && len(l2n.FdbRefs) == 0)
 	return keep
 }
@@ -124,4 +169,26 @@ func (l2n *L2NexthopStruct) deepEqual(l2nOld *L2NexthopStruct, nc bool) bool {
 		}
 	}
 	return true
+}
+
+// dumpL2NexthDB dump the l2 nexthop entries
+func dumpL2NexthDB() string {
+	var s string
+	log.Printf("netlink: Dump L2 Nexthop table:\n")
+	s = "L2 Nexthop table:\n"
+	var ip string
+	for _, n := range latestL2Nexthop {
+		if n.Dst == nil {
+			ip = strNone
+		} else {
+			ip = n.Dst.String()
+		}
+		str := fmt.Sprintf("L2Nexthop(id=%d dev=%s vlan=%d dst=%s type=%d #fDB entries=%d Resolved=%t) ", n.ID, n.Dev, n.VlanID, ip, n.Type, len(n.FdbRefs), n.Resolved)
+		log.Println(str)
+		s += str
+		s += "\n"
+	}
+	log.Printf("\n\n\n")
+	s += "\n\n"
+	return s
 }

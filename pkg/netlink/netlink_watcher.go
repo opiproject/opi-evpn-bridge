@@ -29,35 +29,35 @@ func deleteLatestDB() {
 
 // notifyDBChanges notify the database changes
 func notifyDBChanges() {
-	processAndnotify[RouteKey, *RouteStruct](latestRoutes, routes, ROUTE, routeOperations)
-	processAndnotify[NexthopKey, *NexthopStruct](latestNexthop, nexthops, NEXTHOP, nexthopOperations)
-	processAndnotify[FdbKey, *FdbEntryStruct](latestFDB, fDB, FDB, fdbOperations)
-	processAndnotify[L2NexthopKey, *L2NexthopStruct](latestL2Nexthop, l2Nexthops, L2NEXTHOP, l2NexthopOperations)
+	notifyDBCompChanges[RouteKey, *RouteStruct](latestRoutes, routes, ROUTE, routeOperations)
+	notifyDBCompChanges[NexthopKey, *NexthopStruct](latestNexthop, nexthops, NEXTHOP, nexthopOperations)
+	notifyDBCompChanges[FdbKey, *FdbEntryStruct](latestFDB, fDB, FDB, fdbOperations)
+	notifyDBCompChanges[L2NexthopKey, *L2NexthopStruct](latestL2Nexthop, l2Nexthops, L2NEXTHOP, l2NexthopOperations)
 }
 
 // nolint
 func applyInstallFilters() {
-	for K, r := range latestRoutes {
-		if !installFilterRoute(r) {
+	for key, route := range latestRoutes {
+		if !route.installFilterRoute() {
 			// Remove route from its nexthop(s)
-			delete(latestRoutes, K)
+			delete(latestRoutes, key)
 		}
 	}
 
-	for k, nexthop := range latestNexthop {
-		if !installFilterNH(nexthop) {
-			delete(latestNexthop, k)
+	for key, nexthop := range latestNexthop {
+		if !nexthop.installFilterNH() {
+			delete(latestNexthop, key)
 		}
 	}
 
-	for k, m := range latestFDB {
-		if !installFilterFDB(m) {
-			delete(latestFDB, k)
+	for key, fdb := range latestFDB {
+		if !fdb.installFilterFDB() {
+			delete(latestFDB, key)
 		}
 	}
-	for k, L2 := range latestL2Nexthop {
-		if !installFilterL2N(L2) {
-			delete(latestL2Nexthop, k)
+	for key, l2 := range latestL2Nexthop {
+		if !l2.installFilterL2N() {
+			delete(latestL2Nexthop, key)
 		}
 	}
 }
@@ -68,14 +68,14 @@ func annotateDBEntries() {
 		nexthop.annotate()
 		latestNexthop[nexthop.Key] = nexthop
 	}
-	for _, r := range latestRoutes {
-		r.annotate()
-		latestRoutes[r.Key] = r
+	for _, route := range latestRoutes {
+		route.annotate()
+		latestRoutes[route.Key] = route
 	}
 
-	for _, m := range latestFDB {
-		m.annotate()
-		latestFDB[m.Key] = m
+	for _, fdb := range latestFDB {
+		fdb.annotate()
+		latestFDB[fdb.Key] = fdb
 	}
 	for _, l2n := range latestL2Nexthop {
 		l2n.annotate()
@@ -92,7 +92,7 @@ func readLatestNetlinkState() {
 	}
 	m := readFDB()
 	for i := 0; i < len(m); i++ {
-		addFdbEntry(m[i])
+		m[i].addFdbEntry()
 	}
 	dumpDBs()
 }
@@ -125,16 +125,16 @@ func monitorNetlink() {
 	log.Printf("netlink: One final netlink poll to identify what's still left.")
 	// Inform subscribers to delete configuration for any still remaining Netlink DB objects.
 	log.Printf("netlink: Delete any residual objects in DB")
-	for _, r := range routes {
-		notifyAddDel(r, RouteDeleted)
+	for _, route := range routes {
+		notifyAddDel(route, RouteDeleted)
 	}
 
 	for _, nexthop := range nexthops {
 		notifyAddDel(nexthop, NexthopDeleted)
 	}
 
-	for _, m := range fDB {
-		notifyAddDel(m, FdbEntryDeleted)
+	for _, fdb := range fDB {
+		notifyAddDel(fdb, FdbEntryDeleted)
 	}
 	log.Printf("netlink: DB cleanup completed.")
 }
