@@ -35,52 +35,67 @@ func notifyDBChanges() {
 	notifyDBCompChanges[L2NexthopKey, *L2NexthopStruct](latestL2Nexthop, l2Nexthops, L2NEXTHOP, l2NexthopOperations)
 }
 
-// nolint
+// Filterable method for each type
+type Filterable interface {
+	ShouldFilter() bool
+}
+
+// applyInstallFilters install the filters
 func applyInstallFilters() {
-	for key, route := range latestRoutes {
-		if !route.installFilterRoute() {
-			// Remove route from its nexthop(s)
-			delete(latestRoutes, key)
-		}
-	}
+	filterMap(latestRoutes, func(r *RouteStruct) bool { return r.installFilterRoute() })
+	filterMap(latestNexthop, func(n *NexthopStruct) bool { return n.installFilterNH() })
+	filterMap(latestFDB, func(f *FdbEntryStruct) bool { return f.installFilterFDB() })
+	filterMap(latestL2Nexthop, func(l *L2NexthopStruct) bool { return l.installFilterL2N() })
+}
 
-	for key, nexthop := range latestNexthop {
-		if !nexthop.installFilterNH() {
-			delete(latestNexthop, key)
-		}
-	}
-
-	for key, fdb := range latestFDB {
-		if !fdb.installFilterFDB() {
-			delete(latestFDB, key)
-		}
-	}
-	for key, l2 := range latestL2Nexthop {
-		if !l2.installFilterL2N() {
-			delete(latestL2Nexthop, key)
+// filterMap install the filters
+func filterMap[K comparable, V Filterable](m map[K]V, shouldFilter func(V) bool) {
+	for key, value := range m {
+		if !shouldFilter(value) {
+			delete(m, key)
 		}
 	}
 }
 
-// annotateDBEntries annonates the database entries
-func annotateDBEntries() {
-	for _, nexthop := range latestNexthop {
-		nexthop.annotate()
-		latestNexthop[nexthop.Key] = nexthop
-	}
-	for _, route := range latestRoutes {
-		route.annotate()
-		latestRoutes[route.Key] = route
-	}
+// ShouldFilter method for each type
+func (route *RouteStruct) ShouldFilter() bool {
+	return route.installFilterRoute()
+}
 
-	for _, fdb := range latestFDB {
-		fdb.annotate()
-		latestFDB[fdb.Key] = fdb
+// ShouldFilter method for each type
+func (nexthop *NexthopStruct) ShouldFilter() bool {
+	return nexthop.installFilterNH()
+}
+
+// ShouldFilter method for each type
+func (fdb *FdbEntryStruct) ShouldFilter() bool {
+	return fdb.installFilterFDB()
+}
+
+// ShouldFilter method for each type
+func (l *L2NexthopStruct) ShouldFilter() bool {
+	return l.installFilterL2N()
+}
+
+// Annotatable interface
+type Annotatable interface {
+	annotate()
+}
+
+// annotateMap  annonates the latest db map updates
+func annotateMap[K comparable, V Annotatable](m map[K]V) {
+	for key, value := range m {
+		value.annotate()
+		m[key] = value
 	}
-	for _, l2n := range latestL2Nexthop {
-		l2n.annotate()
-		latestL2Nexthop[l2n.Key] = l2n
-	}
+}
+
+// annotateDBEntries  annonates the latest db updates
+func annotateDBEntries() {
+	annotateMap(latestNexthop)
+	annotateMap(latestRoutes)
+	annotateMap(latestFDB)
+	annotateMap(latestL2Nexthop)
 }
 
 // readLatestNetlinkState reads the latest netlink state
@@ -114,6 +129,15 @@ func resyncWithKernel() {
 	deleteLatestDB()
 }
 
+// notifyUpdates notifies the db updates
+func notifyUpdates[K comparable, V any](items map[K]V, deletionType string) {
+	for _, item := range items {
+		notifyAddDel(item, deletionType)
+	}
+}
+
+// Usage
+
 // monitorNetlink moniters the netlink
 func monitorNetlink() {
 	for !stopMonitoring.Load() {
@@ -125,17 +149,9 @@ func monitorNetlink() {
 	log.Printf("netlink: One final netlink poll to identify what's still left.")
 	// Inform subscribers to delete configuration for any still remaining Netlink DB objects.
 	log.Printf("netlink: Delete any residual objects in DB")
-	for _, route := range routes {
-		notifyAddDel(route, RouteDeleted)
-	}
-
-	for _, nexthop := range nexthops {
-		notifyAddDel(nexthop, NexthopDeleted)
-	}
-
-	for _, fdb := range fDB {
-		notifyAddDel(fdb, FdbEntryDeleted)
-	}
+	notifyUpdates(routes, RouteDeleted)
+	notifyUpdates(nexthops, NexthopDeleted)
+	notifyUpdates(fDB, FdbEntryDeleted)
 	log.Printf("netlink: DB cleanup completed.")
 }
 
