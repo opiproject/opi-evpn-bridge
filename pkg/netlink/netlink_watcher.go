@@ -35,52 +35,57 @@ func notifyDBChanges() {
 	notifyDBCompChanges[L2NexthopKey, *L2NexthopStruct](latestL2Nexthop, l2Nexthops, L2NEXTHOP, l2NexthopOperations)
 }
 
-// nolint
-func applyInstallFilters() {
-	for key, route := range latestRoutes {
-		if !route.installFilterRoute() {
-			// Remove route from its nexthop(s)
-			delete(latestRoutes, key)
-		}
-	}
+// dboperations interface
+type dboperations interface {
+	annotate()
+	filter() bool
+}
 
-	for key, nexthop := range latestNexthop {
-		if !nexthop.installFilterNH() {
-			delete(latestNexthop, key)
-		}
-	}
+type genericDB[K comparable, V dboperations] struct {
+	compDB map[K]V
+}
 
-	for key, fdb := range latestFDB {
-		if !fdb.installFilterFDB() {
-			delete(latestFDB, key)
-		}
+func newGenericDB[K comparable, V dboperations](data map[K]V) *genericDB[K, V] {
+	return &genericDB[K, V]{compDB: data}
+}
+
+func (db *genericDB[K, V]) annotate() {
+	for key, value := range db.compDB {
+		value.annotate()
+		db.compDB[key] = value
 	}
-	for key, l2 := range latestL2Nexthop {
-		if !l2.installFilterL2N() {
-			delete(latestL2Nexthop, key)
+}
+
+func (db *genericDB[K, V]) filter() {
+	for key, value := range db.compDB {
+		if !value.filter() {
+			delete(db.compDB, key)
 		}
 	}
 }
 
-// annotateDBEntries annonates the database entries
-func annotateDBEntries() {
-	for _, nexthop := range latestNexthop {
-		nexthop.annotate()
-		latestNexthop[nexthop.Key] = nexthop
-	}
-	for _, route := range latestRoutes {
-		route.annotate()
-		latestRoutes[route.Key] = route
-	}
+// annotateAndFilterDB  annonates and filters the latest db updates
+func annotateAndFilterDB() {
+	latestNexthopDB := newGenericDB(latestNexthop)
+	latestNexthopDB.annotate()
+	latestNexthopDB.filter()
 
-	for _, fdb := range latestFDB {
-		fdb.annotate()
-		latestFDB[fdb.Key] = fdb
-	}
-	for _, l2n := range latestL2Nexthop {
-		l2n.annotate()
-		latestL2Nexthop[l2n.Key] = l2n
-	}
+	latestRoutesDB := newGenericDB(latestRoutes)
+	latestRoutesDB.annotate()
+	latestRoutesDB.filter()
+
+	latestFdbDB := newGenericDB(latestFDB)
+	latestFdbDB.annotate()
+	latestFdbDB.filter()
+
+	latestL2NexthopDB := newGenericDB(latestL2Nexthop)
+	latestL2NexthopDB.annotate()
+	latestL2NexthopDB.filter()
+
+	latestNexthop = latestNexthopDB.compDB
+	latestRoutes = latestRoutesDB.compDB
+	latestFDB = latestFdbDB.compDB
+	latestL2Nexthop = latestL2NexthopDB.compDB
 }
 
 // readLatestNetlinkState reads the latest netlink state
@@ -101,10 +106,8 @@ func readLatestNetlinkState() {
 func resyncWithKernel() {
 	// Build a new DB snapshot from netlink and other sources
 	readLatestNetlinkState()
-	// Annotate the latest DB entries
-	annotateDBEntries()
-	// Filter the latest DB to retain only entries to be installed
-	applyInstallFilters()
+	// Annotate and filter the latest DB entries
+	annotateAndFilterDB()
 	// Compute changes between current and latest DB versions and inform subscribers about the changes
 	notifyDBChanges()
 	routes = latestRoutes
@@ -113,6 +116,15 @@ func resyncWithKernel() {
 	l2Nexthops = latestL2Nexthop
 	deleteLatestDB()
 }
+
+// notifyUpdates notifies the db updates
+func notifyUpdates[K comparable, V any](items map[K]V, deletionType string) {
+	for _, item := range items {
+		notifyAddDel(item, deletionType)
+	}
+}
+
+// Usage
 
 // monitorNetlink moniters the netlink
 func monitorNetlink() {
@@ -125,17 +137,9 @@ func monitorNetlink() {
 	log.Printf("netlink: One final netlink poll to identify what's still left.")
 	// Inform subscribers to delete configuration for any still remaining Netlink DB objects.
 	log.Printf("netlink: Delete any residual objects in DB")
-	for _, route := range routes {
-		notifyAddDel(route, RouteDeleted)
-	}
-
-	for _, nexthop := range nexthops {
-		notifyAddDel(nexthop, NexthopDeleted)
-	}
-
-	for _, fdb := range fDB {
-		notifyAddDel(fdb, FdbEntryDeleted)
-	}
+	notifyUpdates(routes, RouteDeleted)
+	notifyUpdates(nexthops, NexthopDeleted)
+	notifyUpdates(fDB, FdbEntryDeleted)
 	log.Printf("netlink: DB cleanup completed.")
 }
 
