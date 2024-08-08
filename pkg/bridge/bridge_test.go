@@ -120,6 +120,14 @@ func Test_CreateLogicalBridge(t *testing.T) {
 			out: &pb.LogicalBridge{
 				Spec: &pb.LogicalBridgeSpec{
 					VlanId: 11,
+					VtepIpPrefix: &pc.IPPrefix{
+						Addr: &pc.IPAddress{
+							Af: pc.IpAf_IP_AF_INET,
+							V4OrV6: &pc.IPAddress_V4Addr{
+								V4Addr: 0,
+							},
+						},
+					},
 				},
 				Status: &pb.LogicalBridgeStatus{
 					OperStatus: pb.LBOperStatus_LB_OPER_STATUS_DOWN,

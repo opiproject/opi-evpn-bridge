@@ -39,11 +39,24 @@ func (h *ModulelciHandler) HandleEvent(eventType string, objectData *eventbus.Ob
 }
 
 // handlebp  handle the bridge port functionality
+//
+//gocognit:ignore
 func handlebp(objectData *eventbus.ObjectData) {
 	var comp common.Component
 	BP, err := infradb.GetBP(objectData.Name)
 	if err != nil {
 		log.Printf("LCI : GetBP error: %s\n", err)
+		comp.Name = lciComp
+		comp.CompStatus = common.ComponentStatusError
+		if comp.Timer == 0 {
+			comp.Timer = 2 * time.Second
+		} else {
+			comp.Timer *= 2
+		}
+		err := infradb.UpdateBPStatus(objectData.Name, objectData.ResourceVersion, objectData.NotificationID, nil, comp)
+		if err != nil {
+			log.Printf("error in updating bp status: %s\n", err)
+		}
 		return
 	}
 	if objectData.ResourceVersion != BP.ResourceVersion {
@@ -202,8 +215,8 @@ func tearDownBp(bp *infradb.BridgePort) bool {
 var ctx context.Context
 var nlink utils.Netlink
 
-// Init initializes the config and  subscribers
-func Init() {
+// Initialize initializes the config and  subscribers
+func Initialize() {
 	eb := eventbus.EBus
 	for _, subscriberConfig := range config.GlobalConfig.Subscribers {
 		if subscriberConfig.Name == "lci" {
@@ -213,5 +226,12 @@ func Init() {
 		}
 	}
 	ctx = context.Background()
-	nlink = utils.NewNetlinkWrapper()
+	nlink = utils.NewNetlinkWrapperWithArgs(config.GlobalConfig.Tracer)
+}
+
+// DeInitialize function handles stops functionality
+func DeInitialize() {
+	// Unsubscribe to InfraDB notifications
+	eb := eventbus.EBus
+	eb.UnsubscribeModule("lci")
 }
