@@ -42,6 +42,7 @@ linuxfrr:
     portmux: "enp0s1f0d5"
     vrfmux: "enp0s1f0d4"
     ipmtu: 2962
+    localas: 65001
 netlink:
     enabled: true
     pollinterval: 1

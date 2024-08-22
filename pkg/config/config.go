@@ -61,6 +61,7 @@ type LinuxFrrConfig struct {
 	PortMux     string `yaml:"portmux"`
 	VrfMux      string `yaml:"vrfmux"`
 	IPMtu       int    `yaml:"ipmtu"`
+	LocalAs     int    `yaml:"localas"`
 }
 
 // NetlinkConfig netlink config structure
