@@ -20,7 +20,6 @@ type EventBus struct {
 	subscribers   map[string][]*Subscriber
 	eventHandlers map[string]EventHandler
 	subscriberL   sync.RWMutex
-	publishL      sync.RWMutex
 	mutex         sync.RWMutex
 }
 
@@ -130,8 +129,6 @@ func (e *EventBus) subscriberExist(eventType string, moduleName string) bool {
 
 // Publish api notifies the subscribers with certain eventType
 func (e *EventBus) Publish(objectData *ObjectData, subscriber *Subscriber) error {
-	e.publishL.Lock()
-	defer e.publishL.Unlock()
 	var err error
 
 	select {
