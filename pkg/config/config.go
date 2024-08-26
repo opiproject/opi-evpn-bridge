@@ -30,19 +30,14 @@ type P4FilesConfig struct {
 
 // RepresentorsConfig Representors config structure
 type RepresentorsConfig struct {
-	PortMux  string `yaml:"port-mux"`
-	VrfMux   string `yaml:"vrf_mux"`
-	GrpcAcc  string `yaml:"host"`
-	GrpcHost string `yaml:"grpc_host"`
-	Phy0Rep  string `yaml:"phy0_rep"`
-	Phy1Rep  string `yaml:"phy1_rep"`
+	Phy0Rep string `yaml:"phy0_rep"`
+	Phy1Rep string `yaml:"phy1_rep"`
 }
 
 // P4Config p4 config structure
 type P4Config struct {
-	Enabled      bool                   `yaml:"enabled"`
-	Representors map[string]interface{} `yaml:"representors"`
-	Config       P4FilesConfig          `yaml:"config"`
+	Enabled bool          `yaml:"enabled"`
+	Config  P4FilesConfig `yaml:"config"`
 }
 
 // loglevelConfig log level config structure
@@ -58,20 +53,29 @@ type loglevelConfig struct {
 type LinuxFrrConfig struct {
 	Enabled     bool   `yaml:"enabled"`
 	DefaultVtep string `yaml:"defaultvtep"`
-	PortMux     string `yaml:"portmux"`
-	VrfMux      string `yaml:"vrfmux"`
 	IPMtu       int    `yaml:"ipmtu"`
 	LocalAs     int    `yaml:"localas"`
 }
 
+// InterfaceConfig linux frr config structure
+type InterfaceConfig struct {
+	PhyPorts []struct {
+		Rep string `yaml:"rep"`
+		Vsi int    `yaml:"vsi"`
+	} `yaml:"phyports"`
+	Other    map[string]interface{} `yaml:",inline"`
+	GrpcAcc  string                 `yaml:"grpcacc"`
+	GrpcHost string                 `yaml:"grpchost"`
+	VrfMux   string                 `yaml:"vrfmux"`
+	PortMux  string                 `yaml:"port-mux"`
+}
+
 // NetlinkConfig netlink config structure
 type NetlinkConfig struct {
-	Enabled      bool `yaml:"enabled"`
-	PollInterval int  `yaml:"pollinterval"`
-	PhyPorts     []struct {
-		Name string `yaml:"name"`
-		Vsi  int    `yaml:"vsi"`
-	} `yaml:"phyports"`
+	Enabled         bool `yaml:"enabled"`
+	PollInterval    int  `yaml:"pollinterval"`
+	GrdDefaultRoute bool `yaml:"grddefaultroute"`
+	EnableEcmp      bool `yaml:"enableecmp"`
 }
 
 // Config global config structure
@@ -85,6 +89,7 @@ type Config struct {
 	Buildenv    string             `yaml:"buildenv"`
 	Tracer      bool               `yaml:"tracer"`
 	Subscribers []SubscriberConfig `yaml:"subscribers"`
+	Interfaces  InterfaceConfig    `yaml:"interfaces"`
 	LinuxFrr    LinuxFrrConfig     `yaml:"linuxfrr"`
 	Netlink     NetlinkConfig      `yaml:"netlink"`
 	P4          P4Config           `yaml:"p4"`
