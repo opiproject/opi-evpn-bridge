@@ -32,10 +32,10 @@ import (
 type ModulelgmHandler struct{}
 
 // RoutingTableMax max value of routing table
-const RoutingTableMax = 4000
+//const RoutingTableMax = 4000
 
 // RoutingTableMin min value of routing table
-const RoutingTableMin = 1000
+//const RoutingTableMin = 1000
 
 // lgmComp string constant
 const lgmComp string = "lgm"
@@ -46,10 +46,21 @@ const brStr string = "br-"
 // vxlanStr string constant
 const vxlanStr string = "vxlan-"
 
+
+// ModPointer structure of  mod ptr definitions
+var RoutengTable_range = struct {
+       RoutingTableMin, RoutingTableMax uint32
+}{
+       RoutingTableMin: 1000,
+       RoutingTableMax: 4000,
+}
+
+/*
 // GenerateRouteTable range specification, note that min <= max
 func GenerateRouteTable() uint32 {
 	return uint32(rand.Intn(RoutingTableMax-RoutingTableMin+1) + RoutingTableMin) //nolint:gosec
 }
+*/
 
 // run runs the commands
 func run(cmd []string, flag bool) (string, int) {
@@ -350,6 +361,8 @@ var ctx context.Context
 // nlink variable wrapper
 var nlink utils.Netlink
 
+var Route_table_Gen utils.IdPool
+
 // Initialize initializes the config, logger and subscribers
 func Initialize() {
 	eb := eventbus.EBus
@@ -363,7 +376,8 @@ func Initialize() {
 	brTenant = "br-tenant"
 	ipMtu = config.GlobalConfig.LinuxFrr.IPMtu
 	ctx = context.Background()
-	nlink = utils.NewNetlinkWrapperWithArgs(config.GlobalConfig.Tracer)
+	Route_table_Gen = utils.IDPoolInit("RTtable", RoutengTable_range.RoutingTableMin, RoutengTable_range.RoutingTableMax)
+	nlink = utils.NewNetlinkWrapperWithArgs(false)
 	// Set up the static configuration parts
 	_, err := nlink.LinkByName(ctx, brTenant)
 	if err != nil {
@@ -466,7 +480,8 @@ func setUpVrf(vrf *infradb.Vrf) (string, bool) {
 	vrf.Metadata.RoutingTable[0] = new(uint32)
 	var routingTable uint32
 	for {
-		routingTable = GenerateRouteTable()
+		//var key interface{}
+		routingTable, _ = Route_table_Gen.GetID(vrf.Name, 0)
 		isBusy, err := routingTableBusy(routingTable)
 		if err != nil {
 			log.Printf("LGM : Error occurred when checking if routing table %d is busy: %+v\n", routingTable, err)
