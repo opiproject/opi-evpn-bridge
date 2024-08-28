@@ -8,6 +8,7 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"os/exec"
 	"strings"
 	"time"
 
@@ -52,6 +53,7 @@ type Frr interface {
 	TelnetDialAndCommunicate(ctx context.Context, command string, port int) (string, error)
 	FrrZebraCmd(ctx context.Context, command string) (string, error)
 	FrrBgpCmd(ctx context.Context, command string) (string, error)
+	Save(context.Context) error
 	Password(conn *telnet.Conn, delim string) error
 	EnterPrivileged(conn *telnet.Conn) error
 	ExitPrivileged(conn *telnet.Conn) error
@@ -123,6 +125,16 @@ func (n *FrrWrapper) FrrZebraCmd(ctx context.Context, command string) (string, e
 func (n *FrrWrapper) FrrBgpCmd(ctx context.Context, command string) (string, error) {
 	// ports defined here https://docs.frrouting.org/en/latest/setup.html#services
 	return n.TelnetDialAndCommunicate(ctx, command, bgpd)
+}
+
+// Save command save the current config to /etc/frr/frr.conf
+func (n *FrrWrapper) Save(ctx context.Context) error {
+	cmd := exec.CommandContext(ctx, "vtysh", "-c", "write")
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("failed to save FRR config: %v, output: %s", err, output)
+	}
+	return nil
 }
 
 // MultiLineCmd breaks command by lines, sends each and waits for output and returns combined output

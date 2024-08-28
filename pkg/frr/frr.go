@@ -371,6 +371,10 @@ func setUpVrf(vrf *infradb.Vrf) (string, bool) {
 		if err != nil {
 			return "", false
 		}
+		err = Frr.Save(ctx)
+		if err != nil {
+			log.Printf("FRR(setUpVrf): Failed to run save command: %v\n", err)
+		}
 		log.Printf("FRR: Executed frr config t %s %s exit-vrf exit\n", vrfName, vniID)
 		var LbiP string
 
@@ -383,13 +387,20 @@ func setUpVrf(vrf *infradb.Vrf) (string, bool) {
 		if err != nil {
 			return "", false
 		}
-
+		err = Frr.Save(ctx)
+		if err != nil {
+			log.Printf("FRR(setUpVrf): Failed to run save command: %v\n", err)
+		}
 		log.Printf("FRR: Executed config t bgpVrfName router bgp %+v vrf %s bgp_route_id %s no bgp ebgp-requires-policy exit-vrf exit\n", localas, vrf.Name, LbiP)
 		// Update the vrf with attributes from FRR
 		cmd := fmt.Sprintf("show bgp l2vpn evpn vni %d json", *vrf.Spec.Vni)
 		cp, err := Frr.FrrBgpCmd(ctx, cmd)
 		if err != nil {
 			log.Printf("error-%v", err)
+		}
+		err = Frr.Save(ctx)
+		if err != nil {
+			log.Printf("FRR(setUpVrf): Failed to run save command: %v\n", err)
 		}
 		hname, _ := os.Hostname()
 		L2vpnCmd := strings.Split(cp, "json")
@@ -411,6 +422,10 @@ func setUpVrf(vrf *infradb.Vrf) (string, bool) {
 		cp, err = Frr.FrrBgpCmd(ctx, cmd)
 		if err != nil {
 			log.Printf("error-%v", err)
+		}
+		err = Frr.Save(ctx)
+		if err != nil {
+			log.Printf("FRR(setUpVrf): Failed to run save command: %v\n", err)
 		}
 		BgpCmd := strings.Split(cp, "json")
 		BgpCmd = strings.Split(BgpCmd[1], hname)
@@ -466,6 +481,10 @@ func setUpSvi(svi *infradb.Svi) bool {
 			log.Printf("FRR: Error in conf svi %s %s command %s\n", svi.Name, path.Base(svi.Spec.Vrf), data)
 			return false
 		}
+		err = Frr.Save(ctx)
+		if err != nil {
+			log.Printf("FRR(setUpSvi): Failed to run save command: %v\n", err)
+		}
 		return true
 	}
 	return true
@@ -488,6 +507,10 @@ func tearDownSvi(svi *infradb.Svi) bool {
 			log.Printf("FRR: Error in conf Delete vrf/VNI command %s\n", data)
 			return false
 		}
+		err = Frr.Save(ctx)
+		if err != nil {
+			log.Printf("FRR(tearDownSvi): Failed to run save command: %v\n", err)
+		}
 		log.Printf("FRR: Executed vtysh -c conf t -c router bgp %+v vrf %s -c no  neighbor %s peer-group -c exit\n", localas, path.Base(svi.Spec.Vrf), linkSvi)
 		return true
 	}
@@ -509,6 +532,10 @@ func tearDownVrf(vrf *infradb.Vrf) bool {
 		log.Printf("CP FRR %s\n", data)
 		return true
 	}
+	err = Frr.Save(ctx)
+	if err != nil {
+		log.Printf("FRR(tearDownVrf): Failed to run save command: %v\n", err)
+	}
 	// Clean up FRR last
 	if !reflect.ValueOf(vrf.Spec.Vni).IsZero() {
 		log.Printf("FRR Deleted event")
@@ -518,9 +545,17 @@ func tearDownVrf(vrf *infradb.Vrf) bool {
 		if err != nil {
 			return false
 		}
+		err = Frr.Save(ctx)
+		if err != nil {
+			log.Printf("FRR(tearDownVrf): Failed to run save command: %v\n", err)
+		}
 		_, err = Frr.FrrZebraCmd(ctx, fmt.Sprintf("configure terminal\n %s\n exit\n", delCmd2))
 		if err != nil {
 			return false
+		}
+		err = Frr.Save(ctx)
+		if err != nil {
+			log.Printf("FRR(tearDownVrf): Failed to run save command: %v\n", err)
 		}
 		log.Printf("FRR: Executed vtysh -c conf t -c %s -c %s -c exit\n", delCmd1, delCmd2)
 	}
