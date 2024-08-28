@@ -468,6 +468,7 @@ func setUpBridge(lb *infradb.LogicalBridge) bool {
 //nolint:funlen,gocognit
 func setUpVrf(vrf *infradb.Vrf) (string, bool) {
 	IPMtu := fmt.Sprintf("%+v", ipMtu)
+	var add_key int
 	if path.Base(vrf.Name) == "GRD" {
 		vrf.Metadata.RoutingTable = make([]*uint32, 2)
 		vrf.Metadata.RoutingTable[0] = new(uint32)
@@ -479,9 +480,12 @@ func setUpVrf(vrf *infradb.Vrf) (string, bool) {
 	vrf.Metadata.RoutingTable = make([]*uint32, 1)
 	vrf.Metadata.RoutingTable[0] = new(uint32)
 	var routingTable uint32
+	Name:=vrf.Name
+        add_key=0
 	for {
 		//var key interface{}
-		routingTable, _ = Route_table_Gen.GetID(vrf.Name, 0)
+	        routingTable, _ = Route_table_Gen.GetID(Name, 0)
+	        log.Printf("LGM assigned id %+v for vrf name %s\n",routingTable,vrf.Name)
 		isBusy, err := routingTableBusy(routingTable)
 		if err != nil {
 			log.Printf("LGM : Error occurred when checking if routing table %d is busy: %+v\n", routingTable, err)
@@ -492,6 +496,8 @@ func setUpVrf(vrf *infradb.Vrf) (string, bool) {
 			break
 		}
 		log.Printf("LGM: Routing Table %d is busy\n", routingTable)
+    	        add_key+=1
+                Name= fmt.Sprintf("%s%d",Name,add_key)
 	}
 	var vtip string
 	if !reflect.ValueOf(vrf.Spec.VtepIP).IsZero() {
