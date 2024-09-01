@@ -121,10 +121,8 @@ func cmdProcessNb(nbs []NeighIPStruct, v string) NeighList {
 // addNeigh adds the neigh
 func addNeigh(dump NeighList) {
 	for _, n := range dump.NS {
-		n.neighborAnnotate()
-		if len(latestNeighbors) == 0 {
-			latestNeighbors[n.Key] = n
-		} else if !CheckNdup(n.Key) {
+		n = n.neighborAnnotate()
+		if len(latestNeighbors) == 0 || !CheckNdup(n.Key) {
 			latestNeighbors[n.Key] = n
 		}
 	}

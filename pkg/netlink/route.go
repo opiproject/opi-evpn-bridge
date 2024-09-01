@@ -526,7 +526,7 @@ func checkRtype(rType string) bool {
 }
 
 // installFilterRoute install the route filter
-func (route *RouteStruct) filter() bool {
+func (route *RouteStruct) installFilterRoute() bool {
 	var nh []*NexthopStruct
 	for _, n := range route.Nexthops {
 		if n.Resolved {

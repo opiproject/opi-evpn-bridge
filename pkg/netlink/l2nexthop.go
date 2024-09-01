@@ -148,7 +148,7 @@ func (l2n *L2NexthopStruct) annotate() {
 }
 
 // installFilterL2N install the l2 filter
-func (l2n *L2NexthopStruct) filter() bool {
+func (l2n *L2NexthopStruct) installFilterL2N() bool {
 	keep := !(l2n.Type == 0 && l2n.Resolved && len(l2n.FdbRefs) == 0)
 	return keep
 }

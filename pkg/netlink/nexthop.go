@@ -326,7 +326,7 @@ func checkNhType(nType int) bool {
 }
 
 // installFilterNH install the neighbor filter
-func (nexthop *NexthopStruct) filter() bool {
+func (nexthop *NexthopStruct) installFilterNH() bool {
 	check := checkNhType(nexthop.NhType)
 	keep := check && nexthop.Resolved && len(nexthop.RouteRefs) != 0
 	return keep

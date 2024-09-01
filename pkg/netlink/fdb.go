@@ -176,7 +176,7 @@ func checkFdbType(fdbtype int) bool {
 }
 
 // installFilterFDB install fdb filer
-func (fdb *FdbEntryStruct) filter() bool {
+func (fdb *FdbEntryStruct) installFilterFDB() bool {
 	// Drop entries w/o VLAN ID or associated LogicalBridge ...
 	// ... other than with L2 nexthops of type VXLAN and BridgePort ...
 	// ... and VXLAN entries with unresolved underlay nextop.
