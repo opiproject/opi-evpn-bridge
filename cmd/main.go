@@ -41,16 +41,8 @@ import (
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	ci_linux "github.com/opiproject/opi-evpn-bridge/pkg/LinuxCIModule"
 	gen_linux "github.com/opiproject/opi-evpn-bridge/pkg/LinuxGeneralModule"
-	intel_e2000_linux "github.com/opiproject/opi-evpn-bridge/pkg/LinuxVendorModule/intele2000"
 	frr "github.com/opiproject/opi-evpn-bridge/pkg/frr"
-	netlink "github.com/opiproject/opi-evpn-bridge/pkg/netlink"
-	"github.com/opiproject/opi-evpn-bridge/pkg/vendor_plugins/intel-e2000/p4runtime/p4driverapi"
-	ipu_vendor "github.com/opiproject/opi-evpn-bridge/pkg/vendor_plugins/intel-e2000/p4runtime/p4translation"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
-)
-
-const (
-	intelStr = "intel_e2000"
 )
 
 var rootCmd = &cobra.Command{
@@ -69,12 +61,6 @@ var rootCmd = &cobra.Command{
 		go runGatewayServer(config.GlobalConfig.GRPCPort, config.GlobalConfig.HTTPPort)
 
 		switch config.GlobalConfig.Buildenv {
-		case intelStr:
-			gen_linux.Initialize()
-			intel_e2000_linux.Initialize()
-			frr.Initialize()
-			ipu_vendor.Initialize()
-
 		case "ci":
 			gen_linux.Initialize()
 			ci_linux.Initialize()
@@ -86,11 +72,6 @@ var rootCmd = &cobra.Command{
 		// Create GRD VRF configuration during startup
 		if err := createGrdVrf(); err != nil {
 			log.Panicf("Error: %v", err)
-		}
-		switch config.GlobalConfig.Buildenv {
-		case intelStr:
-			netlink.Initialize()
-		default:
 		}
 		runGrpcServer(config.GlobalConfig.GRPCPort, config.GlobalConfig.TLSFiles)
 
@@ -139,14 +120,6 @@ func cleanUp() {
 		log.Println("Failed to delete all the resources: ", err)
 	}
 	switch config.GlobalConfig.Buildenv {
-	case intelStr:
-		gen_linux.DeInitialize()
-		intel_e2000_linux.DeInitialize()
-		frr.DeInitialize()
-		netlink.DeInitialize()
-		ipu_vendor.DeInitialize()
-		close(p4driverapi.StopCh)
-
 	case "ci":
 		gen_linux.DeInitialize()
 		ci_linux.DeInitialize()

@@ -3,8 +3,6 @@ module github.com/opiproject/opi-evpn-bridge
 go 1.19
 
 require (
-	github.com/antoninbas/p4runtime-go-client v0.0.0-20231025232350-c5ccfd6512c8
-	github.com/golang/protobuf v1.5.3
 	github.com/golangci/golangci-lint v1.55.2
 	github.com/google/uuid v1.5.0
 	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.0.1
@@ -12,12 +10,9 @@ require (
 	github.com/onsi/ginkgo/v2 v2.14.0
 	github.com/opiproject/opi-api v0.0.0-20240304222410-5dba226aaa9e
 	github.com/opiproject/opi-smbios-bridge v0.1.3-0.20240113044816-4401aa6a3d1a
-	github.com/p4lang/p4runtime v1.4.0-rc.5
 	github.com/philippgille/gokv v0.6.0
 	github.com/philippgille/gokv/gomap v0.6.0
 	github.com/philippgille/gokv/redis v0.6.0
-	github.com/roman-kachanovsky/go-binary-pack v0.0.0-20170214094030-e260e0dc6732
-	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/cobra v1.7.0
 	github.com/spf13/viper v1.15.0
 	github.com/stretchr/testify v1.8.4
@@ -100,6 +95,7 @@ require (
 	github.com/go-xmlfmt/xmlfmt v1.1.2 // indirect
 	github.com/gobwas/glob v0.2.3 // indirect
 	github.com/gofrs/flock v0.8.1 // indirect
+	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/golangci/check v0.0.0-20180506172741-cfe4005ccda2 // indirect
 	github.com/golangci/dupl v0.0.0-20180902072040-3e9179ac440a // indirect
 	github.com/golangci/go-misc v0.0.0-20220329215616-d24fe342adfe // indirect
@@ -182,6 +178,7 @@ require (
 	github.com/sashamelentyev/usestdlibvars v1.24.0 // indirect
 	github.com/securego/gosec/v2 v2.18.2 // indirect
 	github.com/shazow/go-diff v0.0.0-20160112020656-b6b7b6733b8c // indirect
+	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/sivchari/containedctx v1.0.3 // indirect
 	github.com/sivchari/nosnakecase v1.7.0 // indirect
 	github.com/sivchari/tenv v1.7.1 // indirect
