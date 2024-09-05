@@ -52,10 +52,13 @@ func (e *EventBus) StartSubscriber(moduleName, eventType string, priority int, e
 			for {
 				select {
 				case event := <-subscriber.Ch:
-					log.Printf("\nSubscriber %s for %s received \n", moduleName, eventType)
 
+					log.Printf("\nSubscriber %s for %s received \n", moduleName, eventType)
 					handlerKey := moduleName + "." + eventType
-					if handler, ok := e.eventHandlers[handlerKey]; ok {
+					e.subscriberL.Lock()
+					handler, ok := e.eventHandlers[handlerKey]
+					e.subscriberL.Unlock()
+					if ok {
 						if objectData, ok := event.(*ObjectData); ok {
 							handler.HandleEvent(eventType, objectData)
 						} else {
@@ -65,6 +68,7 @@ func (e *EventBus) StartSubscriber(moduleName, eventType string, priority int, e
 					} else {
 						subscriber.Ch <- "error: no event handler found"
 					}
+
 				case <-subscriber.Quit:
 					close(subscriber.Ch)
 					return
