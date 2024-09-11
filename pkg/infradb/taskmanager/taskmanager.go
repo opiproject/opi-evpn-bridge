@@ -112,6 +112,8 @@ func (t *TaskManager) ReplayFinished() {
 }
 
 // processTasks processes the task
+//
+//gocognit:ignore
 func (t *TaskManager) processTasks() {
 	var taskStatus *TaskStatus
 
