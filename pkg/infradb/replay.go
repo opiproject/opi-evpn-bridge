@@ -22,6 +22,7 @@ func startReplayProcedure(componentName string) {
 
 	defer func() {
 		if deferErr != nil {
+			globalLock.Unlock()
 			log.Println("startReplayProcedure(): The replay procedure has failed")
 			log.Println("startReplayProcedure(): unblocking the TaskManager to continue")
 			taskmanager.TaskMan.ReplayFinished()
@@ -64,11 +65,9 @@ func startReplayProcedure(componentName string) {
 
 	objectTypesToReplay := getObjectTypesToReplay(componentName)
 
-	objectsToReplay, subsForReplay, err := gatherObjectsAndSubsToReplay(componentName, objectTypesToReplay)
-
-	if err != nil {
-		log.Printf("startReplayProcedure(): Error %+v\n", err)
-		deferErr = err
+	objectsToReplay, subsForReplay, deferErr := gatherObjectsAndSubsToReplay(componentName, objectTypesToReplay)
+	if deferErr != nil {
+		log.Printf("startReplayProcedure(): Error %+v\n", deferErr)
 		return
 	}
 
