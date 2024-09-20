@@ -32,10 +32,10 @@ import (
 type ModulelgmHandler struct{}
 
 // RoutingTableMax max value of routing table
-//const RoutingTableMax = 4000
+// const RoutingTableMax = 4000
 
 // RoutingTableMin min value of routing table
-//const RoutingTableMin = 1000
+// const RoutingTableMin = 1000
 
 // lgmComp string constant
 const lgmComp string = "lgm"
@@ -46,13 +46,12 @@ const brStr string = "br-"
 // vxlanStr string constant
 const vxlanStr string = "vxlan-"
 
-
-// ModPointer structure of  mod ptr definitions
-var RoutengTable_range = struct {
-       RoutingTableMin, RoutingTableMax uint32
+// RoutingTableRange ModPointer structure of  mod ptr definitions
+var RoutingTableRange = struct {
+	RoutingTableMin, RoutingTableMax uint32
 }{
-       RoutingTableMin: 1000,
-       RoutingTableMax: 4000,
+	RoutingTableMin: 1000,
+	RoutingTableMax: 4000,
 }
 
 /*
@@ -361,7 +360,8 @@ var ctx context.Context
 // nlink variable wrapper
 var nlink utils.Netlink
 
-var Route_table_Gen utils.IdPool
+// RouteTableGen table id generate variable
+var RouteTableGen utils.IDPool
 
 // Initialize initializes the config, logger and subscribers
 func Initialize() {
@@ -376,7 +376,7 @@ func Initialize() {
 	brTenant = "br-tenant"
 	ipMtu = config.GlobalConfig.LinuxFrr.IPMtu
 	ctx = context.Background()
-	Route_table_Gen = utils.IDPoolInit("RTtable", RoutengTable_range.RoutingTableMin, RoutengTable_range.RoutingTableMax)
+	RouteTableGen = utils.IDPoolInit("RTtable", RoutingTableRange.RoutingTableMin, RoutingTableRange.RoutingTableMax)
 	nlink = utils.NewNetlinkWrapperWithArgs(false)
 	// Set up the static configuration parts
 	_, err := nlink.LinkByName(ctx, brTenant)
@@ -468,7 +468,7 @@ func setUpBridge(lb *infradb.LogicalBridge) bool {
 //nolint:funlen,gocognit
 func setUpVrf(vrf *infradb.Vrf) (string, bool) {
 	IPMtu := fmt.Sprintf("%+v", ipMtu)
-	var add_key int
+	var addKey int
 	if path.Base(vrf.Name) == "GRD" {
 		vrf.Metadata.RoutingTable = make([]*uint32, 2)
 		vrf.Metadata.RoutingTable[0] = new(uint32)
@@ -480,12 +480,12 @@ func setUpVrf(vrf *infradb.Vrf) (string, bool) {
 	vrf.Metadata.RoutingTable = make([]*uint32, 1)
 	vrf.Metadata.RoutingTable[0] = new(uint32)
 	var routingTable uint32
-	Name:=vrf.Name
-        add_key=0
+	Name := vrf.Name
+	addKey = 0
 	for {
-		//var key interface{}
-	        routingTable, _ = Route_table_Gen.GetID(Name, 0)
-	        log.Printf("LGM assigned id %+v for vrf name %s\n",routingTable,vrf.Name)
+		// var key interface{}
+		routingTable, _ = RouteTableGen.GetID(Name, 0)
+		log.Printf("LGM assigned id %+v for vrf name %s\n", routingTable, vrf.Name)
 		isBusy, err := routingTableBusy(routingTable)
 		if err != nil {
 			log.Printf("LGM : Error occurred when checking if routing table %d is busy: %+v\n", routingTable, err)
@@ -496,8 +496,8 @@ func setUpVrf(vrf *infradb.Vrf) (string, bool) {
 			break
 		}
 		log.Printf("LGM: Routing Table %d is busy\n", routingTable)
-    	        add_key+=1
-                Name= fmt.Sprintf("%s%d",Name,add_key)
+		addKey++
+		Name = fmt.Sprintf("%s%d", Name, addKey)
 	}
 	var vtip string
 	if !reflect.ValueOf(vrf.Spec.VtepIP).IsZero() {

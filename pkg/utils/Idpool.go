@@ -9,71 +9,66 @@ package utils
 import (
 	"log"
 	"reflect"
-	//"github.com/opiproject/opi-evpn-bridge/pkg/vendor_plugins/intel-e2000/p4runtime/p4translation"
+	// "github.com/opiproject/opi-evpn-bridge/pkg/vendor_plugins/intel-e2000/p4runtime/p4translation"
 )
 
-/*
-# ---------------------------------------------------------------------------------
-#   ID Pool
-#
-#   Helper class for uniquely assigning IDs from a specified integer set (e.g. a
+/*  IDPool Helper class for uniquely assigning IDs from a specified integer set (e.g. a
 #   range) to keys. IDs are assigned (or read) with get_id(key) and returned back
-#   into the pool with release_id(key). The IdPool remembers a once-assigned ID
+#   into the pool with release_id(key). The IDPool remembers a once-assigned ID
 #   for keys so that the same ID is assigned for a key. Only when the pool runs
 #   out of unassigned keys, it will recycle released ids and assign them to new
 #   keys.
-#   Optionally, the IdPool supports reference tracking for key/ID pairs. Clients
+#   Optionally, the IDPool supports reference tracking for key/ID pairs. Clients
 #   can provide a unique reference when fetching and releasing an ID for a key
 #   to support multiple independent clients.
 #   The pool will only release the ID for the key, when the last client has the
 #   released the ID with its reference. When a reference is specified in get_id()
-#   and release_id() the IdPool returns the current number of reference for the
+#   and release_id() the IDPool returns the current number of reference for the
 #   ID so that a caller knows when an ID was newly assigned (ref_count 1) or
 #   finally released (ref_count 0).
 # ---------------------------------------------------------------------------------
 */
-
-type IdPool struct {
-	//self._lock = threading.Lock()
-	name           string                 // Name of pool
-	_unused_ids    []uint32               // Yet unused IDs in pool Available ids
-	_ids_in_use    map[interface{}]uint32 // Mapping key: id for currently assigned ids
-	_ids_for_reuse map[interface{}]uint32 // Mapping key: id for previously assigned ids
-	_refs          map[uint32][]interface{}
-	_size          int // Size of the pool
+type IDPool struct {
+	// self._lock = threading.Lock()
+	name         string                 // Name of pool
+	_unusedIDs   []uint32               // Yet unused IDs in pool Available ids
+	_idsInUse    map[interface{}]uint32 // Mapping key: id for currently assigned ids
+	_idsForReuse map[interface{}]uint32 // Mapping key: id for previously assigned ids
+	_refs        map[uint32][]interface{}
+	_size        int // Size of the pool
 }
 
 // IDPoolInit initialize mod ptr pool
-func IDPoolInit(name string, min uint32, max uint32) IdPool {
-	var id IdPool
+func IDPoolInit(name string, min uint32, max uint32) IDPool {
+	var id IDPool
 	id.name = name
-	id._unused_ids = make([]uint32, 0)
+	id._unusedIDs = make([]uint32, 0)
 	for j := min; j <= (max + 1); j++ {
-		id._unused_ids = append(id._unused_ids, j)
+		id._unusedIDs = append(id._unusedIDs, j)
 	}
-	id._size = len(id._unused_ids)
-	id._ids_in_use = make(map[interface{}]uint32)
-	id._ids_for_reuse = make(map[interface{}]uint32)
+	id._size = len(id._unusedIDs)
+	id._idsInUse = make(map[interface{}]uint32)
+	id._idsForReuse = make(map[interface{}]uint32)
 	id._refs = make(map[uint32][]interface{})
 	return id
 }
 
-func (Ip *IdPool) _assign_id(key interface{}) uint32 {
+func (ip *IDPool) _assignID(key interface{}) uint32 {
 	// Check if there was an id assigned for that key earlier
-	id := Ip._ids_for_reuse[key]
+	id := ip._idsForReuse[key]
 	if !reflect.ValueOf(id).IsZero() {
 		// Re-use the old id
-		delete(Ip._ids_for_reuse, key)
+		delete(ip._idsForReuse, key)
 	} else {
-		if len(Ip._unused_ids) != 0 {
+		if len(ip._unusedIDs) != 0 {
 			// Pick an unused id
-			id = Ip._unused_ids[0]
-			Ip._unused_ids = append(Ip._unused_ids[1:])
+			id = ip._unusedIDs[0]
+			ip._unusedIDs = append(ip._unusedIDs[1:])
 		} else {
-			if len(Ip._ids_for_reuse) != 0 {
+			if len(ip._idsForReuse) != 0 {
 				// Pick one of the ids earlier used for another key
-				for old_key, _ := range Ip._ids_for_reuse {
-					delete(Ip._ids_for_reuse, old_key)
+				for oldKey := range ip._idsForReuse {
+					delete(ip._idsForReuse, oldKey)
 					break
 				}
 			} else {
@@ -85,76 +80,74 @@ func (Ip *IdPool) _assign_id(key interface{}) uint32 {
 	}
 	// Store the assigned id, if any
 	if !reflect.ValueOf(id).IsZero() {
-		Ip._ids_in_use[key] = id
+		ip._idsInUse[key] = id
 	}
 	return id
 }
 
-// getID get the mod ptr id from pool
-func (IP *IdPool) GetID(key interface{}, ref interface{}) (uint32, uint32) {
-	id := IP._ids_in_use[key]
+// GetID get the mod ptr id from pool
+func (ip *IDPool) GetID(key interface{}, ref interface{}) (uint32, uint32) {
+	id := ip._idsInUse[key]
 	if reflect.ValueOf(id).IsZero() {
 		// Assign a free id for the key
-		id = IP._assign_id(key)
+		id = ip._assignID(key)
 		if id == 0 {
-	   	     return 0,0
-		}	
+			return 0, 0
+		}
 	}
 	if !reflect.ValueOf(ref).IsZero() {
 		log.Printf("IDPool: GetID  Assigning key : %+v , id  %+v for ref %v", id, key, ref)
-		//ref_set := IP._refs[id]
-		if reflect.ValueOf(IP._refs[id]).IsZero() {
-			IP._refs[id] = make([]interface{},0)
-		}	
-		IP._refs[id] = append(IP._refs[id], ref)
-		return id, uint32(len(IP._refs[id]))
-	} else {
-		log.Printf("IDPool: GetID Assigning id %v for key %v and ref %v", id, key, ref)
+		// refSet := ip._refs[id]
+		if reflect.ValueOf(ip._refs[id]).IsZero() {
+			ip._refs[id] = make([]interface{}, 0)
+		}
+		ip._refs[id] = append(ip._refs[id], ref)
+		return id, uint32(len(ip._refs[id]))
 	}
+	log.Printf("IDPool: GetID Assigning id %v for key %v and ref %v", id, key, ref)
 	return id, uint32(0)
 }
 
-func delete_ref(ref_set []interface{}, ref interface{}) []interface{} {
-	//size := len(ref_set)
+func deleteRef(refSet []interface{}, ref interface{}) []interface{} {
+	// size := len(refSet)
 	var i uint32
-	for index, value := range ref_set {
+	for index, value := range refSet {
 		if value == ref {
 			i = uint32(index)
 			break
 		}
 	}
-	return append(ref_set[:i], ref_set[i+1:]...)
+	return append(refSet[:i], refSet[i+1:]...)
 }
 
-// refCount get the reference count
-func (IP *IdPool) Release_id(key interface{}, ref interface{}) (uint32, uint32) {
-	//with self._lock:
-	log.Printf("IDPool:Release_id  Releasing id for key %v", key)
-	id := IP._ids_in_use[key]
+//  ReleaseID get the reference id
+func (ip *IDPool) ReleaseID(key interface{}, ref interface{}) (uint32, uint32) {
+	// with self._lock:
+	log.Printf("IDPool:ReleaseID  Releasing id for key %v", key)
+	id := ip._idsInUse[key]
 	if reflect.ValueOf(ref).IsZero() {
 		log.Printf("No id to release for key %v", key)
 		return 0, 0
 	}
-	ref_set := IP._refs[id]
-	if !reflect.ValueOf(ref_set).IsZero() && !reflect.ValueOf(ref).IsZero() {
+	refSet := ip._refs[id]
+	if !reflect.ValueOf(refSet).IsZero() && !reflect.ValueOf(ref).IsZero() {
 		// Remove the specified reference from the id
-		ref_set = delete_ref(ref_set, ref)
+		refSet = deleteRef(refSet, ref)
 	}
-	if !reflect.ValueOf(ref_set).IsZero() {
+	if !reflect.ValueOf(refSet).IsZero() {
 		// No (remaining) references, release id
-		log.Printf("IDPool:Release_id Id %v has been released", id)
-		delete(IP._ids_in_use, key)
-		if !reflect.ValueOf(ref_set).IsZero() {
-			delete(IP._refs, id)
+		log.Printf("IDPool:ReleaseID Id %v has been released", id)
+		delete(ip._idsInUse, key)
+		if !reflect.ValueOf(refSet).IsZero() {
+			delete(ip._refs, id)
 		}
 		// Store released id for future reassignment
-		IP._ids_for_reuse[key] = id
+		ip._idsForReuse[key] = id
 	} else {
-		log.Printf("IDPool:Release_id Keep id:%+v remaining references %+v", id,len(ref_set))
+		log.Printf("IDPool:ReleaseID Keep id:%+v remaining references %+v", id, len(refSet))
 	}
 	if !reflect.ValueOf(ref).IsZero() {
-		return id, uint32(len(ref_set))
-	} else {
-		return id, uint32(0)
+		return id, uint32(len(refSet))
 	}
+	return id, uint32(0)
 }
