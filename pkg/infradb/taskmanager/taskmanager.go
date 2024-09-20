@@ -112,8 +112,6 @@ func (t *TaskManager) ReplayFinished() {
 }
 
 // processTasks processes the task
-//
-//gocognit:ignore
 func (t *TaskManager) processTasks() {
 	var taskStatus *TaskStatus
 
@@ -163,19 +161,9 @@ func (t *TaskManager) processTasks() {
 			}
 
 			// This check is needed in order to move to the next task if the status channel has timed out or we need to drop the task in case that
-			// the task of the object is referring to an old already updated object or the object is no longer in the database (has been deleted).
-			if taskStatus == nil {
-				log.Println("processTasks(): Move to the next Task in the queue")
-				break loopTwo
-			}
-
-			if taskStatus.dropTask {
-				if taskStatus.component.Replay {
-					log.Println("processTasks(): Wait for the replay DB procedure to finish and move to the next Task in the queue")
-					<-t.replayChan
-					log.Println("processTasks(): Replay has finished. Continuing processing tasks")
-				}
-
+			// the task of the object is referring to an old already updated object or the object is no longer in the database (has been deleted)
+			// or a replay procedure has been requested
+			if t.checkStatus(taskStatus) {
 				log.Println("processTasks(): Move to the next Task in the queue")
 				break loopTwo
 			}
@@ -196,4 +184,23 @@ func (t *TaskManager) processTasks() {
 			}
 		}
 	}
+}
+
+// checkStatus checks if the taskStatus is nill or if the current Task
+// should be dropped or if a replay procedure has been requested
+func (t *TaskManager) checkStatus(taskStatus *TaskStatus) bool {
+	if taskStatus == nil {
+		return true
+	}
+
+	if taskStatus.dropTask {
+		if taskStatus.component.Replay {
+			log.Println("checkStatus(): Wait for the replay DB procedure to finish and move to the next Task in the queue")
+			<-t.replayChan
+			log.Println("checkStatus(): Replay has finished. Continuing processing tasks")
+		}
+		return true
+	}
+
+	return false
 }
