@@ -84,40 +84,47 @@ func handlePreReplay(actionData *actionbus.ActionData) {
 	}()
 
 	// Backup the current running config
-	if err := os.Rename(runningFrrConfFile, backupFrrConfFile); err != nil {
-		log.Printf("FRR: handlePreReplay(): Failed to backup running config of FRR: %s\n", err)
-		deferErr = err
+	deferErr = os.Rename(runningFrrConfFile, backupFrrConfFile)
+	if deferErr != nil {
+		log.Printf("FRR: handlePreReplay(): Failed to backup running config of FRR: %s\n", deferErr)
 		return
 	}
 
 	// Create a new running config based on the basic/initial FRR config
-	input, err := os.ReadFile(basicFrrConfFile)
-	if err != nil {
-		log.Printf("FRR: handlePreReplay(): Failed to read content of %s: %s\n", basicFrrConfFile, err)
-		deferErr = err
+	input, deferErr := os.ReadFile(basicFrrConfFile)
+	if deferErr != nil {
+		log.Printf("FRR: handlePreReplay(): Failed to read content of %s: %s\n", basicFrrConfFile, deferErr)
 		return
 	}
 
-	if err := os.WriteFile(runningFrrConfFile, input, 0600); err != nil {
-		log.Printf("FRR: handlePreReplay(): Failed to write content to %s: %s\n", runningFrrConfFile, err)
-		deferErr = err
+	deferErr = os.WriteFile(runningFrrConfFile, input, 0600)
+	if deferErr != nil {
+		log.Printf("FRR: handlePreReplay(): Failed to write content to %s: %s\n", runningFrrConfFile, deferErr)
 		return
 	}
 
 	// Change ownership of the frr.conf to frr:frr
-	group, err := user.Lookup("frr")
-	if err != nil {
-		log.Printf("FRR: handlePreReplay(): Failed to lookup user frr %s\n", err)
-		deferErr = err
+	group, deferErr := user.Lookup("frr")
+	if deferErr != nil {
+		log.Printf("FRR: handlePreReplay(): Failed to lookup user frr %s\n", deferErr)
 		return
 	}
 
-	uid, _ := strconv.Atoi(group.Uid)
-	gid, _ := strconv.Atoi(group.Gid)
+	uid, deferErr := strconv.Atoi(group.Uid)
+	if deferErr != nil {
+		log.Printf("FRR: handlePreReplay(): Failed to convert frr user string in linux to int %s\n", deferErr)
+		return
+	}
 
-	if err := os.Chown(runningFrrConfFile, uid, gid); err != nil {
-		log.Printf("FRR: handlePreReplay(): Failed to chown of %s to frr:frr : %s\n", runningFrrConfFile, err)
-		deferErr = err
+	gid, deferErr := strconv.Atoi(group.Gid)
+	if deferErr != nil {
+		log.Printf("FRR: handlePreReplay(): Failed to convert frr group string in linux to int %s\n", deferErr)
+		return
+	}
+
+	deferErr = os.Chown(runningFrrConfFile, uid, gid)
+	if deferErr != nil {
+		log.Printf("FRR: handlePreReplay(): Failed to chown of %s to frr:frr : %s\n", runningFrrConfFile, deferErr)
 		return
 	}
 
@@ -125,8 +132,7 @@ func handlePreReplay(actionData *actionbus.ActionData) {
 	_, errCmd := utils.Run([]string{"systemctl", "restart", "frr"}, false)
 	if errCmd != 0 {
 		log.Println("FRR: handlePreReplay(): Failed to restart FRR daemon")
-		err := fmt.Errorf("restart FRR daemon failed")
-		deferErr = err
+		deferErr = fmt.Errorf("restart FRR daemon failed")
 		return
 	}
 
