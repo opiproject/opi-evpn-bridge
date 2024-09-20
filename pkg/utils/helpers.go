@@ -29,10 +29,6 @@ func Run(cmd []string, _ bool) (string, int) {
 	var err error
 	out, err = exec.Command(cmd[0], cmd[1:]...).CombinedOutput() //nolint:gosec
 	if err != nil {
-		/*if flag {
-			// panic(fmt.Sprintf("Command %s': exit code %s;", out, err.Error()))
-		}
-		// fmt.Printf("Command %s': exit code %s;\n", out, err)*/
 		return "Error in running command", -1
 	}
 	output := string(out)
