@@ -31,12 +31,6 @@ import (
 // ModulelgmHandler enmpty interface
 type ModulelgmHandler struct{}
 
-// RoutingTableMax max value of routing table
-const RoutingTableMax = 4000
-
-// RoutingTableMin min value of routing table
-const RoutingTableMin = 1000
-
 // lgmComp string constant
 const lgmComp string = "lgm"
 
@@ -46,10 +40,11 @@ const brStr string = "br-"
 // vxlanStr string constant
 const vxlanStr string = "vxlan-"
 
-// GenerateRouteTable range specification, note that min <= max
-func GenerateRouteTable() uint32 {
-	return uint32(rand.Intn(RoutingTableMax-RoutingTableMin+1) + RoutingTableMin) //nolint:gosec
-}
+// routingTableMax max value of routing table
+const routingTableMax = 4000
+
+// routingTableMin min value of routing table
+const routingTableMin = 1000
 
 // run runs the commands
 func run(cmd []string, flag bool) (string, int) {
@@ -359,6 +354,9 @@ var ctx context.Context
 // nlink variable wrapper
 var nlink utils.Netlink
 
+// RouteTableGen table id generate variable
+var RouteTableGen utils.IDPool
+
 // Initialize initializes the config, logger and subscribers
 func Initialize() {
 	eb := eventbus.EBus
@@ -372,7 +370,8 @@ func Initialize() {
 	brTenant = "br-tenant"
 	ipMtu = config.GlobalConfig.LinuxFrr.IPMtu
 	ctx = context.Background()
-	nlink = utils.NewNetlinkWrapperWithArgs(config.GlobalConfig.Tracer)
+	RouteTableGen = utils.IDPoolInit("RTtable", routingTableMin, routingTableMax)
+	nlink = utils.NewNetlinkWrapperWithArgs(false)
 	// Set up the static configuration parts
 	_, err := nlink.LinkByName(ctx, brTenant)
 	if err != nil {
@@ -410,8 +409,8 @@ func setUpTenantBridge() {
 	}
 }
 
-// routingTableBusy checks if the route is in filterred list
-func routingTableBusy(table uint32) (bool, error) {
+// routingtableBusy checks if the route is in filterred list
+func routingtableBusy(table uint32) (bool, error) {
 	routeList, err := nlink.RouteListFiltered(ctx, netlink.FAMILY_V4, &netlink.Route{Table: int(table)}, netlink.RT_FILTER_TABLE)
 	if err != nil {
 		return false, err
@@ -463,6 +462,7 @@ func setUpBridge(lb *infradb.LogicalBridge) (string, bool) {
 //nolint:funlen,gocognit
 func setUpVrf(vrf *infradb.Vrf) (string, bool) {
 	IPMtu := fmt.Sprintf("%+v", ipMtu)
+	var addKey int
 	if path.Base(vrf.Name) == "GRD" {
 		vrf.Metadata.RoutingTable = make([]*uint32, 2)
 		vrf.Metadata.RoutingTable[0] = new(uint32)
@@ -473,19 +473,23 @@ func setUpVrf(vrf *infradb.Vrf) (string, bool) {
 	}
 	vrf.Metadata.RoutingTable = make([]*uint32, 1)
 	vrf.Metadata.RoutingTable[0] = new(uint32)
-	var routingTable uint32
+	var routingtable uint32
+	name := vrf.Name
 	for {
-		routingTable = GenerateRouteTable()
-		isBusy, err := routingTableBusy(routingTable)
+		routingtable, _ = RouteTableGen.GetID(name, 0)
+		log.Printf("LGM assigned id %+v for vrf name %s\n", routingtable, vrf.Name)
+		isbusy, err := routingtableBusy(routingtable)
 		if err != nil {
-			log.Printf("LGM : Error occurred when checking if routing table %d is busy: %+v\n", routingTable, err)
-			return fmt.Sprintf("LGM : Error occurred when checking if routing table %d is busy: %+v\n", routingTable, err), false
+			log.Printf("LGM : Error occurred when checking if routing table %d is busy: %+v\n", routingtable, err)
+			return fmt.Sprintf("LGM : Error occurred when checking if routing table %d is busy: %+v\n", routingtable, err), false
 		}
-		if !isBusy {
-			log.Printf("LGM: Routing Table %d is not busy\n", routingTable)
+		if !isbusy {
+			log.Printf("LGM: Routing Table %d is not busy\n", routingtable)
 			break
 		}
-		log.Printf("LGM: Routing Table %d is busy\n", routingTable)
+		log.Printf("LGM: Routing Table %d is busy\n", routingtable)
+		addKey++
+		name = fmt.Sprintf("%s%d", name, addKey)
 	}
 	var vtip string
 	if !reflect.ValueOf(vrf.Spec.VtepIP).IsZero() {
@@ -498,19 +502,19 @@ func setUpVrf(vrf *infradb.Vrf) (string, bool) {
 			return fmt.Sprintf(" LGM: VTEP IP not found: %+v\n", vrf.Spec.VtepIP), false
 		}
 	}
-	log.Printf("setUpVrf: %s %d\n", vtip, routingTable)
+	log.Printf("setUpVrf: %s %d\n", vtip, routingtable)
 	// Create the vrf interface for the specified routing table and add loopback address
 
 	linkAdderr := nlink.LinkAdd(ctx, &netlink.Vrf{
 		LinkAttrs: netlink.LinkAttrs{Name: path.Base(vrf.Name)},
-		Table:     routingTable,
+		Table:     routingtable,
 	})
 	if linkAdderr != nil {
-		log.Printf("LGM: Error in Adding vrf link table %d\n", routingTable)
-		return fmt.Sprintf("LGM: Error in Adding vrf link table %d\n", routingTable), false
+		log.Printf("LGM: Error in Adding vrf link table %d\n", routingtable)
+		return fmt.Sprintf("LGM: Error in Adding vrf link table %d\n", routingtable), false
 	}
 
-	log.Printf("LGM: vrf link %s Added with table id %d\n", vrf.Name, routingTable)
+	log.Printf("LGM: vrf link %s Added with table id %d\n", vrf.Name, routingtable)
 
 	link, linkErr := nlink.LinkByName(ctx, path.Base(vrf.Name))
 	if linkErr != nil {
@@ -545,7 +549,7 @@ func setUpVrf(vrf *infradb.Vrf) (string, bool) {
 
 	Src1 := net.IPv4(0, 0, 0, 0)
 	route := netlink.Route{
-		Table:    int(routingTable),
+		Table:    int(routingtable),
 		Type:     unix.RTN_THROW,
 		Protocol: 255,
 		Priority: 9999,
@@ -557,7 +561,7 @@ func setUpVrf(vrf *infradb.Vrf) (string, bool) {
 		return fmt.Sprintf("LGM : Failed in adding Route throw default %+v\n", routeaddErr), false
 	}
 
-	log.Printf("LGM : Added route throw default table %d proto opi_evpn_br metric 9999\n", routingTable)
+	log.Printf("LGM : Added route throw default table %d proto opi_evpn_br metric 9999\n", routingtable)
 	// Disable reverse-path filtering to accept ingress traffic punted by the pipeline
 	// disable_rp_filter("rep-"+vrf.Name)
 	// Configuration specific for VRFs associated with L3 EVPN
@@ -647,8 +651,8 @@ func setUpVrf(vrf *infradb.Vrf) (string, bool) {
 			return fmt.Sprintf("LGM : Unable to set link %s UP \n", vrf.Name), false
 		}
 	}
-	details := fmt.Sprintf("{\"routingTable\":\"%d\"}", routingTable)
-	*vrf.Metadata.RoutingTable[0] = routingTable
+	details := fmt.Sprintf("{\"routingtable\":\"%d\"}", routingtable)
+	*vrf.Metadata.RoutingTable[0] = routingtable
 	return details, true
 }
 
@@ -784,7 +788,7 @@ func tearDownVrf(vrf *infradb.Vrf) (string, bool) {
 	if path.Base(vrf.Name) == "GRD" {
 		return "", true
 	}
-	routingTable := *vrf.Metadata.RoutingTable[0]
+	routingtable := *vrf.Metadata.RoutingTable[0]
 	// Delete the Linux networking artefacts in reverse order
 	if !reflect.ValueOf(vrf.Spec.Vni).IsZero() {
 		linkVxlan, linkErr := nlink.LinkByName(ctx, vxlanStr+path.Base(vrf.Name))
@@ -811,7 +815,7 @@ func tearDownVrf(vrf *infradb.Vrf) (string, bool) {
 		}
 		log.Printf("LGM : Delete br-%s\n", vrf.Name)
 	}
-	routeTable := fmt.Sprintf("%+v", routingTable)
+	routeTable := fmt.Sprintf("%+v", routingtable)
 	flusherr := nlink.RouteFlushTable(ctx, routeTable)
 	if flusherr != nil {
 		log.Printf("LGM: Error in flush table  %+v\n", routeTable)
