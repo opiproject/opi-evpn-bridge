@@ -85,37 +85,19 @@ func startReplayProcedure(componentName string) {
 // which are related to the component that called the replay.
 func getObjectTypesToReplay(componentName string) []string {
 	objectTypesToReplay := []string{}
+	typesAndSubs := make(map[string][]*eventbus.Subscriber)
 
-	bpSubs := eventbus.EBus.GetSubscribers("bridge-port")
-	sviSubs := eventbus.EBus.GetSubscribers("svi")
-	lbSubs := eventbus.EBus.GetSubscribers("logical-bridge")
-	vrfSubs := eventbus.EBus.GetSubscribers("vrf")
+	typesAndSubs["bridge-port"] = eventbus.EBus.GetSubscribers("bridge-port")
+	typesAndSubs["svi"] = eventbus.EBus.GetSubscribers("svi")
+	typesAndSubs["logical-bridge"] = eventbus.EBus.GetSubscribers("logical-bridge")
+	typesAndSubs["vrf"] = eventbus.EBus.GetSubscribers("vrf")
 
-	for _, vrfSub := range vrfSubs {
-		if vrfSub.Name == componentName {
-			objectTypesToReplay = append(objectTypesToReplay, "vrf")
-			break
-		}
-	}
-
-	for _, lbSub := range lbSubs {
-		if lbSub.Name == componentName {
-			objectTypesToReplay = append(objectTypesToReplay, "logical-bridge")
-			break
-		}
-	}
-
-	for _, sviSub := range sviSubs {
-		if sviSub.Name == componentName {
-			objectTypesToReplay = append(objectTypesToReplay, "svi")
-			break
-		}
-	}
-
-	for _, bpSub := range bpSubs {
-		if bpSub.Name == componentName {
-			objectTypesToReplay = append(objectTypesToReplay, "bridge-port")
-			break
+	for objType, subs := range typesAndSubs {
+		for _, sub := range subs {
+			if sub.Name == componentName {
+				objectTypesToReplay = append(objectTypesToReplay, objType)
+				break
+			}
 		}
 	}
 
