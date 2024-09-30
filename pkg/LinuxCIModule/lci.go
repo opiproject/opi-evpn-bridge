@@ -7,6 +7,7 @@ package linuxcimodule
 
 import (
 	"context"
+	"fmt"
 
 	// "io/ioutil"
 	"log"
@@ -48,6 +49,7 @@ func handlebp(objectData *eventbus.ObjectData) {
 		log.Printf("LCI : GetBP error: %s\n", err)
 		comp.Name = lciComp
 		comp.CompStatus = common.ComponentStatusError
+		comp.Details = fmt.Sprintf("LCI : GetBP error: %s\n", err)
 		if comp.Timer == 0 {
 			comp.Timer = 2 * time.Second
 		} else {
@@ -63,6 +65,7 @@ func handlebp(objectData *eventbus.ObjectData) {
 		log.Printf("LVM: Mismatch in resoruce version %+v\n and bp resource version %+v\n", objectData.ResourceVersion, BP.ResourceVersion)
 		comp.Name = lciComp
 		comp.CompStatus = common.ComponentStatusError
+		comp.Details = fmt.Sprintf("LVM: Mismatch in resoruce version %+v\n and bp resource version %+v\n", objectData.ResourceVersion, BP.ResourceVersion)
 		if comp.Timer == 0 {
 			comp.Timer = 2 * time.Second
 		} else {
@@ -82,10 +85,10 @@ func handlebp(objectData *eventbus.ObjectData) {
 		}
 	}
 	if BP.Status.BPOperStatus != infradb.BridgePortOperStatusToBeDeleted {
-		status := setUpBp(BP)
+		details, status := setUpBp(BP)
 		comp.Name = lciComp
+		comp.Details = details
 		if status {
-			comp.Details = ""
 			comp.CompStatus = common.ComponentStatusSuccess
 			comp.Timer = 0
 		} else {
@@ -102,8 +105,9 @@ func handlebp(objectData *eventbus.ObjectData) {
 			log.Printf("error in updating bp status: %s\n", err)
 		}
 	} else {
-		status := tearDownBp(BP)
+		details, status := tearDownBp(BP)
 		comp.Name = lciComp
+		comp.Details = details
 		if status {
 			comp.CompStatus = common.ComponentStatusSuccess
 			comp.Timer = 0
@@ -124,31 +128,31 @@ func handlebp(objectData *eventbus.ObjectData) {
 }
 
 // setUpBp sets up the bridge port
-func setUpBp(bp *infradb.BridgePort) bool {
+func setUpBp(bp *infradb.BridgePort) (string, bool) {
 	resourceID := path.Base(bp.Name)
 	bridge, err := nlink.LinkByName(ctx, "br-tenant")
 	if err != nil {
 		log.Printf("LCI: Unable to find key br-tenant\n")
-		return false
+		return fmt.Sprintf("LCI: Unable to find key br-tenant, %s", err), false
 	}
 	iface, err := nlink.LinkByName(ctx, resourceID)
 	if err != nil {
 		log.Printf("LCI: Unable to find key %s\n", resourceID)
-		return false
+		return fmt.Sprintf("LCI: Unable to find key %s\n", resourceID), false
 	}
 	if err := nlink.LinkSetMaster(ctx, iface, bridge); err != nil {
 		log.Printf("LCI: Failed to add iface to bridge: %v", err)
-		return false
+		return fmt.Sprintf("LCI: Failed to add iface to bridge: %v", err), false
 	}
 	for _, bridgeRefName := range bp.Spec.LogicalBridges {
 		BrObj, err := infradb.GetLB(bridgeRefName)
 		if err != nil {
 			log.Printf("LCI: unable to find key %s and error is %v", bridgeRefName, err)
-			return false
+			return fmt.Sprintf("LCI: unable to find key %s and error is %v", bridgeRefName, err), false
 		}
 		if BrObj.Spec.VlanID > math.MaxUint16 {
 			log.Printf("LVM : VlanID %v value passed in Logical Bridge create is greater than 16 bit value\n", BrObj.Spec.VlanID)
-			return false
+			return fmt.Sprintf("LVM : VlanID %v value passed in Logical Bridge create is greater than 16 bit value\n", BrObj.Spec.VlanID), false
 		}
 		//TODO: Update opi-api to change vlanid to int16 in LogiclaBridge "https://linter.aip.dev/141/forbidden-types"
 		vid := uint16(BrObj.Spec.VlanID)
@@ -156,60 +160,60 @@ func setUpBp(bp *infradb.BridgePort) bool {
 		case infradb.Access:
 			if err := nlink.BridgeVlanAdd(ctx, iface, vid, true, true, false, false); err != nil {
 				log.Printf("Failed to add vlan to bridge: %v", err)
-				return false
+				return fmt.Sprintf("Failed to add vlan to bridge: %v", err), false
 			}
 		case infradb.Trunk:
 			// Example: bridge vlan add dev eth2 vid 20
 			if err := nlink.BridgeVlanAdd(ctx, iface, vid, false, false, false, false); err != nil {
 				log.Printf("Failed to add vlan to bridge: %v", err)
-				return false
+				return fmt.Sprintf("Failed to add vlan to bridge: %v", err), false
 			}
 		default:
 			log.Printf("Only ACCESS or TRUNK supported and not (%d)", bp.Spec.Ptype)
-			return false
+			return fmt.Sprintf("Only ACCESS or TRUNK supported and not (%d)", bp.Spec.Ptype), false
 		}
 	}
 	if err := nlink.LinkSetUp(ctx, iface); err != nil {
 		log.Printf("Failed to up iface link: %v", err)
-		return false
+		return fmt.Sprintf("Failed to up iface link: %v", err), false
 	}
-	return true
+	return "", true
 }
 
 // tearDownBp tears down a bridge port
-func tearDownBp(bp *infradb.BridgePort) bool {
+func tearDownBp(bp *infradb.BridgePort) (string, bool) {
 	resourceID := path.Base(bp.Name)
 	iface, err := nlink.LinkByName(ctx, resourceID)
 	if err != nil {
 		log.Printf("LCI: Unable to find key %s\n", resourceID)
-		return false
+		return fmt.Sprintf("LCI: Unable to find key %s\n", resourceID), false
 	}
 	if err := nlink.LinkSetDown(ctx, iface); err != nil {
 		log.Printf("LCI: Failed to down link: %v", err)
-		return false
+		return fmt.Sprintf("LCI: Failed to down link: %v", err), false
 	}
 	for _, bridgeRefName := range bp.Spec.LogicalBridges {
 		BrObj, err := infradb.GetLB(bridgeRefName)
 		if err != nil {
 			log.Printf("LCI: unable to find key %s and error is %v", bridgeRefName, err)
-			return false
+			return fmt.Sprintf("LCI: unable to find key %s and error is %v", bridgeRefName, err), false
 		}
 		if BrObj.Spec.VlanID > math.MaxUint16 {
 			log.Printf("LVM : VlanID %v value passed in Logical Bridge create is greater than 16 bit value\n", BrObj.Spec.VlanID)
-			return false
+			return fmt.Sprintf("LVM : VlanID %v value passed in Logical Bridge create is greater than 16 bit value\n", BrObj.Spec.VlanID), false
 		}
 		//TODO: Update opi-api to change vlanid to uint16 in LogiclaBridge
 		vid := uint16(BrObj.Spec.VlanID)
 		if err := nlink.BridgeVlanDel(ctx, iface, vid, true, true, false, false); err != nil {
 			log.Printf("LCI: Failed to delete vlan to bridge: %v", err)
-			return false
+			return fmt.Sprintf("LCI: Failed to delete vlan to bridge: %v", err), false
 		}
 	}
 	if err := nlink.LinkDel(ctx, iface); err != nil {
 		log.Printf("Failed to delete link: %v", err)
-		return false
+		return fmt.Sprintf("Failed to delete link: %v", err), false
 	}
-	return true
+	return "", true
 }
 
 var ctx context.Context
