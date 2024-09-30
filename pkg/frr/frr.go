@@ -536,7 +536,7 @@ func setUpVrf(vrf *infradb.Vrf) (string, bool) {
 		L2vpnCmd := strings.Split(cp, "json")
 		L2vpnCmd = strings.Split(L2vpnCmd[1], hname)
 		cp = L2vpnCmd[0]
-		if len(cp) != 7 { // Checking CMD o/p
+		if strings.Compare(cp, "\r\n{}\r\n{\r\n}\r\n") != 0 { // Checking CMD o/p
 			cp = cp[3 : len(cp)-3]
 		} else {
 			log.Printf("FRR: unable to get the command %s\n", cmd)
