@@ -495,8 +495,9 @@ func setUpVrf(vrf *infradb.Vrf) (string, bool) {
 		// Configure the vrf in FRR and set up BGP EVPN for it
 		vrfName := fmt.Sprintf("vrf %s", path.Base(vrf.Name))
 		vniID := fmt.Sprintf("vni %s", strconv.Itoa(int(*vrf.Spec.Vni)))
-		data, err := Frr.FrrZebraCmd(ctx, fmt.Sprintf("configure terminal\n %s\n %s\n exit-vrf\n exit", vrfName, vniID))
-		if err != nil || checkFrrResult(data, false) {
+
+		data, err := Frr.FrrZebraCmd(ctx, fmt.Sprintf("configure terminal\n %s\n %s\n exit-vrf\n exit", vrfName, vniID), false)
+		if err != nil {
 			log.Printf("FRR: Error Executing frr config t %s %s exit-vrf exit \n Error: is %v data is %v\n", vrfName, vniID, err.Error(), data)
 			return fmt.Sprintf("FRR: Error Executing frr config t %s %s exit-vrf exit data %v \n Error: %v Data: %v\n", vrfName, vniID, data, err, data), false
 		}
@@ -512,8 +513,8 @@ func setUpVrf(vrf *infradb.Vrf) (string, bool) {
 		} else {
 			LbiP = fmt.Sprintf("%+v", vrf.Spec.LoopbackIP.IP)
 		}
-		data, err = Frr.FrrBgpCmd(ctx, fmt.Sprintf("configure terminal\n router bgp %+v vrf %s\n bgp router-id %s\n no bgp ebgp-requires-policy\n no bgp hard-administrative-reset\n no bgp graceful-restart notification\n address-family ipv4 unicast\n redistribute connected\n redistribute static\n exit-address-family\n address-family l2vpn evpn\n advertise ipv4 unicast\n exit-address-family\n exit", localas, path.Base(vrf.Name), LbiP))
-		if err != nil || checkFrrResult(data, false) {
+		data, err = Frr.FrrBgpCmd(ctx, fmt.Sprintf("configure terminal\n router bgp %+v vrf %s\n bgp router-id %s\n no bgp ebgp-requires-policy\n no bgp hard-administrative-reset\n no bgp graceful-restart notification\n address-family ipv4 unicast\n redistribute connected\n redistribute static\n exit-address-family\n address-family l2vpn evpn\n advertise ipv4 unicast\n exit-address-family\n exit", localas, path.Base(vrf.Name), LbiP), false)
+		if err != nil {
 			log.Printf("FRR: Error Executing config t bgpVrfName router bgp %+v vrf %s bgp_route_id %s no bgp ebgp-requires-policy exit-vrf exit data %v \n", localas, vrf.Name, LbiP, data)
 			return fmt.Sprintf("FRR: Error Executing config t bgpVrfName router bgp %+v vrf %s bgp_route_id %s no bgp ebgp-requires-policy exit-vrf exit data %v \n", localas, vrf.Name, LbiP, data), false
 		}
@@ -524,8 +525,8 @@ func setUpVrf(vrf *infradb.Vrf) (string, bool) {
 		log.Printf("FRR: Executed config t bgpVrfName router bgp %+v vrf %s bgp_route_id %s no bgp ebgp-requires-policy exit-vrf exit\n", localas, vrf.Name, LbiP)
 		// Update the vrf with attributes from FRR
 		cmd := fmt.Sprintf("show bgp l2vpn evpn vni %d json", *vrf.Spec.Vni)
-		cp, err := Frr.FrrBgpCmd(ctx, cmd)
-		if err != nil || checkFrrResult(cp, true) {
+		cp, err := Frr.FrrBgpCmd(ctx, cmd, true)
+		if err != nil {
 			log.Printf("FRR Error-show bgp l2vpn evpn vni %v cp %v", err, cp)
 		}
 		err = Frr.Save(ctx)
@@ -548,8 +549,8 @@ func setUpVrf(vrf *infradb.Vrf) (string, bool) {
 			log.Printf("error-%v", err)
 		}
 		cmd = fmt.Sprintf("show bgp vrf %s json", path.Base(vrf.Name))
-		cp, err = Frr.FrrBgpCmd(ctx, cmd)
-		if err != nil || checkFrrResult(cp, true) {
+		cp, err = Frr.FrrBgpCmd(ctx, cmd, true)
+		if err != nil {
 			log.Printf("error-%v", err)
 		}
 		err = Frr.Save(ctx)
@@ -579,11 +580,6 @@ func setUpVrf(vrf *infradb.Vrf) (string, bool) {
 	return "", true
 }
 
-// checkFrrResult checks the vrf result
-func checkFrrResult(cp string, show bool) bool {
-	return ((show && reflect.ValueOf(cp).IsZero()) || strings.Contains(cp, "warning") || strings.Contains(cp, "unknown") || strings.Contains(cp, "Unknown") || strings.Contains(cp, "Warning") || strings.Contains(cp, "Ambiguous") || strings.Contains(cp, "specified does not exist") || strings.Contains(cp, "Error"))
-}
-
 // setUpSvi sets up the svi
 func setUpSvi(svi *infradb.Svi) (string, bool) {
 	BrObj, err := infradb.GetLB(svi.Spec.LogicalBridge)
@@ -604,9 +600,9 @@ func setUpSvi(svi *infradb.Svi) (string, bool) {
 		neighlinkSr := fmt.Sprintf("neighbor %s soft-reconfiguration inbound\n", linkSvi)
 		bgpListen := fmt.Sprintf(" bgp listen range %s peer-group %s\n", svi.Spec.GatewayIPs[0], linkSvi)
 
-		data, err := Frr.FrrBgpCmd(ctx, fmt.Sprintf("configure terminal\n %s bgp disable-ebgp-connected-route-check\n %s %s %s %s %s %s exit", bgpVrfName, neighlink, neighlinkRe, neighlinkGw, neighlinkOv, neighlinkSr, bgpListen))
+		data, err := Frr.FrrBgpCmd(ctx, fmt.Sprintf("configure terminal\n %s bgp disable-ebgp-connected-route-check\n %s %s %s %s %s %s exit", bgpVrfName, neighlink, neighlinkRe, neighlinkGw, neighlinkOv, neighlinkSr, bgpListen), false)
 
-		if err != nil || checkFrrResult(data, false) {
+		if err != nil {
 			log.Printf("FRR: Error in conf svi %s %s command %s\n", svi.Name, path.Base(svi.Spec.Vrf), data)
 			return fmt.Sprintf("FRR: Error in conf svi %s %s command %s\n", svi.Name, path.Base(svi.Spec.Vrf), data), false
 		}
@@ -631,11 +627,10 @@ func tearDownSvi(svi *infradb.Svi) (string, bool) {
 	if svi.Spec.EnableBgp && !reflect.ValueOf(svi.Spec.GatewayIPs).IsZero() {
 		bgpVrfName := fmt.Sprintf("router bgp %+v vrf %s", localas, path.Base(svi.Spec.Vrf))
 		noNeigh := fmt.Sprintf("no neighbor %s peer-group", linkSvi)
-		data, err := Frr.FrrBgpCmd(ctx, fmt.Sprintf("configure terminal\n %s\n %s\n exit", bgpVrfName, noNeigh))
-		if strings.Contains(data, "Create the peer-group first") { // Trying to delete non exist peer-group return true
-			return "", true
-		}
-		if err != nil || checkFrrResult(data, false) {
+
+		data, err := Frr.FrrBgpCmd(ctx, fmt.Sprintf("configure terminal\n %s\n %s\n exit", bgpVrfName, noNeigh), false)
+
+		if err != nil {
 			log.Printf("FRR: Error in conf Delete vrf/VNI command %s\n", data)
 			return fmt.Sprintf("FRR: Error in conf Delete vrf/VNI command %s\n", data), false
 		}
@@ -656,8 +651,8 @@ func tearDownVrf(vrf *infradb.Vrf) (string, bool) {
 		return "", true
 	}
 
-	data, err := Frr.FrrZebraCmd(ctx, fmt.Sprintf("show vrf %s vni\n", path.Base(vrf.Name)))
-	if err != nil || checkFrrResult(data, true) {
+	data, err := Frr.FrrZebraCmd(ctx, fmt.Sprintf("show vrf %s vni\n", path.Base(vrf.Name)), true)
+	if err != nil {
 		log.Printf("FRR: Error  %s\n", data)
 		return "", true
 	}
@@ -670,11 +665,8 @@ func tearDownVrf(vrf *infradb.Vrf) (string, bool) {
 		log.Printf("FRR Deleted event")
 		delCmd1 := fmt.Sprintf("no router bgp %+v vrf %s", localas, path.Base(vrf.Name))
 		delCmd2 := fmt.Sprintf("no vrf %s", path.Base(vrf.Name))
-		data, err = Frr.FrrBgpCmd(ctx, fmt.Sprintf("configure terminal\n %s\n exit\n", delCmd1))
-		if strings.Contains(data, "Can't find BGP instance") { // Trying to delete non exist VRF return true
-			return "", true
-		}
-		if err != nil || checkFrrResult(data, false) {
+		data, err = Frr.FrrBgpCmd(ctx, fmt.Sprintf("configure terminal\n %s\n exit\n", delCmd1), false)
+		if err != nil {
 			log.Printf("FRR: Error  %s\n", data)
 			return fmt.Sprintf("FRR: Error  %s\n", data), false
 		}
@@ -682,7 +674,7 @@ func tearDownVrf(vrf *infradb.Vrf) (string, bool) {
 		if err != nil {
 			log.Printf("FRR(tearDownVrf): Failed to run save command: %v\n", err)
 		}
-		_, err = Frr.FrrZebraCmd(ctx, fmt.Sprintf("configure terminal\n %s\n exit\n", delCmd2))
+		data, err = Frr.FrrZebraCmd(ctx, fmt.Sprintf("configure terminal\n %s\n exit\n", delCmd2), false)
 		if err != nil {
 			log.Printf("FRR: Error  %s\n", data)
 			return fmt.Sprintf("FRR: Error  %s\n", data), false
