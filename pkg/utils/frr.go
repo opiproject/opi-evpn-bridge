@@ -7,6 +7,7 @@ package utils
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
 	"os/exec"
 	"strings"
@@ -51,8 +52,8 @@ const (
 // Frr represents limited subset of functions from Frr package
 type Frr interface {
 	TelnetDialAndCommunicate(ctx context.Context, command string, port int) (string, error)
-	FrrZebraCmd(ctx context.Context, command string) (string, error)
-	FrrBgpCmd(ctx context.Context, command string) (string, error)
+	FrrZebraCmd(ctx context.Context, command string, cmdTypeShow bool) (string, error)
+	FrrBgpCmd(ctx context.Context, command string, cmdTypeShow bool) (string, error)
 	Save(context.Context) error
 	Password(conn *telnet.Conn, delim string) error
 	EnterPrivileged(conn *telnet.Conn) error
@@ -115,16 +116,47 @@ func (n *FrrWrapper) ExitPrivileged(conn *telnet.Conn) error {
 	return conn.SkipUntil(">")
 }
 
+// checkFrrResult checks the vrf result
+func checkFrrResult(data string, show bool) bool {
+	if show && data == "" {
+		return true
+	}
+	// // Trying to delete non exist VRF || Trying to delete non exist peer-group
+	if strings.Contains(data, "Can't find BGP instance") || strings.Contains(data, "Create the peer-group first") {
+		return false
+	}
+	patterns := []string{"error", "warning", "unknown", "ambiguous", "specified does not exist"}
+	lowerStr := strings.ToLower(data)
+	for _, pattern := range patterns {
+		if strings.Contains(lowerStr, pattern) {
+			return true
+		}
+	}
+	return false
+}
+
 // FrrZebraCmd connects to Zebra telnet with password and runs command
-func (n *FrrWrapper) FrrZebraCmd(ctx context.Context, command string) (string, error) {
+func (n *FrrWrapper) FrrZebraCmd(ctx context.Context, command string, cmdTypeShow bool) (string, error) {
 	// ports defined here https://docs.frrouting.org/en/latest/setup.html#services
-	return n.TelnetDialAndCommunicate(ctx, command, zebra)
+	cmdOutput, cmdError := n.TelnetDialAndCommunicate(ctx, command, zebra)
+	if cmdError != nil {
+		return cmdOutput, cmdError
+	} else if checkFrrResult(cmdOutput, cmdTypeShow) {
+		return cmdOutput, errors.New("error while running FrrZebraCmd")
+	}
+	return cmdOutput, cmdError
 }
 
 // FrrBgpCmd connects to Bgp telnet with password and runs command
-func (n *FrrWrapper) FrrBgpCmd(ctx context.Context, command string) (string, error) {
+func (n *FrrWrapper) FrrBgpCmd(ctx context.Context, command string, cmdTypeShow bool) (string, error) {
 	// ports defined here https://docs.frrouting.org/en/latest/setup.html#services
-	return n.TelnetDialAndCommunicate(ctx, command, bgpd)
+	cmdOutput, cmdError := n.TelnetDialAndCommunicate(ctx, command, bgpd)
+	if cmdError != nil {
+		return cmdOutput, cmdError
+	} else if checkFrrResult(cmdOutput, cmdTypeShow) {
+		return cmdOutput, errors.New("error while running FrrBgpCmd")
+	}
+	return cmdOutput, cmdError
 }
 
 // Save command save the current config to /etc/frr/frr.conf
