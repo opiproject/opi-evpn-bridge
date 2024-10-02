@@ -10,6 +10,7 @@ import (
 	"net"
 	"os/exec"
 	"regexp"
+	"time"
 
 	"github.com/vishvananda/netlink"
 	"go.einride.tech/aip/fieldmask"
@@ -76,4 +77,14 @@ func GetIPAddress(dev string) net.IPNet {
 		}
 	}
 	return *validIps[0].IPNet
+}
+
+// CheckReplayThreshold checks if the replay threshold has been exceeded
+func CheckReplayThreshold(currentTimer, replayThreshold time.Duration) bool {
+	return (currentTimer > replayThreshold)
+}
+
+// ConcatenateModuleNameWithType this function concatenates the module name and type
+func ConcatenateModuleNameWithType(moduleName, kindOfType string) string {
+	return moduleName + "." + kindOfType
 }

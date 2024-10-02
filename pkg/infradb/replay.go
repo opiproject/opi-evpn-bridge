@@ -19,14 +19,18 @@ func startReplayProcedure(componentName string) {
 
 	var deferErr error
 	var preSubscriber *actionbus.Subscriber
+	var subsForReplay [][]*eventbus.Subscriber
+	var objectsToReplay []interface{}
 
 	defer func() {
+		globalLock.Unlock()
+		log.Println("startReplayProcedure(): unblocking the TaskManager to continue")
+		taskmanager.TaskMan.ReplayFinished()
 		if deferErr != nil {
-			globalLock.Unlock()
 			log.Println("startReplayProcedure(): The replay procedure has failed")
-			log.Println("startReplayProcedure(): unblocking the TaskManager to continue")
-			taskmanager.TaskMan.ReplayFinished()
+			return
 		}
+		createReplayTasks(objectsToReplay, subsForReplay)
 	}()
 
 	preSubscribers := actionbus.ABus.GetSubscribers("preReplay")
@@ -65,20 +69,11 @@ func startReplayProcedure(componentName string) {
 
 	objectTypesToReplay := getObjectTypesToReplay(componentName)
 
-	objectsToReplay, subsForReplay, deferErr := gatherObjectsAndSubsToReplay(componentName, objectTypesToReplay)
+	objectsToReplay, subsForReplay, deferErr = gatherObjectsAndSubsToReplay(componentName, objectTypesToReplay)
 	if deferErr != nil {
 		log.Printf("startReplayProcedure(): Error %+v\n", deferErr)
 		return
 	}
-
-	// Releasing the lock as all the operations in the DB has finished
-	globalLock.Unlock()
-
-	// Notify task manager to continue processing tasks as
-	// the replay of objects in the DB has finished
-	taskmanager.TaskMan.ReplayFinished()
-
-	createReplayTasks(objectsToReplay, subsForReplay)
 }
 
 // getObjectTypesToReplay collects all the types of object to be replayed
@@ -270,6 +265,8 @@ func createReplayTasks(objectsToReplay []interface{}, subsForReplay [][]*eventbu
 			taskmanager.TaskMan.CreateTask(tempObj.Name, "svi", tempObj.ResourceVersion, subsForReplay[i])
 		case *BridgePort:
 			taskmanager.TaskMan.CreateTask(tempObj.Name, "bridge-port", tempObj.ResourceVersion, subsForReplay[i])
+		default:
+			log.Printf("createReplayTasks: Unknown object type %+v\n", tempObj)
 		}
 	}
 }
