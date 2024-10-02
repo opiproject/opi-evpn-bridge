@@ -9,6 +9,8 @@ import (
 	"log"
 	"sort"
 	"sync"
+
+	"github.com/opiproject/opi-evpn-bridge/pkg/utils"
 )
 
 // EBus holds the EventBus object
@@ -54,7 +56,7 @@ func (e *EventBus) StartSubscriber(moduleName, eventType string, priority int, e
 				case event := <-subscriber.Ch:
 					log.Printf("\nSubscriber %s for %s received \n", moduleName, eventType)
 
-					handlerKey := moduleName + "." + eventType
+					handlerKey := utils.ConcatenateModuleNameWithType(moduleName, eventType)
 					if handler, ok := e.eventHandlers[handlerKey]; ok {
 						if objectData, ok := event.(*ObjectData); ok {
 							handler.HandleEvent(eventType, objectData)
@@ -96,7 +98,9 @@ func (e *EventBus) Subscribe(moduleName, eventType string, priority int, eventHa
 	}
 
 	e.subscribers[eventType] = append(e.subscribers[eventType], subscriber)
-	e.eventHandlers[moduleName+"."+eventType] = eventHandler
+
+	handlerKey := utils.ConcatenateModuleNameWithType(moduleName, eventType)
+	e.eventHandlers[handlerKey] = eventHandler
 
 	// Sort subscribers based on priority
 	sort.Slice(e.subscribers[eventType], func(i, j int) bool {
@@ -137,7 +141,9 @@ func (e *EventBus) UnsubscribeModule(moduleName string) bool {
 				if sub.Name == moduleName {
 					sub.Quit <- true
 					e.subscribers[eventName] = append(subs[:i], subs[i+1:]...)
-					e.eventHandlers[moduleName+"."+eventName] = nil
+
+					handlerKey := utils.ConcatenateModuleNameWithType(moduleName, eventName)
+					e.eventHandlers[handlerKey] = nil
 					log.Printf("\n Module %s is unsubscribed for event %s", sub.Name, eventName)
 				}
 			}

@@ -200,9 +200,7 @@ func handlesvi(objectData *eventbus.ObjectData) {
 		log.Printf("%+v\n", comp)
 
 		// Checking the timer to decide if we need to replay or not
-		if comp.Timer > replayThreshold {
-			comp.Replay = true
-		}
+		comp.Replay = utils.CheckReplayThreshold(comp.Timer, replayThreshold)
 
 		err := infradb.UpdateSviStatus(objectData.Name, objectData.ResourceVersion, objectData.NotificationID, nil, comp)
 		if err != nil {
@@ -225,9 +223,7 @@ func handlesvi(objectData *eventbus.ObjectData) {
 		log.Printf("%+v\n", comp)
 
 		// Checking the timer to decide if we need to replay or not
-		if comp.Timer > replayThreshold {
-			comp.Replay = true
-		}
+		comp.Replay = utils.CheckReplayThreshold(comp.Timer, replayThreshold)
 
 		err := infradb.UpdateSviStatus(objectData.Name, objectData.ResourceVersion, objectData.NotificationID, nil, comp)
 		if err != nil {
@@ -305,9 +301,7 @@ func handlevrf(objectData *eventbus.ObjectData) {
 		log.Printf("%+v\n", comp)
 
 		// Checking the timer to decide if we need to replay or not
-		if comp.Timer > replayThreshold {
-			comp.Replay = true
-		}
+		comp.Replay = utils.CheckReplayThreshold(comp.Timer, replayThreshold)
 
 		err := infradb.UpdateVrfStatus(objectData.Name, objectData.ResourceVersion, objectData.NotificationID, nil, comp)
 		if err != nil {
@@ -330,9 +324,7 @@ func handlevrf(objectData *eventbus.ObjectData) {
 		log.Printf("%+v\n", comp)
 
 		// Checking the timer to decide if we need to replay or not
-		if comp.Timer > replayThreshold {
-			comp.Replay = true
-		}
+		comp.Replay = utils.CheckReplayThreshold(comp.Timer, replayThreshold)
 
 		err := infradb.UpdateVrfStatus(objectData.Name, objectData.ResourceVersion, objectData.NotificationID, nil, comp)
 		if err != nil {

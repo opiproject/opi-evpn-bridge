@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"log"
 	"sync"
+
+	"github.com/opiproject/opi-evpn-bridge/pkg/utils"
 )
 
 // ABus holds the ActionBus object
@@ -19,7 +21,6 @@ type ActionBus struct {
 	subscribers    map[string][]*Subscriber
 	actionHandlers map[string]ActionHandler
 	subscriberL    sync.RWMutex
-	mutex          sync.RWMutex
 }
 
 // Subscriber holds the info for each subscriber
@@ -50,7 +51,7 @@ func (a *ActionBus) StartSubscriber(moduleName, actionType string, actionHandler
 				case action := <-subscriber.Ch:
 					log.Printf("\nSubscriber %s for %s received \n", moduleName, actionType)
 
-					handlerKey := moduleName + "." + actionType
+					handlerKey := utils.ConcatenateModuleNameWithType(moduleName, actionType)
 					if handler, ok := a.actionHandlers[handlerKey]; ok {
 						if actionData, ok := action.(*ActionData); ok {
 							handler.HandleAction(actionType, actionData)
@@ -96,7 +97,9 @@ func (a *ActionBus) Subscribe(moduleName, actionType string, actionHandler Actio
 	}
 
 	a.subscribers[actionType] = append(a.subscribers[actionType], subscriber)
-	a.actionHandlers[moduleName+"."+actionType] = actionHandler
+
+	handlerKey := utils.ConcatenateModuleNameWithType(moduleName, actionType)
+	a.actionHandlers[handlerKey] = actionHandler
 
 	log.Printf("Subscriber %s registered for action %s\n", moduleName, actionType)
 	return subscriber
@@ -104,8 +107,8 @@ func (a *ActionBus) Subscribe(moduleName, actionType string, actionHandler Actio
 
 // GetSubscribers api is used to fetch the list of subscribers registered with given actionType
 func (a *ActionBus) GetSubscribers(actionType string) []*Subscriber {
-	a.mutex.RLock()
-	defer a.mutex.RUnlock()
+	a.subscriberL.Lock()
+	defer a.subscriberL.Unlock()
 
 	return a.subscribers[actionType]
 }
