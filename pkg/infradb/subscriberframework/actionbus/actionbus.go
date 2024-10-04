@@ -51,7 +51,7 @@ func (a *ActionBus) StartSubscriber(moduleName, actionType string, actionHandler
 				case action := <-subscriber.Ch:
 					log.Printf("\nSubscriber %s for %s received \n", moduleName, actionType)
 
-					handlerKey := utils.ConcatenateModuleNameWithType(moduleName, actionType)
+					handlerKey := utils.ComposeHandlerName(moduleName, actionType)
 					if handler, ok := a.actionHandlers[handlerKey]; ok {
 						if actionData, ok := action.(*ActionData); ok {
 							handler.HandleAction(actionType, actionData)
@@ -98,7 +98,7 @@ func (a *ActionBus) Subscribe(moduleName, actionType string, actionHandler Actio
 
 	a.subscribers[actionType] = append(a.subscribers[actionType], subscriber)
 
-	handlerKey := utils.ConcatenateModuleNameWithType(moduleName, actionType)
+	handlerKey := utils.ComposeHandlerName(moduleName, actionType)
 	a.actionHandlers[handlerKey] = actionHandler
 
 	log.Printf("Subscriber %s registered for action %s\n", moduleName, actionType)
@@ -107,8 +107,8 @@ func (a *ActionBus) Subscribe(moduleName, actionType string, actionHandler Actio
 
 // GetSubscribers api is used to fetch the list of subscribers registered with given actionType
 func (a *ActionBus) GetSubscribers(actionType string) []*Subscriber {
-	a.subscriberL.Lock()
-	defer a.subscriberL.Unlock()
+	a.subscriberL.RLock()
+	defer a.subscriberL.RUnlock()
 
 	return a.subscribers[actionType]
 }
