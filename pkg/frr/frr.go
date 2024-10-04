@@ -32,22 +32,39 @@ import (
 // frrComp string constant
 const frrComp string = "frr"
 
-// runningFrrConfFile holds the running configuration of FRR daemon
-const runningFrrConfFile = "/etc/frr/frr.conf"
-
-// basicFrrConfFile holds the basic/initial configuration of FRR daemon
-const basicFrrConfFile = "/etc/frr/frr-basic.conf"
-
-// backupFrrConfFile holds the backup configuration the current running config of FRR daemon
-const backupFrrConfFile = "/etc/frr/frr.conf.bak"
-
+// replayThreshold time threshold for replay
 const replayThreshold = 64 * time.Second
 
 // ModulefrrHandler empty structure
 type ModulefrrHandler struct{}
 
 // ModuleFrrActionHandler empty structure
-type ModuleFrrActionHandler struct{}
+type ModuleFrrActionHandler struct {
+	// runningFrrConfFile holds the running configuration of FRR daemon
+	runningFrrConfFile string
+	// basicFrrConfFile holds the basic/initial configuration of FRR daemon
+	basicFrrConfFile string
+	// backupFrrConfFile holds the backup configuration the current running config of FRR daemon
+	backupFrrConfFile string
+}
+
+// NewModuleFrrActionHandler initializes a default ModuleFrrActionHandler
+func NewModuleFrrActionHandler() *ModuleFrrActionHandler {
+	return &ModuleFrrActionHandler{
+		runningFrrConfFile: "/etc/frr/frr.conf",
+		basicFrrConfFile:   "/etc/frr/frr-basic.conf",
+		backupFrrConfFile:  "/etc/frr/frr.conf.bak",
+	}
+}
+
+// NewModuleFrrActionHandlerWithArgs initializes a ModuleFrrActionHandler
+func NewModuleFrrActionHandlerWithArgs(runningFrrConfFile, basicFrrConfFile, backupFrrConfFile string) *ModuleFrrActionHandler {
+	return &ModuleFrrActionHandler{
+		runningFrrConfFile: runningFrrConfFile,
+		basicFrrConfFile:   basicFrrConfFile,
+		backupFrrConfFile:  backupFrrConfFile,
+	}
+}
 
 // HandleEvent handles the events
 func (h *ModulefrrHandler) HandleEvent(eventType string, objectData *eventbus.ObjectData) {
@@ -68,13 +85,13 @@ func (h *ModuleFrrActionHandler) HandleAction(actionType string, actionData *act
 	switch actionType {
 	case "preReplay":
 		log.Printf("Module FRR received %s\n", actionType)
-		handlePreReplay(actionData)
+		h.handlePreReplay(actionData)
 	default:
 		log.Printf("error: Unknown action type %s", actionType)
 	}
 }
 
-func handlePreReplay(actionData *actionbus.ActionData) {
+func (h *ModuleFrrActionHandler) handlePreReplay(actionData *actionbus.ActionData) {
 	var deferErr error
 
 	defer func() {
@@ -84,22 +101,22 @@ func handlePreReplay(actionData *actionbus.ActionData) {
 	}()
 
 	// Backup the current running config
-	deferErr = os.Rename(runningFrrConfFile, backupFrrConfFile)
+	deferErr = os.Rename(h.runningFrrConfFile, h.backupFrrConfFile)
 	if deferErr != nil {
 		log.Printf("FRR: handlePreReplay(): Failed to backup running config of FRR: %s\n", deferErr)
 		return
 	}
 
 	// Create a new running config based on the basic/initial FRR config
-	input, deferErr := os.ReadFile(basicFrrConfFile)
+	input, deferErr := os.ReadFile(h.basicFrrConfFile)
 	if deferErr != nil {
-		log.Printf("FRR: handlePreReplay(): Failed to read content of %s: %s\n", basicFrrConfFile, deferErr)
+		log.Printf("FRR: handlePreReplay(): Failed to read content of %s: %s\n", h.basicFrrConfFile, deferErr)
 		return
 	}
 
-	deferErr = os.WriteFile(runningFrrConfFile, input, 0600)
+	deferErr = os.WriteFile(h.runningFrrConfFile, input, 0600)
 	if deferErr != nil {
-		log.Printf("FRR: handlePreReplay(): Failed to write content to %s: %s\n", runningFrrConfFile, deferErr)
+		log.Printf("FRR: handlePreReplay(): Failed to write content to %s: %s\n", h.runningFrrConfFile, deferErr)
 		return
 	}
 
@@ -122,9 +139,9 @@ func handlePreReplay(actionData *actionbus.ActionData) {
 		return
 	}
 
-	deferErr = os.Chown(runningFrrConfFile, uid, gid)
+	deferErr = os.Chown(h.runningFrrConfFile, uid, gid)
 	if deferErr != nil {
-		log.Printf("FRR: handlePreReplay(): Failed to chown of %s to frr:frr : %s\n", runningFrrConfFile, deferErr)
+		log.Printf("FRR: handlePreReplay(): Failed to chown of %s to frr:frr : %s\n", h.runningFrrConfFile, deferErr)
 		return
 	}
 
@@ -368,7 +385,7 @@ func subscribeInfradb(config *config.Config) {
 			}
 		}
 	}
-	ab.StartSubscriber(frrComp, "preReplay", &ModuleFrrActionHandler{})
+	ab.StartSubscriber(frrComp, "preReplay", NewModuleFrrActionHandler())
 }
 
 // ctx variable of type context

@@ -84,7 +84,7 @@ func CheckReplayThreshold(currentTimer, replayThreshold time.Duration) bool {
 	return (currentTimer > replayThreshold)
 }
 
-// ConcatenateModuleNameWithType this function concatenates the module name and type
-func ConcatenateModuleNameWithType(moduleName, kindOfType string) string {
+// ComposeHandlerName this function concatenates the module name and type
+func ComposeHandlerName(moduleName, kindOfType string) string {
 	return moduleName + "." + kindOfType
 }

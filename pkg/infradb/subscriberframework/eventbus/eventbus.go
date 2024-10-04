@@ -56,7 +56,7 @@ func (e *EventBus) StartSubscriber(moduleName, eventType string, priority int, e
 				case event := <-subscriber.Ch:
 					log.Printf("\nSubscriber %s for %s received \n", moduleName, eventType)
 
-					handlerKey := utils.ConcatenateModuleNameWithType(moduleName, eventType)
+					handlerKey := utils.ComposeHandlerName(moduleName, eventType)
 					if handler, ok := e.eventHandlers[handlerKey]; ok {
 						if objectData, ok := event.(*ObjectData); ok {
 							handler.HandleEvent(eventType, objectData)
@@ -99,7 +99,7 @@ func (e *EventBus) Subscribe(moduleName, eventType string, priority int, eventHa
 
 	e.subscribers[eventType] = append(e.subscribers[eventType], subscriber)
 
-	handlerKey := utils.ConcatenateModuleNameWithType(moduleName, eventType)
+	handlerKey := utils.ComposeHandlerName(moduleName, eventType)
 	e.eventHandlers[handlerKey] = eventHandler
 
 	// Sort subscribers based on priority
@@ -142,7 +142,7 @@ func (e *EventBus) UnsubscribeModule(moduleName string) bool {
 					sub.Quit <- true
 					e.subscribers[eventName] = append(subs[:i], subs[i+1:]...)
 
-					handlerKey := utils.ConcatenateModuleNameWithType(moduleName, eventName)
+					handlerKey := utils.ComposeHandlerName(moduleName, eventName)
 					e.eventHandlers[handlerKey] = nil
 					log.Printf("\n Module %s is unsubscribed for event %s", sub.Name, eventName)
 				}
