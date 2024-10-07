@@ -84,6 +84,7 @@ func parseNeigh(nm []NeighIPStruct, v string) NeighList {
 	for _, nd := range nm {
 		var ns NeighStruct
 		ns.Neigh0.Type = OTHER
+		ns.Type = OTHER
 		ns.VrfName = v
 		if nd.Dev != "" {
 			vrf, _ := vn.LinkByName(nd.Dev)

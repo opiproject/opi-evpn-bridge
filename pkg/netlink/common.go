@@ -26,7 +26,13 @@ var EventBus = eb.NewEventBus()
 // pollInterval variable
 var pollInterval int
 
-// dbphyPortslock variable
+// grd default route bool variable
+var grdDefaultRoute bool
+
+// enable ecmp bool variable
+var enableEcmp bool
+
+// phyPorts variable
 var phyPorts = make(map[string]int)
 
 // stopMonitoring variable
@@ -236,7 +242,12 @@ func notify_changes(new_db map[interface{}]interface{}, old_db map[interface{}]i
 					continue
 				}
 			}
-			notifyAddDel(v1, event.Operation.Update)
+			if event.EventType == ROUTE {
+				notifyAddDel(v2, event.Operation.Delete)
+				notifyAddDel(v1, event.Operation.Add)
+			} else {
+				notifyAddDel(v1, event.Operation.Update)
+			}
 		}
 		delete(new_db, k1)
 		delete(old_db, k1)

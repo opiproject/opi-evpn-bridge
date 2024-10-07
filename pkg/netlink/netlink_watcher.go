@@ -100,14 +100,21 @@ func annotateDBEntries() {
 
 // readLatestNetlinkState reads the latest netlink state
 func readLatestNetlinkState() {
-	vrfs, _ := infradb.GetAllVrfs()
-	for _, v := range vrfs {
-		readNeighbors(v) // viswanantha library
-		readRoutes(v)    // Viswantha library
-	}
-	m := readFDB()
-	for i := 0; i < len(m); i++ {
-		m[i].addFdbEntry()
+	grdVrf, err := infradb.GetVrf("//network.opiproject.org/vrfs/GRD")
+	if err == nil {
+		readNeighbors(grdVrf)
+		readRoutes(grdVrf)
+		vrfs, _ := infradb.GetAllVrfs()
+		for _, v := range vrfs {
+			if v.Name != grdVrf.Name {
+				readNeighbors(v) // viswanantha library
+				readRoutes(v)    // Viswantha library
+			}
+		}
+		m := readFDB()
+		for i := 0; i < len(m); i++ {
+			m[i].addFdbEntry()
+		}
 	}
 	dumpDBs()
 }
@@ -186,17 +193,20 @@ func Initialize() {
 	pollInterval = config.GlobalConfig.Netlink.PollInterval
 	log.Printf("netlink: poll interval: %v", pollInterval)
 	nlEnabled := config.GlobalConfig.Netlink.Enabled
+
+	grdDefaultRoute = config.GlobalConfig.Netlink.GrdDefaultRoute
+	enableEcmp = config.GlobalConfig.Netlink.EnableEcmp
+
 	if !nlEnabled {
 		log.Printf("netlink: netlink_monitor disabled")
 		return
 	}
-	for i := 0; i < len(config.GlobalConfig.Netlink.PhyPorts); i++ {
-		phyPorts[config.GlobalConfig.Netlink.PhyPorts[i].Name] = config.GlobalConfig.Netlink.PhyPorts[i].Vsi
+	for i := 0; i < len(config.GlobalConfig.Interfaces.PhyPorts); i++ {
+		phyPorts[config.GlobalConfig.Interfaces.PhyPorts[i].Rep] = config.GlobalConfig.Interfaces.PhyPorts[i].Vsi
 	}
 	getlink()
 	ctx = context.Background()
 	nlink = utils.NewNetlinkWrapperWithArgs(config.GlobalConfig.Tracer)
-	// stopMonitoring = false
 	stopMonitoring.Store(false)
 	go monitorNetlink() // monitor Thread started
 }

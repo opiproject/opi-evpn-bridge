@@ -21,6 +21,16 @@ grpc:
     server_port: 51703
     num_threads: 10
     static_external_macs: []
+interfaces:
+    phyports:
+      - rep: "enp0s1f0d1"
+        vsi: 0
+      - rep: "enp0s1f0d2"
+        vsi: 1
+    grpcacc: "host"
+    grpchost: "00:20:00:00:14:48"
+    vrfmux: "enp0s1f0d4"
+    portmux: "enp0s1f0d5"
 linuxfrr:
     enabled: true
     defaultvtep: "vxlan-vtep"
