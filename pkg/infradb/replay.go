@@ -109,6 +109,8 @@ func gatherObjectsAndSubsToReplay(componentName string, objectTypesToReplay []st
 	lbSubs := eventbus.EBus.GetSubscribers("logical-bridge")
 	vrfSubs := eventbus.EBus.GetSubscribers("vrf")
 
+	domain := &Domain{}
+
 	for _, objType := range objectTypesToReplay {
 		switch objType {
 		case "vrf":
@@ -138,7 +140,8 @@ func gatherObjectsAndSubsToReplay(componentName string, objectTypesToReplay []st
 
 				// tempSubs holds the subscribers list to be contacted for every VRF object each time
 				// for replay
-				tempSubs := vrf.prepareObjectsForReplay(componentName, vrfSubs)
+				domain.IDomain = vrf
+				tempSubs := domain.prepareObjectsForReplay(componentName, vrfSubs)
 
 				err = infradb.client.Set(vrf.Name, vrf)
 				if err != nil {
@@ -172,7 +175,8 @@ func gatherObjectsAndSubsToReplay(componentName string, objectTypesToReplay []st
 
 				// tempSubs holds the subscribers list to be contacted for every VRF object each time
 				// for replay
-				tempSubs := lb.prepareObjectsForReplay(componentName, lbSubs)
+				domain.IDomain = lb
+				tempSubs := domain.prepareObjectsForReplay(componentName, lbSubs)
 
 				err = infradb.client.Set(lb.Name, lb)
 				if err != nil {
@@ -205,7 +209,8 @@ func gatherObjectsAndSubsToReplay(componentName string, objectTypesToReplay []st
 
 				// tempSubs holds the subscribers list to be contacted for every VRF object each time
 				// for replay
-				tempSubs := svi.prepareObjectsForReplay(componentName, sviSubs)
+				domain.IDomain = svi
+				tempSubs := domain.prepareObjectsForReplay(componentName, sviSubs)
 
 				err = infradb.client.Set(svi.Name, svi)
 				if err != nil {
@@ -238,7 +243,8 @@ func gatherObjectsAndSubsToReplay(componentName string, objectTypesToReplay []st
 
 				// tempSubs holds the subscribers list to be contacted for every VRF object each time
 				// for replay
-				tempSubs := bp.prepareObjectsForReplay(componentName, bpSubs)
+				domain.IDomain = bp
+				tempSubs := domain.prepareObjectsForReplay(componentName, bpSubs)
 
 				err = infradb.client.Set(bp.Name, bp)
 				if err != nil {

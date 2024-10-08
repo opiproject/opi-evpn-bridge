@@ -66,6 +66,7 @@ type BridgePortMetadata struct {
 
 // BridgePort holds Bridge Port info
 type BridgePort struct {
+	Domain
 	Name             string
 	Spec             *BridgePortSpec
 	Status           *BridgePortStatus
@@ -215,25 +216,47 @@ func (in *BridgePort) parseMeta(bpMeta *BridgePortMetadata) {
 	}
 }
 
-// prepareObjectsForReplay prepares an object for replay by setting the unsuccessful components
-// in pending state and returning a list of the components that need to be contacted for the
-// replay of the particular object that called the function.
-func (in *BridgePort) prepareObjectsForReplay(componentName string, bpSubs []*eventbus.Subscriber) []*eventbus.Subscriber {
-	// We assume that the list of Components that are returned
-	// from DB is ordered based on the priority as that was the
-	// way that has been stored in the DB in first place.
-	bpComponents := in.Status.Components
-	tempSubs := []*eventbus.Subscriber{}
-	for i, comp := range bpComponents {
-		if comp.Name == componentName || comp.CompStatus != common.ComponentStatusSuccess {
-			in.Status.Components[i] = common.Component{Name: comp.Name, CompStatus: common.ComponentStatusPending, Details: ""}
-			tempSubs = append(tempSubs, bpSubs[i])
-		}
-	}
-	if in.Status.BPOperStatus == BridgePortOperStatusUp {
-		in.Status.BPOperStatus = BridgePortOperStatusDown
-	}
+func (in *BridgePort) getStatusComponents() []common.Component {
+	return in.Status.Components
+}
 
+func (in *BridgePort) setStatusComponents(components []common.Component) {
+	copy(in.Status.Components, components)
+}
+
+func (in *BridgePort) isOperationalStatus(operStatus OperStatus) bool {
+	switch operStatus {
+	case OperStatusUp:
+		return in.Status.BPOperStatus == BridgePortOperStatusUp
+	case OperStatusDown:
+		return in.Status.BPOperStatus == BridgePortOperStatusDown
+	case OperStatusToBeDeleted:
+		return in.Status.BPOperStatus == BridgePortOperStatusToBeDeleted
+	case OperStatusUnspecified:
+		return in.Status.BPOperStatus == BridgePortOperStatusUnspecified
+	default:
+		log.Println("isOperationalStatus(): operational status has not been identified")
+		return false
+	}
+}
+
+func (in *BridgePort) setOperationalStatus(operStatus OperStatus) {
+	switch operStatus {
+	case OperStatusUp:
+		in.Status.BPOperStatus = BridgePortOperStatusUp
+	case OperStatusDown:
+		in.Status.BPOperStatus = BridgePortOperStatusDown
+	case OperStatusToBeDeleted:
+		in.Status.BPOperStatus = BridgePortOperStatusToBeDeleted
+	case OperStatusUnspecified:
+		in.Status.BPOperStatus = BridgePortOperStatusUnspecified
+	default:
+		log.Println("setOperationalStatus(): operational status has not been identified")
+	}
+}
+
+// TODO: This function can probably be moved to the domain.go as the ResourceVersion
+// field is common for all the child objects (VRF,LB, BP, SVI)
+func (in *BridgePort) setNewResourceVersion() {
 	in.ResourceVersion = generateVersion()
-	return tempSubs
 }

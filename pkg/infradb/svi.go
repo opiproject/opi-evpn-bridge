@@ -56,6 +56,7 @@ type SviMetadata struct {
 
 // Svi holds SVI info
 type Svi struct {
+	Domain
 	Name            string
 	Spec            *SviSpec
 	Status          *SviStatus
@@ -197,25 +198,47 @@ func (in *Svi) parseMeta(sviMeta *SviMetadata) {
 	}
 }
 
-// prepareObjectsForReplay prepares an object for replay by setting the unsuccessful components
-// in pending state and returning a list of the components that need to be contacted for the
-// replay of the particular object that called the function.
-func (in *Svi) prepareObjectsForReplay(componentName string, sviSubs []*eventbus.Subscriber) []*eventbus.Subscriber {
-	// We assume that the list of Components that are returned
-	// from DB is ordered based on the priority as that was the
-	// way that has been stored in the DB in first place.
-	sviComponents := in.Status.Components
-	tempSubs := []*eventbus.Subscriber{}
-	for i, comp := range sviComponents {
-		if comp.Name == componentName || comp.CompStatus != common.ComponentStatusSuccess {
-			in.Status.Components[i] = common.Component{Name: comp.Name, CompStatus: common.ComponentStatusPending, Details: ""}
-			tempSubs = append(tempSubs, sviSubs[i])
-		}
-	}
-	if in.Status.SviOperStatus == SviOperStatusUp {
-		in.Status.SviOperStatus = SviOperStatusDown
-	}
+func (in *Svi) getStatusComponents() []common.Component {
+	return in.Status.Components
+}
 
+func (in *Svi) setStatusComponents(components []common.Component) {
+	copy(in.Status.Components, components)
+}
+
+func (in *Svi) isOperationalStatus(operStatus OperStatus) bool {
+	switch operStatus {
+	case OperStatusUp:
+		return in.Status.SviOperStatus == SviOperStatusUp
+	case OperStatusDown:
+		return in.Status.SviOperStatus == SviOperStatusDown
+	case OperStatusToBeDeleted:
+		return in.Status.SviOperStatus == SviOperStatusToBeDeleted
+	case OperStatusUnspecified:
+		return in.Status.SviOperStatus == SviOperStatusUnspecified
+	default:
+		log.Println("isOperationalStatus(): operational status has not been identified")
+		return false
+	}
+}
+
+func (in *Svi) setOperationalStatus(operStatus OperStatus) {
+	switch operStatus {
+	case OperStatusUp:
+		in.Status.SviOperStatus = SviOperStatusUp
+	case OperStatusDown:
+		in.Status.SviOperStatus = SviOperStatusDown
+	case OperStatusToBeDeleted:
+		in.Status.SviOperStatus = SviOperStatusToBeDeleted
+	case OperStatusUnspecified:
+		in.Status.SviOperStatus = SviOperStatusUnspecified
+	default:
+		log.Println("setOperationalStatus(): operational status has not been identified")
+	}
+}
+
+// TODO: This function can probably be moved to the domain.go as the ResourceVersion
+// field is common for all the child objects (VRF,LB, BP, SVI)
+func (in *Svi) setNewResourceVersion() {
 	in.ResourceVersion = generateVersion()
-	return tempSubs
 }
