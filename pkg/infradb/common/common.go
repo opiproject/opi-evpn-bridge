@@ -38,6 +38,11 @@ type Component struct {
 	Replay bool
 }
 
+// CheckReplayThreshold checks if the replay threshold has been exceeded
+func (c *Component) CheckReplayThreshold(replayThreshold time.Duration) {
+	c.Replay = (c.Timer > replayThreshold)
+}
+
 func ip4ToInt(ip net.IP) uint32 {
 	if !reflect.ValueOf(ip).IsZero() {
 		return uint32(ip[0])<<24 | uint32(ip[1])<<16 | uint32(ip[2])<<8 | uint32(ip[3])
