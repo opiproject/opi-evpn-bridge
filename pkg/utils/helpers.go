@@ -8,7 +8,9 @@ import (
 	"context"
 	"log"
 	"net"
+	"os/exec"
 	"regexp"
+	"time"
 
 	"github.com/vishvananda/netlink"
 	"go.einride.tech/aip/fieldmask"
@@ -20,6 +22,18 @@ import (
 // in the update grpc request based on the provided field mask
 func ApplyMaskToStoredPbObject[T proto.Message](updateMask *fieldmaskpb.FieldMask, dst, src T) {
 	fieldmask.Update(updateMask, dst, src)
+}
+
+// Run function run the commands
+func Run(cmd []string, _ bool) (string, int) {
+	var out []byte
+	var err error
+	out, err = exec.Command(cmd[0], cmd[1:]...).CombinedOutput() //nolint:gosec
+	if err != nil {
+		return "Error in running command", -1
+	}
+	output := string(out)
+	return output, 0
 }
 
 // ValidateMacAddress validates if a passing MAC address
@@ -63,4 +77,14 @@ func GetIPAddress(dev string) net.IPNet {
 		}
 	}
 	return *validIps[0].IPNet
+}
+
+// CheckReplayThreshold checks if the replay threshold has been exceeded
+func CheckReplayThreshold(currentTimer, replayThreshold time.Duration) bool {
+	return (currentTimer > replayThreshold)
+}
+
+// ComposeHandlerName this function concatenates the module name and type
+func ComposeHandlerName(moduleName, kindOfType string) string {
+	return moduleName + "." + kindOfType
 }

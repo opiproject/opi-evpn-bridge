@@ -56,6 +56,7 @@ type SviMetadata struct {
 
 // Svi holds SVI info
 type Svi struct {
+	Domain
 	Name            string
 	Spec            *SviSpec
 	Status          *SviStatus
@@ -167,4 +168,77 @@ func (in *Svi) ToPb() *pb.Svi {
 // GetName returns object unique name
 func (in *Svi) GetName() string {
 	return in.Name
+}
+
+// setComponentState set the stat of the component
+func (in *Svi) setComponentState(component common.Component) {
+	sviComponents := in.Status.Components
+	for i, comp := range sviComponents {
+		if comp.Name == component.Name {
+			in.Status.Components[i] = component
+			break
+		}
+	}
+}
+
+// checkForAllSuccess check if all the components are in Success state
+func (in *Svi) checkForAllSuccess() bool {
+	for _, comp := range in.Status.Components {
+		if comp.CompStatus != common.ComponentStatusSuccess {
+			return false
+		}
+	}
+	return true
+}
+
+// parseMeta parse metadata
+func (in *Svi) parseMeta(sviMeta *SviMetadata) {
+	if sviMeta != nil {
+		in.Metadata = sviMeta
+	}
+}
+
+func (in *Svi) getStatusComponents() []common.Component {
+	return in.Status.Components
+}
+
+func (in *Svi) setStatusComponents(components []common.Component) {
+	copy(in.Status.Components, components)
+}
+
+func (in *Svi) isOperationalStatus(operStatus OperStatus) bool {
+	switch operStatus {
+	case OperStatusUp:
+		return in.Status.SviOperStatus == SviOperStatusUp
+	case OperStatusDown:
+		return in.Status.SviOperStatus == SviOperStatusDown
+	case OperStatusToBeDeleted:
+		return in.Status.SviOperStatus == SviOperStatusToBeDeleted
+	case OperStatusUnspecified:
+		return in.Status.SviOperStatus == SviOperStatusUnspecified
+	default:
+		log.Println("isOperationalStatus(): operational status has not been identified")
+		return false
+	}
+}
+
+func (in *Svi) setOperationalStatus(operStatus OperStatus) {
+	switch operStatus {
+	case OperStatusUp:
+		in.Status.SviOperStatus = SviOperStatusUp
+	case OperStatusDown:
+		in.Status.SviOperStatus = SviOperStatusDown
+	case OperStatusToBeDeleted:
+		in.Status.SviOperStatus = SviOperStatusToBeDeleted
+	case OperStatusUnspecified:
+		in.Status.SviOperStatus = SviOperStatusUnspecified
+	default:
+		log.Println("setOperationalStatus(): operational status has not been identified")
+	}
+}
+
+// TODO: This function can probably be moved to the domain.go as the ResourceVersion
+// field is common for all the child objects (VRF,LB, BP, SVI)
+func (in *Svi) setNewResourceVersion() {
+	in.ResourceVersion = generateVersion()
 }

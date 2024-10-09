@@ -57,6 +57,7 @@ type VrfMetadata struct {
 
 // Vrf holds VRF info
 type Vrf struct {
+	Domain
 	Name            string
 	Spec            *VrfSpec
 	Status          *VrfStatus
@@ -237,4 +238,79 @@ func (in *Vrf) DeleteSvi(sviName string) error {
 // GetName returns object unique name
 func (in *Vrf) GetName() string {
 	return in.Name
+}
+
+// setComponentState set the stat of the component
+func (in *Vrf) setComponentState(component common.Component) {
+	vrfComponents := in.Status.Components
+	for i, comp := range vrfComponents {
+		if comp.Name == component.Name {
+			in.Status.Components[i] = component
+			break
+		}
+	}
+}
+
+// checkForAllSuccess check if all the components are in Success state
+func (in *Vrf) checkForAllSuccess() bool {
+	for _, comp := range in.Status.Components {
+		if comp.CompStatus != common.ComponentStatusSuccess {
+			return false
+		}
+	}
+	return true
+}
+
+// parseMeta parse metadata
+func (in *Vrf) parseMeta(vrfMeta *VrfMetadata) {
+	if vrfMeta != nil {
+		if len(vrfMeta.RoutingTable) > 0 {
+			in.Metadata.RoutingTable = vrfMeta.RoutingTable
+		}
+	}
+}
+
+func (in *Vrf) getStatusComponents() []common.Component {
+	return in.Status.Components
+}
+
+func (in *Vrf) setStatusComponents(components []common.Component) {
+	copy(in.Status.Components, components)
+}
+
+func (in *Vrf) isOperationalStatus(operStatus OperStatus) bool {
+	switch operStatus {
+	case OperStatusUp:
+		return in.Status.VrfOperStatus == VrfOperStatusUp
+	case OperStatusDown:
+		return in.Status.VrfOperStatus == VrfOperStatusDown
+	case OperStatusToBeDeleted:
+		return in.Status.VrfOperStatus == VrfOperStatusToBeDeleted
+	case OperStatusUnspecified:
+		return in.Status.VrfOperStatus == VrfOperStatusUnspecified
+	default:
+		log.Println("isOperationalStatus(): operational status has not been identified")
+		return false
+	}
+}
+
+func (in *Vrf) setOperationalStatus(operStatus OperStatus) {
+	switch operStatus {
+	case OperStatusUp:
+		in.Status.VrfOperStatus = VrfOperStatusUp
+	case OperStatusDown:
+		in.Status.VrfOperStatus = VrfOperStatusDown
+	case OperStatusToBeDeleted:
+		in.Status.VrfOperStatus = VrfOperStatusToBeDeleted
+	case OperStatusUnspecified:
+		in.Status.VrfOperStatus = VrfOperStatusUnspecified
+	default:
+		log.Println("setOperationalStatus(): operational status has not been identified")
+	}
+}
+
+// TODO: This function can probably be moved to the domain.go as the ResourceVersion
+// field is common for all the child objects (VRF,LB, BP, SVI)
+func (in *Vrf) setNewResourceVersion() {
+	in.ResourceVersion = generateVersion()
 }

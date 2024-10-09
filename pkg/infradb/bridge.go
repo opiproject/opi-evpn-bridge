@@ -52,6 +52,7 @@ type LogicalBridgeMetadata struct{}
 
 // LogicalBridge holds Logical Bridge info
 type LogicalBridge struct {
+	Domain
 	Name            string
 	Spec            *LogicalBridgeSpec
 	Status          *LogicalBridgeStatus
@@ -210,4 +211,77 @@ func (in *LogicalBridge) DeleteBridgePort(bpName, bpMac string) error {
 // GetName returns object unique name
 func (in *LogicalBridge) GetName() string {
 	return in.Name
+}
+
+// setComponentState set the stat of the component
+func (in *LogicalBridge) setComponentState(component common.Component) {
+	lbComponents := in.Status.Components
+	for i, comp := range lbComponents {
+		if comp.Name == component.Name {
+			in.Status.Components[i] = component
+			break
+		}
+	}
+}
+
+// checkForAllSuccess check if all the components are in Success state
+func (in *LogicalBridge) checkForAllSuccess() bool {
+	for _, comp := range in.Status.Components {
+		if comp.CompStatus != common.ComponentStatusSuccess {
+			return false
+		}
+	}
+	return true
+}
+
+// parseMeta parse metadata
+func (in *LogicalBridge) parseMeta(lbMeta *LogicalBridgeMetadata) {
+	if lbMeta != nil {
+		in.Metadata = lbMeta
+	}
+}
+
+func (in *LogicalBridge) getStatusComponents() []common.Component {
+	return in.Status.Components
+}
+
+func (in *LogicalBridge) setStatusComponents(components []common.Component) {
+	copy(in.Status.Components, components)
+}
+
+func (in *LogicalBridge) isOperationalStatus(operStatus OperStatus) bool {
+	switch operStatus {
+	case OperStatusUp:
+		return in.Status.LBOperStatus == LogicalBridgeOperStatusUp
+	case OperStatusDown:
+		return in.Status.LBOperStatus == LogicalBridgeOperStatusDown
+	case OperStatusToBeDeleted:
+		return in.Status.LBOperStatus == LogicalBridgeOperStatusToBeDeleted
+	case OperStatusUnspecified:
+		return in.Status.LBOperStatus == LogicalBridgeOperStatusUnspecified
+	default:
+		log.Println("isOperationalStatus(): operational status has not been identified")
+		return false
+	}
+}
+
+func (in *LogicalBridge) setOperationalStatus(operStatus OperStatus) {
+	switch operStatus {
+	case OperStatusUp:
+		in.Status.LBOperStatus = LogicalBridgeOperStatusUp
+	case OperStatusDown:
+		in.Status.LBOperStatus = LogicalBridgeOperStatusDown
+	case OperStatusToBeDeleted:
+		in.Status.LBOperStatus = LogicalBridgeOperStatusToBeDeleted
+	case OperStatusUnspecified:
+		in.Status.LBOperStatus = LogicalBridgeOperStatusUnspecified
+	default:
+		log.Println("setOperationalStatus(): operational status has not been identified")
+	}
+}
+
+// TODO: This function can probably be moved to the domain.go as the ResourceVersion
+// field is common for all the child objects (VRF,LB, BP, SVI)
+func (in *LogicalBridge) setNewResourceVersion() {
+	in.ResourceVersion = generateVersion()
 }
