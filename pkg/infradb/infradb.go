@@ -286,7 +286,7 @@ func UpdateLBStatus(name string, resourceVersion string, notificationID string, 
 	globalLock.Lock()
 	defer globalLock.Unlock()
 
-	var lastCompSuccsess bool
+	var allCompSuccess bool
 
 	// When we get an error from an operation to the Database then we just return it. The
 	// Task manager will just expire the task and retry.
@@ -311,27 +311,26 @@ func UpdateLBStatus(name string, resourceVersion string, notificationID string, 
 		return nil
 	}
 
-	lbComponents := lb.Status.Components
-	for i, comp := range lbComponents {
-		compCounter := i + 1
-		if comp.Name == component.Name {
-			lb.Status.Components[i] = component
-
-			if compCounter == len(lbComponents) && lb.Status.Components[i].CompStatus == common.ComponentStatusSuccess {
-				lastCompSuccsess = true
-			}
-
-			break
-		}
+	if component.Replay {
+		// One of the components has requested a replay of the DB.
+		// The task related to the status update will be dropped.
+		log.Printf("UpdateLBStatus(): Component %s has requested a replay\n", component.Name)
+		taskmanager.TaskMan.StatusUpdated(lb.Name, "logical-bridge", lb.ResourceVersion, notificationID, true, &component)
+		go startReplayProcedure(component.Name)
+		return nil
 	}
+
+	// Set the state of the component
+	lb.setComponentState(component)
+
+	// Check if all the components are in Success state
+	allCompSuccess = lb.checkForAllSuccess()
 
 	// Parse the Metadata that has been sent from the Component
-	if lbMeta != nil {
-		lb.Metadata = lbMeta
-	}
+	lb.parseMeta(lbMeta)
 
 	// Is it ok to delete an object before we update the last component status to success ?
-	if lastCompSuccsess {
+	if allCompSuccess {
 		if lb.Status.LBOperStatus == LogicalBridgeOperStatusToBeDeleted {
 			err = infradb.client.Delete(lb.Name)
 			if err != nil {
@@ -606,7 +605,7 @@ func UpdateBPStatus(name string, resourceVersion string, notificationID string, 
 	globalLock.Lock()
 	defer globalLock.Unlock()
 
-	var lastCompSuccsess bool
+	var allCompSuccess bool
 
 	// When we get an error from an operation to the Database then we just return it. The
 	// Task manager will just expire the task and retry.
@@ -631,30 +630,27 @@ func UpdateBPStatus(name string, resourceVersion string, notificationID string, 
 		return nil
 	}
 
-	bpComponents := bp.Status.Components
-	for i, comp := range bpComponents {
-		compCounter := i + 1
-		if comp.Name == component.Name {
-			bp.Status.Components[i] = component
-
-			if compCounter == len(bpComponents) && bp.Status.Components[i].CompStatus == common.ComponentStatusSuccess {
-				lastCompSuccsess = true
-			}
-
-			break
-		}
+	if component.Replay {
+		// One of the components has requested a replay of the DB.
+		// The task related to the status update will be dropped.
+		log.Printf("UpdateBPStatus(): Component %s has requested a replay\n", component.Name)
+		taskmanager.TaskMan.StatusUpdated(bp.Name, "bridge-port", bp.ResourceVersion, notificationID, true, &component)
+		go startReplayProcedure(component.Name)
+		return nil
 	}
+
+	// Set the state of the component
+	bp.setComponentState(component)
+
+	// Check if all the components are in Success state
+	allCompSuccess = bp.checkForAllSuccess()
 
 	// Parse the Metadata that has been sent from the Component
-	if bpMeta != nil {
-		if bpMeta.VPort != "" {
-			bp.Metadata.VPort = bpMeta.VPort
-		}
-	}
+	bp.parseMeta(bpMeta)
 
 	// Is it ok to delete an object before we update the last component status to success ?
 	// Take care of deleting the references to the LB  objects after the BP has been successfully deleted
-	if lastCompSuccsess {
+	if allCompSuccess {
 		if bp.Status.BPOperStatus == SviOperStatusToBeDeleted {
 			// Delete the references from Logical Bridge objects
 			for _, lbName := range bp.Spec.LogicalBridges {
@@ -926,7 +922,7 @@ func UpdateVrfStatus(name string, resourceVersion string, notificationID string,
 	globalLock.Lock()
 	defer globalLock.Unlock()
 
-	var lastCompSuccsess bool
+	var allCompSuccess bool
 
 	// When we get an error from an operation to the Database then we just return it. The
 	// Task manager will just expire the task and retry.
@@ -951,29 +947,27 @@ func UpdateVrfStatus(name string, resourceVersion string, notificationID string,
 		return nil
 	}
 
-	vrfComponents := vrf.Status.Components
-	for i, comp := range vrfComponents {
-		compCounter := i + 1
-		if comp.Name == component.Name {
-			vrf.Status.Components[i] = component
-
-			if compCounter == len(vrfComponents) && vrf.Status.Components[i].CompStatus == common.ComponentStatusSuccess {
-				lastCompSuccsess = true
-			}
-
-			break
-		}
+	// Here we check if the component has asked for a replay of the DB to be taken place
+	if component.Replay {
+		// One of the components has requested a replay of the DB.
+		// The task related to the status update will be dropped.
+		log.Printf("UpdateVrfStatus(): Component %s has requested a replay\n", component.Name)
+		taskmanager.TaskMan.StatusUpdated(vrf.Name, "vrf", vrf.ResourceVersion, notificationID, true, &component)
+		go startReplayProcedure(component.Name)
+		return nil
 	}
+
+	// Set the state of the component
+	vrf.setComponentState(component)
+
+	// Check if all the components are in Success state
+	allCompSuccess = vrf.checkForAllSuccess()
 
 	// Parse the Metadata that has been sent from the Component
-	if vrfMeta != nil {
-		if len(vrfMeta.RoutingTable) > 0 {
-			vrf.Metadata.RoutingTable = vrfMeta.RoutingTable
-		}
-	}
+	vrf.parseMeta(vrfMeta)
 
 	// Is it ok to delete an object before we update the last component status to success ?
-	if lastCompSuccsess {
+	if allCompSuccess {
 		if vrf.Status.VrfOperStatus == VrfOperStatusToBeDeleted {
 			err = infradb.client.Delete(vrf.Name)
 			if err != nil {
@@ -1315,7 +1309,7 @@ func UpdateSviStatus(name string, resourceVersion string, notificationID string,
 	globalLock.Lock()
 	defer globalLock.Unlock()
 
-	var lastCompSuccsess bool
+	var allCompSuccess bool
 
 	// When we get an error from an operation to the Database then we just return it. The
 	// Task manager will just expire the task and retry.
@@ -1340,28 +1334,27 @@ func UpdateSviStatus(name string, resourceVersion string, notificationID string,
 		return nil
 	}
 
-	sviComponents := svi.Status.Components
-	for i, comp := range sviComponents {
-		compCounter := i + 1
-		if comp.Name == component.Name {
-			svi.Status.Components[i] = component
-
-			if compCounter == len(sviComponents) && svi.Status.Components[i].CompStatus == common.ComponentStatusSuccess {
-				lastCompSuccsess = true
-			}
-
-			break
-		}
+	if component.Replay {
+		// One of the components has requested a replay of the DB.
+		// The task related to the status update will be dropped.
+		log.Printf("UpdateSviStatus(): Component %s has requested a replay\n", component.Name)
+		taskmanager.TaskMan.StatusUpdated(svi.Name, "svi", svi.ResourceVersion, notificationID, true, &component)
+		go startReplayProcedure(component.Name)
+		return nil
 	}
+
+	// Set the state of the component
+	svi.setComponentState(component)
+
+	// Check if all the components are in Success state
+	allCompSuccess = svi.checkForAllSuccess()
 
 	// Parse the Metadata that has been sent from the Component
-	if sviMeta != nil {
-		svi.Metadata = sviMeta
-	}
+	svi.parseMeta(sviMeta)
 
 	// Is it ok to delete an object before we update the last component status to success ?
 	// Take care of deleting the references to the LB and VRF objects after the SVI has been successfully deleted
-	if lastCompSuccsess {
+	if allCompSuccess {
 		if svi.Status.SviOperStatus == SviOperStatusToBeDeleted {
 			// Delete the references from VRF and Logical Bridge objects
 

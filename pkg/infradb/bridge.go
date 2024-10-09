@@ -211,3 +211,54 @@ func (in *LogicalBridge) DeleteBridgePort(bpName, bpMac string) error {
 func (in *LogicalBridge) GetName() string {
 	return in.Name
 }
+
+// setComponentState set the stat of the component
+func (in *LogicalBridge) setComponentState(component common.Component) {
+	lbComponents := in.Status.Components
+	for i, comp := range lbComponents {
+		if comp.Name == component.Name {
+			in.Status.Components[i] = component
+			break
+		}
+	}
+}
+
+// checkForAllSuccess check if all the components are in Success state
+func (in *LogicalBridge) checkForAllSuccess() bool {
+	for _, comp := range in.Status.Components {
+		if comp.CompStatus != common.ComponentStatusSuccess {
+			return false
+		}
+	}
+	return true
+}
+
+// parseMeta parse metadata
+func (in *LogicalBridge) parseMeta(lbMeta *LogicalBridgeMetadata) {
+	if lbMeta != nil {
+		in.Metadata = lbMeta
+	}
+}
+
+// prepareObjectsForReplay prepares an object for replay by setting the unsuccessful components
+// in pending state and returning a list of the components that need to be contacted for the
+// replay of the particular object that called the function.
+func (in *LogicalBridge) prepareObjectsForReplay(componentName string, lbSubs []*eventbus.Subscriber) []*eventbus.Subscriber {
+	// We assume that the list of Components that are returned
+	// from DB is ordered based on the priority as that was the
+	// way that has been stored in the DB in first place.
+	lbComponents := in.Status.Components
+	tempSubs := []*eventbus.Subscriber{}
+	for i, comp := range lbComponents {
+		if comp.Name == componentName || comp.CompStatus != common.ComponentStatusSuccess {
+			in.Status.Components[i] = common.Component{Name: comp.Name, CompStatus: common.ComponentStatusPending, Details: ""}
+			tempSubs = append(tempSubs, lbSubs[i])
+		}
+	}
+	if in.Status.LBOperStatus == LogicalBridgeOperStatusUp {
+		in.Status.LBOperStatus = LogicalBridgeOperStatusDown
+	}
+
+	in.ResourceVersion = generateVersion()
+	return tempSubs
+}

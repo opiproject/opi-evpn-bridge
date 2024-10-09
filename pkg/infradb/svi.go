@@ -168,3 +168,54 @@ func (in *Svi) ToPb() *pb.Svi {
 func (in *Svi) GetName() string {
 	return in.Name
 }
+
+// setComponentState set the stat of the component
+func (in *Svi) setComponentState(component common.Component) {
+	sviComponents := in.Status.Components
+	for i, comp := range sviComponents {
+		if comp.Name == component.Name {
+			in.Status.Components[i] = component
+			break
+		}
+	}
+}
+
+// checkForAllSuccess check if all the components are in Success state
+func (in *Svi) checkForAllSuccess() bool {
+	for _, comp := range in.Status.Components {
+		if comp.CompStatus != common.ComponentStatusSuccess {
+			return false
+		}
+	}
+	return true
+}
+
+// parseMeta parse metadata
+func (in *Svi) parseMeta(sviMeta *SviMetadata) {
+	if sviMeta != nil {
+		in.Metadata = sviMeta
+	}
+}
+
+// prepareObjectsForReplay prepares an object for replay by setting the unsuccessful components
+// in pending state and returning a list of the components that need to be contacted for the
+// replay of the particular object that called the function.
+func (in *Svi) prepareObjectsForReplay(componentName string, sviSubs []*eventbus.Subscriber) []*eventbus.Subscriber {
+	// We assume that the list of Components that are returned
+	// from DB is ordered based on the priority as that was the
+	// way that has been stored in the DB in first place.
+	sviComponents := in.Status.Components
+	tempSubs := []*eventbus.Subscriber{}
+	for i, comp := range sviComponents {
+		if comp.Name == componentName || comp.CompStatus != common.ComponentStatusSuccess {
+			in.Status.Components[i] = common.Component{Name: comp.Name, CompStatus: common.ComponentStatusPending, Details: ""}
+			tempSubs = append(tempSubs, sviSubs[i])
+		}
+	}
+	if in.Status.SviOperStatus == SviOperStatusUp {
+		in.Status.SviOperStatus = SviOperStatusDown
+	}
+
+	in.ResourceVersion = generateVersion()
+	return tempSubs
+}

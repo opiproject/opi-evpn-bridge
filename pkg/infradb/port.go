@@ -184,3 +184,56 @@ func (in *BridgePort) ToPb() *pb.BridgePort {
 func (in *BridgePort) GetName() string {
 	return in.Name
 }
+
+// setComponentState set the stat of the component
+func (in *BridgePort) setComponentState(component common.Component) {
+	bpComponents := in.Status.Components
+	for i, comp := range bpComponents {
+		if comp.Name == component.Name {
+			in.Status.Components[i] = component
+			break
+		}
+	}
+}
+
+// checkForAllSuccess check if all the components are in Success state
+func (in *BridgePort) checkForAllSuccess() bool {
+	for _, comp := range in.Status.Components {
+		if comp.CompStatus != common.ComponentStatusSuccess {
+			return false
+		}
+	}
+	return true
+}
+
+// parseMeta parse metadata
+func (in *BridgePort) parseMeta(bpMeta *BridgePortMetadata) {
+	if bpMeta != nil {
+		if bpMeta.VPort != "" {
+			in.Metadata.VPort = bpMeta.VPort
+		}
+	}
+}
+
+// prepareObjectsForReplay prepares an object for replay by setting the unsuccessful components
+// in pending state and returning a list of the components that need to be contacted for the
+// replay of the particular object that called the function.
+func (in *BridgePort) prepareObjectsForReplay(componentName string, bpSubs []*eventbus.Subscriber) []*eventbus.Subscriber {
+	// We assume that the list of Components that are returned
+	// from DB is ordered based on the priority as that was the
+	// way that has been stored in the DB in first place.
+	bpComponents := in.Status.Components
+	tempSubs := []*eventbus.Subscriber{}
+	for i, comp := range bpComponents {
+		if comp.Name == componentName || comp.CompStatus != common.ComponentStatusSuccess {
+			in.Status.Components[i] = common.Component{Name: comp.Name, CompStatus: common.ComponentStatusPending, Details: ""}
+			tempSubs = append(tempSubs, bpSubs[i])
+		}
+	}
+	if in.Status.BPOperStatus == BridgePortOperStatusUp {
+		in.Status.BPOperStatus = BridgePortOperStatusDown
+	}
+
+	in.ResourceVersion = generateVersion()
+	return tempSubs
+}

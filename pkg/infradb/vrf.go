@@ -238,3 +238,56 @@ func (in *Vrf) DeleteSvi(sviName string) error {
 func (in *Vrf) GetName() string {
 	return in.Name
 }
+
+// setComponentState set the stat of the component
+func (in *Vrf) setComponentState(component common.Component) {
+	vrfComponents := in.Status.Components
+	for i, comp := range vrfComponents {
+		if comp.Name == component.Name {
+			in.Status.Components[i] = component
+			break
+		}
+	}
+}
+
+// checkForAllSuccess check if all the components are in Success state
+func (in *Vrf) checkForAllSuccess() bool {
+	for _, comp := range in.Status.Components {
+		if comp.CompStatus != common.ComponentStatusSuccess {
+			return false
+		}
+	}
+	return true
+}
+
+// parseMeta parse metadata
+func (in *Vrf) parseMeta(vrfMeta *VrfMetadata) {
+	if vrfMeta != nil {
+		if len(vrfMeta.RoutingTable) > 0 {
+			in.Metadata.RoutingTable = vrfMeta.RoutingTable
+		}
+	}
+}
+
+// prepareObjectsForReplay prepares an object for replay by setting the unsuccessful components
+// in pending state and returning a list of the components that need to be contacted for the
+// replay of the particular object that called the function.
+func (in *Vrf) prepareObjectsForReplay(componentName string, vrfSubs []*eventbus.Subscriber) []*eventbus.Subscriber {
+	// We assume that the list of Components that are returned
+	// from DB is ordered based on the priority as that was the
+	// way that has been stored in the DB in first place.
+	vrfComponents := in.Status.Components
+	tempSubs := []*eventbus.Subscriber{}
+	for i, comp := range vrfComponents {
+		if comp.Name == componentName || comp.CompStatus != common.ComponentStatusSuccess {
+			in.Status.Components[i] = common.Component{Name: comp.Name, CompStatus: common.ComponentStatusPending, Details: ""}
+			tempSubs = append(tempSubs, vrfSubs[i])
+		}
+	}
+	if in.Status.VrfOperStatus == VrfOperStatusUp {
+		in.Status.VrfOperStatus = VrfOperStatusDown
+	}
+
+	in.ResourceVersion = generateVersion()
+	return tempSubs
+}
