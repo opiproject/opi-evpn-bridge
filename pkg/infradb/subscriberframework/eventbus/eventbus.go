@@ -6,6 +6,7 @@
 package eventbus
 
 import (
+	"fmt"
 	"log"
 	"sort"
 	"sync"
@@ -19,7 +20,6 @@ type EventBus struct {
 	subscribers   map[string][]*Subscriber
 	eventHandlers map[string]EventHandler
 	subscriberL   sync.RWMutex
-	publishL      sync.RWMutex
 	mutex         sync.RWMutex
 }
 
@@ -52,10 +52,13 @@ func (e *EventBus) StartSubscriber(moduleName, eventType string, priority int, e
 			for {
 				select {
 				case event := <-subscriber.Ch:
-					log.Printf("\nSubscriber %s for %s received \n", moduleName, eventType)
 
+					log.Printf("\nSubscriber %s for %s received \n", moduleName, eventType)
 					handlerKey := moduleName + "." + eventType
-					if handler, ok := e.eventHandlers[handlerKey]; ok {
+					e.subscriberL.Lock()
+					handler, ok := e.eventHandlers[handlerKey]
+					e.subscriberL.Unlock()
+					if ok {
 						if objectData, ok := event.(*ObjectData); ok {
 							handler.HandleEvent(eventType, objectData)
 						} else {
@@ -65,6 +68,7 @@ func (e *EventBus) StartSubscriber(moduleName, eventType string, priority int, e
 					} else {
 						subscriber.Ch <- "error: no event handler found"
 					}
+
 				case <-subscriber.Quit:
 					log.Printf("\nSubscriber %s  quit \n", subscriber.Name)
 					close(subscriber.Ch)
@@ -90,7 +94,7 @@ func (e *EventBus) Subscribe(moduleName, eventType string, priority int, eventHa
 
 	subscriber := &Subscriber{
 		Name:     moduleName,
-		Ch:       make(chan interface{}, 1),
+		Ch:       make(chan interface{}),
 		Quit:     make(chan bool),
 		Priority: priority,
 	}
@@ -148,10 +152,16 @@ func (e *EventBus) UnsubscribeModule(moduleName string) bool {
 }
 
 // Publish api notifies the subscribers with certain eventType
-func (e *EventBus) Publish(objectData *ObjectData, subscriber *Subscriber) {
-	e.publishL.RLock()
-	defer e.publishL.RUnlock()
-	subscriber.Ch <- objectData
+func (e *EventBus) Publish(objectData *ObjectData, subscriber *Subscriber) error {
+	var err error
+
+	select {
+	case subscriber.Ch <- objectData:
+		log.Printf("Publish(): Notification is sent to subscriber %s\n", subscriber.Name)
+	default:
+		err = fmt.Errorf("channel for subscriber %s is busy", subscriber.Name)
+	}
+	return err
 }
 
 // Unsubscribe the subscriber, which delete the subscriber(all resources will be washed out)
