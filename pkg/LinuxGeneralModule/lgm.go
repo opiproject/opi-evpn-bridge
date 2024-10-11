@@ -94,6 +94,7 @@ func handleLB(objectData *eventbus.ObjectData) {
 		log.Printf("LGM: GetLB error: %s %s\n", err, objectData.Name)
 		comp.Name = lgmComp
 		comp.CompStatus = common.ComponentStatusError
+		comp.Details = fmt.Sprintf("LGM: GetLB error: %s %s\n", err, objectData.Name)
 		if comp.Timer == 0 {
 			comp.Timer = 2 * time.Second
 		} else {
@@ -109,6 +110,7 @@ func handleLB(objectData *eventbus.ObjectData) {
 		log.Printf("LGM: Mismatch in resoruce version %+v\n and lb resource version %+v\n", objectData.ResourceVersion, lb.ResourceVersion)
 		comp.Name = lgmComp
 		comp.CompStatus = common.ComponentStatusError
+		comp.Details = fmt.Sprintf("LGM: Mismatch in resoruce version %+v\n and lb resource version %+v\n", objectData.ResourceVersion, lb.ResourceVersion)
 		if comp.Timer == 0 {
 			comp.Timer = 2 * time.Second
 		} else {
@@ -128,10 +130,10 @@ func handleLB(objectData *eventbus.ObjectData) {
 		}
 	}
 	if lb.Status.LBOperStatus != infradb.LogicalBridgeOperStatusToBeDeleted {
-		status := setUpBridge(lb)
+		details, status := setUpBridge(lb)
 		comp.Name = lgmComp
+		comp.Details = details
 		if status {
-			comp.Details = ""
 			comp.CompStatus = common.ComponentStatusSuccess
 			comp.Timer = 0
 		} else {
@@ -148,8 +150,9 @@ func handleLB(objectData *eventbus.ObjectData) {
 			log.Printf("error in updating lb status: %s\n", err)
 		}
 	} else {
-		status := tearDownBridge(lb)
+		details, status := tearDownBridge(lb)
 		comp.Name = lgmComp
+		comp.Details = details
 		if status {
 			comp.CompStatus = common.ComponentStatusSuccess
 			comp.Timer = 0
@@ -194,6 +197,7 @@ func handlesvi(objectData *eventbus.ObjectData) {
 		log.Printf("LGM: Mismatch in resoruce version %+v\n and svi resource version %+v\n", objectData.ResourceVersion, svi.ResourceVersion)
 		comp.Name = lgmComp
 		comp.CompStatus = common.ComponentStatusError
+		comp.Details = fmt.Sprintf("LGM: Mismatch in resoruce version %+v\n and svi resource version %+v\n", objectData.ResourceVersion, svi.ResourceVersion)
 		if comp.Timer == 0 {
 			comp.Timer = 2 * time.Second
 		} else {
@@ -213,8 +217,9 @@ func handlesvi(objectData *eventbus.ObjectData) {
 		}
 	}
 	if svi.Status.SviOperStatus != infradb.SviOperStatusToBeDeleted {
-		status := setUpSvi(svi)
+		details, status := setUpSvi(svi)
 		comp.Name = lgmComp
+		comp.Details = details
 		if status {
 			comp.CompStatus = common.ComponentStatusSuccess
 			comp.Timer = 0
@@ -232,8 +237,9 @@ func handlesvi(objectData *eventbus.ObjectData) {
 			log.Printf("error in updating svi status: %s\n", err)
 		}
 	} else {
-		status := tearDownSvi(svi)
+		details, status := tearDownSvi(svi)
 		comp.Name = lgmComp
+		comp.Details = details
 		if status {
 			comp.CompStatus = common.ComponentStatusSuccess
 			comp.Timer = 0
@@ -263,6 +269,7 @@ func handlevrf(objectData *eventbus.ObjectData) {
 		log.Printf("LGM: GetVRF error: %s %s\n", err, objectData.Name)
 		comp.Name = lgmComp
 		comp.CompStatus = common.ComponentStatusError
+		comp.Details = fmt.Sprintf("LGM: GetVRF error: %s %s\n", err, objectData.Name)
 		if comp.Timer == 0 { // wait timer is 2 powerof natural numbers ex : 1,2,3...
 			comp.Timer = 2 * time.Second
 		} else {
@@ -278,6 +285,7 @@ func handlevrf(objectData *eventbus.ObjectData) {
 		log.Printf("LGM: Mismatch in resoruce version %+v\n and vrf resource version %+v\n", objectData.ResourceVersion, vrf.ResourceVersion)
 		comp.Name = lgmComp
 		comp.CompStatus = common.ComponentStatusError
+		comp.Details = fmt.Sprintf("LGM: Mismatch in resoruce version %+v\n and vrf resource version %+v\n", objectData.ResourceVersion, vrf.ResourceVersion)
 		if comp.Timer == 0 { // wait timer is 2 powerof natural numbers ex : 1,2,3...
 			comp.Timer = 2 * time.Second
 		} else {
@@ -299,8 +307,8 @@ func handlevrf(objectData *eventbus.ObjectData) {
 	if vrf.Status.VrfOperStatus != infradb.VrfOperStatusToBeDeleted {
 		details, status := setUpVrf(vrf)
 		comp.Name = lgmComp
+		comp.Details = details
 		if status {
-			comp.Details = details
 			comp.CompStatus = common.ComponentStatusSuccess
 			comp.Timer = 0
 		} else {
@@ -317,8 +325,9 @@ func handlevrf(objectData *eventbus.ObjectData) {
 			log.Printf("error in updating vrf status: %s\n", err)
 		}
 	} else {
-		status := tearDownVrf(vrf)
+		details, status := tearDownVrf(vrf)
 		comp.Name = lgmComp
+		comp.Details = details
 		if status {
 			comp.CompStatus = common.ComponentStatusSuccess
 			comp.Timer = 0
@@ -411,42 +420,42 @@ func routingTableBusy(table uint32) (bool, error) {
 }
 
 // setUpBridge sets up the bridge
-func setUpBridge(lb *infradb.LogicalBridge) bool {
+func setUpBridge(lb *infradb.LogicalBridge) (string, bool) {
 	link := fmt.Sprintf("vxlan-%+v", lb.Spec.VlanID)
 	if !reflect.ValueOf(lb.Spec.Vni).IsZero() {
 		brIntf, err := nlink.LinkByName(ctx, brTenant)
 		if err != nil {
 			log.Printf("LGM: Failed to get link information for %s: %v\n", brTenant, err)
-			return false
+			return fmt.Sprintf("LGM: Failed to get link information for %s: %v\n", brTenant, err), false
 		}
 		vxlan := &netlink.Vxlan{LinkAttrs: netlink.LinkAttrs{Name: link, MTU: ipMtu}, VxlanId: int(*lb.Spec.Vni), Port: 4789, Learning: false, SrcAddr: lb.Spec.VtepIP.IP}
 		if err := nlink.LinkAdd(ctx, vxlan); err != nil {
 			log.Printf("LGM: Failed to create Vxlan linki %s: %v\n", link, err)
-			return false
+			return fmt.Sprintf("LGM: Failed to create Vxlan linki %s: %v\n", link, err), false
 		}
 		// Example: ip link set vxlan-<lb-vlan-id> master br-tenant addrgenmode none
 		if err = nlink.LinkSetMaster(ctx, vxlan, brIntf); err != nil {
 			log.Printf("LGM: Failed to add Vxlan %s to bridge %s: %v\n", link, brTenant, err)
-			return false
+			return fmt.Sprintf("LGM: Failed to add Vxlan %s to bridge %s: %v\n", link, brTenant, err), false
 		}
 		// Example: ip link set vxlan-<lb-vlan-id> up
 		if err = nlink.LinkSetUp(ctx, vxlan); err != nil {
 			log.Printf("LGM: Failed to up Vxlan link %s: %v\n", link, err)
-			return false
+			return fmt.Sprintf("LGM: Failed to up Vxlan link %s: %v\n", link, err), false
 		}
 		// Example: bridge vlan add dev vxlan-<lb-vlan-id> vid <lb-vlan-id> pvid untagged
 		if err = nlink.BridgeVlanAdd(ctx, vxlan, uint16(lb.Spec.VlanID), true, true, false, false); err != nil {
 			log.Printf("LGM: Failed to add vlan to bridge %s: %v\n", brTenant, err)
-			return false
+			return fmt.Sprintf("LGM: Failed to add vlan to bridge %s: %v\n", brTenant, err), false
 		}
 		if err = nlink.LinkSetBrNeighSuppress(ctx, vxlan, true); err != nil {
 			log.Printf("LGM: Failed to add bridge %v neigh_suppress: %s\n", vxlan, err)
-			return false
+			return fmt.Sprintf("LGM: Failed to add bridge %v neigh_suppress: %s\n", vxlan, err), false
 		}
 
-		return true
+		return "", true
 	}
-	return true
+	return "", true
 }
 
 // setUpVrf sets up the vrf
@@ -470,7 +479,7 @@ func setUpVrf(vrf *infradb.Vrf) (string, bool) {
 		isBusy, err := routingTableBusy(routingTable)
 		if err != nil {
 			log.Printf("LGM : Error occurred when checking if routing table %d is busy: %+v\n", routingTable, err)
-			return "", false
+			return fmt.Sprintf("LGM : Error occurred when checking if routing table %d is busy: %+v\n", routingTable, err), false
 		}
 		if !isBusy {
 			log.Printf("LGM: Routing Table %d is not busy\n", routingTable)
@@ -486,7 +495,7 @@ func setUpVrf(vrf *infradb.Vrf) (string, bool) {
 		// Not found similar API in viswananda library so retain the linux commands as it is .. not able to get the route list exact vtip table local
 		if !err {
 			log.Printf(" LGM: VTEP IP not found: %+v\n", vrf.Spec.VtepIP)
-			return "", false
+			return fmt.Sprintf(" LGM: VTEP IP not found: %+v\n", vrf.Spec.VtepIP), false
 		}
 	}
 	log.Printf("setUpVrf: %s %d\n", vtip, routingTable)
@@ -498,7 +507,7 @@ func setUpVrf(vrf *infradb.Vrf) (string, bool) {
 	})
 	if linkAdderr != nil {
 		log.Printf("LGM: Error in Adding vrf link table %d\n", routingTable)
-		return "", false
+		return fmt.Sprintf("LGM: Error in Adding vrf link table %d\n", routingTable), false
 	}
 
 	log.Printf("LGM: vrf link %s Added with table id %d\n", vrf.Name, routingTable)
@@ -506,19 +515,19 @@ func setUpVrf(vrf *infradb.Vrf) (string, bool) {
 	link, linkErr := nlink.LinkByName(ctx, path.Base(vrf.Name))
 	if linkErr != nil {
 		log.Printf("LGM : Link %s not found\n", vrf.Name)
-		return "", false
+		return fmt.Sprintf("LGM : Link %s not found\n", vrf.Name), false
 	}
 
 	linkmtuErr := nlink.LinkSetMTU(ctx, link, ipMtu)
 	if linkmtuErr != nil {
 		log.Printf("LGM : Unable to set MTU to link %s \n", vrf.Name)
-		return "", false
+		return fmt.Sprintf("LGM : Unable to set MTU to link %s \n", vrf.Name), false
 	}
 
 	linksetupErr := nlink.LinkSetUp(ctx, link)
 	if linksetupErr != nil {
 		log.Printf("LGM : Unable to set link %s UP \n", vrf.Name)
-		return "", false
+		return fmt.Sprintf("LGM : Unable to set link %s UP \n", vrf.Name), false
 	}
 	Lbip := fmt.Sprintf("%+v", vrf.Spec.LoopbackIP.IP)
 
@@ -529,7 +538,7 @@ func setUpVrf(vrf *infradb.Vrf) (string, bool) {
 	addrErr := nlink.AddrAdd(ctx, link, Addrs)
 	if addrErr != nil {
 		log.Printf("LGM: Unable to set the loopback ip to vrf link %s \n", vrf.Name)
-		return "", false
+		return fmt.Sprintf("LGM: Unable to set the loopback ip to vrf link %s \n", vrf.Name), false
 	}
 
 	log.Printf("LGM: Added Address %s dev %s\n", Lbip, vrf.Name)
@@ -545,7 +554,7 @@ func setUpVrf(vrf *infradb.Vrf) (string, bool) {
 	routeaddErr := nlink.RouteAdd(ctx, &route)
 	if routeaddErr != nil {
 		log.Printf("LGM : Failed in adding Route throw default %+v\n", routeaddErr)
-		return "", false
+		return fmt.Sprintf("LGM : Failed in adding Route throw default %+v\n", routeaddErr), false
 	}
 
 	log.Printf("LGM : Added route throw default table %d proto opi_evpn_br metric 9999\n", routingTable)
@@ -563,7 +572,7 @@ func setUpVrf(vrf *infradb.Vrf) (string, bool) {
 		})
 		if brErr != nil {
 			log.Printf("LGM : Error in added bridge port\n")
-			return "", false
+			return fmt.Sprintf("LGM : Error in added bridge port %v", brErr), false
 		}
 		log.Printf("LGM : Added link br-%s type bridge\n", vrf.Name)
 
@@ -573,36 +582,36 @@ func setUpVrf(vrf *infradb.Vrf) (string, bool) {
 		linkBr, brErr := nlink.LinkByName(ctx, brStr+path.Base(vrf.Name))
 		if brErr != nil {
 			log.Printf("LGM : Error in getting the br-%s\n", vrf.Name)
-			return "", false
+			return fmt.Sprintf("LGM : Error in getting the br-%s\n", vrf.Name), false
 		}
 		hwErr := nlink.LinkSetHardwareAddr(ctx, linkBr, hw)
 		if hwErr != nil {
 			log.Printf("LGM: Failed in the setting Hardware Address\n")
-			return "", false
+			return fmt.Sprintf("LGM: Failed in the setting Hardware Address: %v\n", hwErr), false
 		}
 
 		linkmtuErr := nlink.LinkSetMTU(ctx, linkBr, ipMtu)
 		if linkmtuErr != nil {
 			log.Printf("LGM : Unable to set MTU to link br-%s \n", vrf.Name)
-			return "", false
+			return fmt.Sprintf("LGM : Unable to set MTU to link br-%s \n", vrf.Name), false
 		}
 
 		linkMaster, errMaster := nlink.LinkByName(ctx, path.Base(vrf.Name))
 		if errMaster != nil {
 			log.Printf("LGM : Error in getting the %s\n", vrf.Name)
-			return "", false
+			return fmt.Sprintf("LGM : Error in getting the %s\n", vrf.Name), false
 		}
 
 		err := nlink.LinkSetMaster(ctx, linkBr, linkMaster)
 		if err != nil {
 			log.Printf("LGM : Unable to set the master to br-%s link", vrf.Name)
-			return "", false
+			return fmt.Sprintf("LGM : Unable to set the master to br-%s link", vrf.Name), false
 		}
 
 		linksetupErr = nlink.LinkSetUp(ctx, linkBr)
 		if linksetupErr != nil {
 			log.Printf("LGM : Unable to set link %s UP \n", vrf.Name)
-			return "", false
+			return fmt.Sprintf("LGM : Unable to set link %s UP \n", vrf.Name), false
 		}
 		log.Printf("LGM: link set  br-%s master  %s up mtu \n", vrf.Name, IPMtu)
 
@@ -613,7 +622,7 @@ func setUpVrf(vrf *infradb.Vrf) (string, bool) {
 			LinkAttrs: netlink.LinkAttrs{Name: vxlanStr + path.Base(vrf.Name), MTU: ipMtu}, VxlanId: int(*vrf.Spec.Vni), SrcAddr: SrcVtep, Learning: false, Proxy: true, Port: 4789})
 		if vxlanErr != nil {
 			log.Printf("LGM : Error in added vxlan port\n")
-			return "", false
+			return fmt.Sprintf("LGM : Error in added vxlan port %v\n", vxlanErr), false
 		}
 
 		log.Printf("LGM : link added vxlan-%s type vxlan id %d local %s dstport 4789 nolearning proxy\n", vrf.Name, *vrf.Spec.Vni, vtip)
@@ -621,13 +630,13 @@ func setUpVrf(vrf *infradb.Vrf) (string, bool) {
 		linkVxlan, vxlanErr := nlink.LinkByName(ctx, vxlanStr+path.Base(vrf.Name))
 		if vxlanErr != nil {
 			log.Printf("LGM : Error in getting the %s\n", vxlanStr+vrf.Name)
-			return "", false
+			return fmt.Sprintf("LGM : Error in getting the %s\n", vxlanStr+vrf.Name), false
 		}
 
 		err = nlink.LinkSetMaster(ctx, linkVxlan, linkBr)
 		if err != nil {
 			log.Printf("LGM : Unable to set the master to vxlan-%s link", vrf.Name)
-			return "", false
+			return fmt.Sprintf("LGM : Unable to set the master to vxlan-%s link", vrf.Name), false
 		}
 
 		log.Printf("LGM: vrf Link vxlan setup master\n")
@@ -635,7 +644,7 @@ func setUpVrf(vrf *infradb.Vrf) (string, bool) {
 		linksetupErr = nlink.LinkSetUp(ctx, linkVxlan)
 		if linksetupErr != nil {
 			log.Printf("LGM : Unable to set link %s UP \n", vrf.Name)
-			return "", false
+			return fmt.Sprintf("LGM : Unable to set link %s UP \n", vrf.Name), false
 		}
 	}
 	details := fmt.Sprintf("{\"routingTable\":\"%d\"}", routingTable)
@@ -644,58 +653,58 @@ func setUpVrf(vrf *infradb.Vrf) (string, bool) {
 }
 
 // setUpSvi sets up the svi
-func setUpSvi(svi *infradb.Svi) bool {
+func setUpSvi(svi *infradb.Svi) (string, bool) {
 	BrObj, err := infradb.GetLB(svi.Spec.LogicalBridge)
 	if err != nil {
 		log.Printf("LGM: unable to find key %s and error is %v", svi.Spec.LogicalBridge, err)
-		return false
+		return fmt.Sprintf("LGM: unable to find key %s and error is %v", svi.Spec.LogicalBridge, err), false
 	}
 	linkSvi := fmt.Sprintf("%+v-%+v", path.Base(svi.Spec.Vrf), BrObj.Spec.VlanID)
 	brIntf, err := nlink.LinkByName(ctx, brTenant)
 	if err != nil {
 		log.Printf("LGM : Failed to get link information for %s: %v\n", brTenant, err)
-		return false
+		return fmt.Sprintf("LGM : Failed to get link information for %s: %v\n", brTenant, err), false
 	}
 	if BrObj.Spec.VlanID > math.MaxUint16 {
 		log.Printf("LGM : VlanID %v value passed in Logical Bridge create is greater than 16 bit value\n", BrObj.Spec.VlanID)
-		return false
+		return fmt.Sprintf("LGM : VlanID %v value passed in Logical Bridge create is greater than 16 bit value\n", BrObj.Spec.VlanID), false
 	}
 	vid := uint16(BrObj.Spec.VlanID)
 	if err = nlink.BridgeVlanAdd(ctx, brIntf, vid, false, false, true, false); err != nil {
 		log.Printf("LGM : Failed to add VLAN %d to bridge interface %s: %v\n", vid, brTenant, err)
-		return false
+		return fmt.Sprintf("LGM : Failed to add VLAN %d to bridge interface %s: %v\n", vid, brTenant, err), false
 	}
 	log.Printf("LGM Executed : bridge vlan add dev %s vid %d self\n", brTenant, vid)
 
 	vlanLink := &netlink.Vlan{LinkAttrs: netlink.LinkAttrs{Name: linkSvi, ParentIndex: brIntf.Attrs().Index}, VlanId: int(BrObj.Spec.VlanID)}
 	if err = nlink.LinkAdd(ctx, vlanLink); err != nil {
 		log.Printf("LGM : Failed to add VLAN sub-interface %s: %v\n", linkSvi, err)
-		return false
+		return fmt.Sprintf("LGM : Failed to add VLAN sub-interface %s: %v\n", linkSvi, err), false
 	}
 
 	log.Printf("LGM Executed : ip link add link %s name %s type vlan id %d\n", brTenant, linkSvi, vid)
 	if err = nlink.LinkSetHardwareAddr(ctx, vlanLink, *svi.Spec.MacAddress); err != nil {
 		log.Printf("LGM : Failed to set link %v: %s\n", vlanLink, err)
-		return false
+		return fmt.Sprintf("LGM : Failed to set link %v: %s\n", vlanLink, err), false
 	}
 
 	log.Printf("LGM Executed : ip link set %s address %s\n", linkSvi, *svi.Spec.MacAddress)
 	vrfIntf, err := nlink.LinkByName(ctx, path.Base(svi.Spec.Vrf))
 	if err != nil {
 		log.Printf("LGM : Failed to get link information for %s: %v\n", path.Base(svi.Spec.Vrf), err)
-		return false
+		return fmt.Sprintf("LGM : Failed to get link information for %s: %v\n", path.Base(svi.Spec.Vrf), err), false
 	}
 	if err = nlink.LinkSetMaster(ctx, vlanLink, vrfIntf); err != nil {
 		log.Printf("LGM : Failed to set master for %v: %s\n", vlanLink, err)
-		return false
+		return fmt.Sprintf("LGM : Failed to set master for %v: %s\n", vlanLink, err), false
 	}
 	if err = nlink.LinkSetUp(ctx, vlanLink); err != nil {
 		log.Printf("LGM : Failed to set up link for %v: %s\n", vlanLink, err)
-		return false
+		return fmt.Sprintf("LGM : Failed to set up link for %v: %s\n", vlanLink, err), false
 	}
 	if err = nlink.LinkSetMTU(ctx, vlanLink, ipMtu); err != nil {
 		log.Printf("LGM : Failed to set MTU for %v: %s\n", vlanLink, err)
-		return false
+		return fmt.Sprintf("LGM : Failed to set MTU for %v: %s\n", vlanLink, err), false
 	}
 
 	log.Printf("LGM Executed :  ip link set %s master %s up mtu %d\n", linkSvi, path.Base(svi.Spec.Vrf), ipMtu)
@@ -716,12 +725,12 @@ func setUpSvi(svi *infradb.Svi) bool {
 		}
 		if err := nlink.AddrAdd(ctx, vlanLink, addr); err != nil {
 			log.Printf("LGM: Failed to add ip address %v to %v: %v\n", addr, vlanLink, err)
-			return false
+			return fmt.Sprintf("LGM: Failed to add ip address %v to %v: %v\n", addr, vlanLink, err), false
 		}
 
 		log.Printf("LGM Executed :  ip address add %s dev %+v\n", addr, vlanLink)
 	}
-	return true
+	return "", true
 }
 
 // GenerateMac Generates the random mac
@@ -765,15 +774,15 @@ func NetMaskToInt(mask int) (netmaskint [4]int64) {
 }
 
 // tearDownVrf tears down the vrf
-func tearDownVrf(vrf *infradb.Vrf) bool {
+func tearDownVrf(vrf *infradb.Vrf) (string, bool) {
 	link, err1 := nlink.LinkByName(ctx, path.Base(vrf.Name))
 	if err1 != nil {
 		log.Printf("LGM : Link %s not found %+v\n", vrf.Name, err1)
-		return true
+		return fmt.Sprintf("LGM : Link %s not found %+v\n", vrf.Name, err1), true
 	}
 
 	if path.Base(vrf.Name) == "GRD" {
-		return true
+		return "", true
 	}
 	routingTable := *vrf.Metadata.RoutingTable[0]
 	// Delete the Linux networking artefacts in reverse order
@@ -781,24 +790,24 @@ func tearDownVrf(vrf *infradb.Vrf) bool {
 		linkVxlan, linkErr := nlink.LinkByName(ctx, vxlanStr+path.Base(vrf.Name))
 		if linkErr != nil {
 			log.Printf("LGM : Link vxlan-%s not found %+v\n", vrf.Name, linkErr)
-			return false
+			return fmt.Sprintf("LGM : Link vxlan-%s not found %+v\n", vrf.Name, linkErr), false
 		}
 		delerr := nlink.LinkDel(ctx, linkVxlan)
 		if delerr != nil {
 			log.Printf("LGM: Error in delete vxlan %+v\n", delerr)
-			return false
+			return fmt.Sprintf("LGM: Error in delete vxlan %+v\n", delerr), false
 		}
 		log.Printf("LGM : Delete vxlan-%s\n", vrf.Name)
 
 		linkBr, linkbrErr := nlink.LinkByName(ctx, brStr+path.Base(vrf.Name))
 		if linkbrErr != nil {
 			log.Printf("LGM : Link br-%s not found %+v\n", vrf.Name, linkbrErr)
-			return false
+			return fmt.Sprintf("LGM : Link br-%s not found %+v\n", vrf.Name, linkbrErr), false
 		}
 		delerr = nlink.LinkDel(ctx, linkBr)
 		if delerr != nil {
 			log.Printf("LGM: Error in delete br %+v\n", delerr)
-			return false
+			return fmt.Sprintf("LGM: Error in delete br %+v\n", delerr), false
 		}
 		log.Printf("LGM : Delete br-%s\n", vrf.Name)
 	}
@@ -806,74 +815,74 @@ func tearDownVrf(vrf *infradb.Vrf) bool {
 	flusherr := nlink.RouteFlushTable(ctx, routeTable)
 	if flusherr != nil {
 		log.Printf("LGM: Error in flush table  %+v\n", routeTable)
-		return false
+		return fmt.Sprintf("LGM: Error in flush table  %+v\n", routeTable), false
 	}
 	log.Printf("LGM Executed : ip route flush table %s\n", routeTable)
 	delerr := nlink.LinkDel(ctx, link)
 	if delerr != nil {
 		log.Printf("LGM: Error in delete br %+v\n", delerr)
-		return false
+		return fmt.Sprintf("LGM: Error in delete br %+v\n", delerr), false
 	}
 	log.Printf("LGM :link delete  %s\n", vrf.Name)
-	return true
+	return "", true
 }
 
 // tearDownSvi tears down the svi
-func tearDownSvi(svi *infradb.Svi) bool {
+func tearDownSvi(svi *infradb.Svi) (string, bool) {
 	BrObj, err := infradb.GetLB(svi.Spec.LogicalBridge)
 	if err != nil {
 		log.Printf("LGM: unable to find key %s and error is %v", svi.Spec.LogicalBridge, err)
-		return false
+		return fmt.Sprintf("LGM: unable to find key %s and error is %v", svi.Spec.LogicalBridge, err), false
 	}
 	brIntf, err := nlink.LinkByName(ctx, brTenant)
 	if err != nil {
 		log.Printf("LGM : Failed to get link information for %s: %v\n", brTenant, err)
-		return false
+		return fmt.Sprintf("LGM : Failed to get link information for %s: %v\n", brTenant, err), false
 	}
 	if BrObj.Spec.VlanID > math.MaxUint16 {
 		log.Printf("LGM : VlanID %v value passed in Logical Bridge create is greater than 16 bit value\n", BrObj.Spec.VlanID)
-		return false
+		return fmt.Sprintf("LGM : VlanID %v value passed in Logical Bridge create is greater than 16 bit value\n", BrObj.Spec.VlanID), false
 	}
 	vid := uint16(BrObj.Spec.VlanID)
 	if err = nlink.BridgeVlanDel(ctx, brIntf, vid, false, false, true, false); err != nil {
 		log.Printf("LGM : Failed to Del VLAN %d to bridge interface %s: %v\n", vid, brTenant, err)
-		return false
+		return fmt.Sprintf("LGM : Failed to Del VLAN %d to bridge interface %s: %v\n", vid, brTenant, err), false
 	}
 	log.Printf("LGM Executed : bridge vlan del dev %s vid %d self\n", brTenant, vid)
 	linkSvi := fmt.Sprintf("%+v-%+v", path.Base(svi.Spec.Vrf), BrObj.Spec.VlanID)
 	Intf, err := nlink.LinkByName(ctx, linkSvi)
 	if err != nil {
 		log.Printf("LGM : Failed to get link %s: %v\n", linkSvi, err)
-		return true
+		return fmt.Sprintf("LGM : Failed to get link %s: %v\n", linkSvi, err), true
 	}
 
 	if err = nlink.LinkDel(ctx, Intf); err != nil {
 		log.Printf("LGM : Failed to delete link %s: %v\n", linkSvi, err)
-		return false
+		return fmt.Sprintf("LGM : Failed to delete link %s: %v\n", linkSvi, err), false
 	}
 	log.Printf("LGM: Executed ip link delete %s\n", linkSvi)
 
-	return true
+	return "", true
 }
 
 // tearDownBridge tears down the bridge
-func tearDownBridge(lb *infradb.LogicalBridge) bool {
+func tearDownBridge(lb *infradb.LogicalBridge) (string, bool) {
 	link := fmt.Sprintf("vxlan-%+v", lb.Spec.VlanID)
 	if !reflect.ValueOf(lb.Spec.Vni).IsZero() {
 		Intf, err := nlink.LinkByName(ctx, link)
 		if err != nil {
 			log.Printf("LGM: Failed to get link %s: %v\n", link, err)
-			return true
+			return fmt.Sprintf("LGM: Failed to get link %s: %v\n", link, err), true
 		}
 		if err = nlink.LinkDel(ctx, Intf); err != nil {
 			log.Printf("LGM : Failed to delete link %s: %v\n", link, err)
-			return false
+			return fmt.Sprintf("LGM: Failed to delete link %s: %v\n", link, err), false
 		}
 		log.Printf("LGM: Executed ip link delete %s", link)
 
-		return true
+		return "", true
 	}
-	return true
+	return "", true
 }
 
 // TearDownTenantBridge tears down the bridge
