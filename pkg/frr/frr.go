@@ -474,10 +474,10 @@ func setUpVrf(vrf *infradb.Vrf) (string, bool) {
 		vrfName := fmt.Sprintf("vrf %s", path.Base(vrf.Name))
 		vniID := fmt.Sprintf("vni %s", strconv.Itoa(int(*vrf.Spec.Vni)))
 
-		data, err := frr.FrrZebraCmd(ctx, fmt.Sprintf("configure terminal\n %s\n %s\n exit-vrf\n exit", vrfName, vniID), false)
+		_, err := frr.FrrZebraCmd(ctx, fmt.Sprintf("configure terminal\n %s\n %s\n exit-vrf\n exit", vrfName, vniID), false)
 		if err != nil {
-			log.Printf("FRR: Error Executing frr config t %s %s exit-vrf exit \n Error: is %v data is %v\n", vrfName, vniID, err.Error(), data)
-			return fmt.Sprintf("FRR: Error Executing frr config t %s %s exit-vrf exit data %v \n Error: %v Data: %v\n", vrfName, vniID, data, err, data), false
+			log.Printf("FRR: Error Executing frr config t %s %s exit-vrf exit \n Error: is%v\n", vrfName, vniID, err)
+			return fmt.Sprintf("FRR: Error Executing frr config t %s %s exit-vrf exit \n Error: %v \n", vrfName, vniID, err), false
 		}
 		err = frr.Save(ctx)
 		if err != nil {
@@ -491,10 +491,10 @@ func setUpVrf(vrf *infradb.Vrf) (string, bool) {
 		} else {
 			lbIP = fmt.Sprintf("%+v", vrf.Spec.LoopbackIP.IP)
 		}
-		data, err = frr.FrrBgpCmd(ctx, fmt.Sprintf("configure terminal\n router bgp %+v vrf %s\n bgp router-id %s\n no bgp ebgp-requires-policy\n no bgp hard-administrative-reset\n no bgp graceful-restart notification\n address-family ipv4 unicast\n redistribute connected\n redistribute static\n exit-address-family\n address-family l2vpn evpn\n advertise ipv4 unicast\n exit-address-family\n exit", localas, path.Base(vrf.Name), lbIP), false)
+		_, err = frr.FrrBgpCmd(ctx, fmt.Sprintf("configure terminal\n router bgp %+v vrf %s\n bgp router-id %s\n no bgp ebgp-requires-policy\n no bgp hard-administrative-reset\n no bgp graceful-restart notification\n address-family ipv4 unicast\n redistribute connected\n redistribute static\n exit-address-family\n address-family l2vpn evpn\n advertise ipv4 unicast\n exit-address-family\n exit", localas, path.Base(vrf.Name), lbIP), false)
 		if err != nil {
-			log.Printf("FRR: Error Executing config t bgpVrfName router bgp %+v vrf %s bgp_route_id %s no bgp ebgp-requires-policy exit-vrf exit data %v \n", localas, vrf.Name, lbIP, data)
-			return fmt.Sprintf("FRR: Error Executing config t bgpVrfName router bgp %+v vrf %s bgp_route_id %s no bgp ebgp-requires-policy exit-vrf exit data %v \n", localas, vrf.Name, lbIP, data), false
+			log.Printf("FRR: Error Executing config t bgpVrfName router bgp %+v vrf %s bgp_route_id %s no bgp ebgp-requires-policy exit-vrf exit Error %v \n", localas, vrf.Name, lbIP, err)
+			return fmt.Sprintf("FRR: Error Executing config t bgpVrfName router bgp %+v vrf %s bgp_route_id %s no bgp ebgp-requires-policy exit-vrf exit Error %v \n", localas, vrf.Name, lbIP, err), false
 		}
 		err = frr.Save(ctx)
 		if err != nil {
@@ -579,11 +579,11 @@ func setUpSvi(svi *infradb.Svi) (string, bool) {
 		neighlinkSr := fmt.Sprintf("neighbor %s soft-reconfiguration inbound\n", linkSvi)
 		bgpListen := fmt.Sprintf(" bgp listen range %s peer-group %s\n", svi.Spec.GatewayIPs[0], linkSvi)
 
-		data, err := frr.FrrBgpCmd(ctx, fmt.Sprintf("configure terminal\n %s bgp disable-ebgp-connected-route-check\n %s %s %s %s %s %s exit", bgpVrfName, neighlink, neighlinkRe, neighlinkGw, neighlinkOv, neighlinkSr, bgpListen), false)
+		_, err := frr.FrrBgpCmd(ctx, fmt.Sprintf("configure terminal\n %s bgp disable-ebgp-connected-route-check\n %s %s %s %s %s %s exit", bgpVrfName, neighlink, neighlinkRe, neighlinkGw, neighlinkOv, neighlinkSr, bgpListen), false)
 
 		if err != nil {
-			log.Printf("FRR: Error in conf svi %s %s command %s\n", svi.Name, path.Base(svi.Spec.Vrf), data)
-			return fmt.Sprintf("FRR: Error in conf svi %s %s command %s\n", svi.Name, path.Base(svi.Spec.Vrf), data), false
+			log.Printf("FRR: Error in conf svi %s %s command %s\n", svi.Name, path.Base(svi.Spec.Vrf), err)
+			return fmt.Sprintf("FRR: Error in conf svi %s %s command %s\n", svi.Name, path.Base(svi.Spec.Vrf), err), false
 		}
 		err = frr.Save(ctx)
 		if err != nil {
@@ -607,11 +607,11 @@ func tearDownSvi(svi *infradb.Svi) (string, bool) {
 		bgpVrfName := fmt.Sprintf("router bgp %+v vrf %s", localas, path.Base(svi.Spec.Vrf))
 		noNeigh := fmt.Sprintf("no neighbor %s peer-group", linkSvi)
 
-		data, err := frr.FrrBgpCmd(ctx, fmt.Sprintf("configure terminal\n %s\n %s\n exit", bgpVrfName, noNeigh), false)
+		_, err := frr.FrrBgpCmd(ctx, fmt.Sprintf("configure terminal\n %s\n %s\n exit", bgpVrfName, noNeigh), false)
 
 		if err != nil {
-			log.Printf("FRR: Error in conf Delete vrf/VNI command %s\n", data)
-			return fmt.Sprintf("FRR: Error in conf Delete vrf/VNI command %s\n", data), false
+			log.Printf("FRR: Error in conf Delete vrf/VNI command %s\n", err)
+			return fmt.Sprintf("FRR: Error in conf Delete vrf/VNI command %s\n", err), false
 		}
 		err = frr.Save(ctx)
 		if err != nil {
@@ -630,9 +630,9 @@ func tearDownVrf(vrf *infradb.Vrf) (string, bool) {
 		return "", true
 	}
 
-	data, err := frr.FrrZebraCmd(ctx, fmt.Sprintf("show vrf %s vni\n", path.Base(vrf.Name)), true)
+	_, err := frr.FrrZebraCmd(ctx, fmt.Sprintf("show vrf %s vni\n", path.Base(vrf.Name)), true)
 	if err != nil {
-		log.Printf("FRR: Error  %s\n", data)
+		log.Printf("FRR: Error  %s\n", err)
 		return "", true
 	}
 	err = frr.Save(ctx)
@@ -644,19 +644,19 @@ func tearDownVrf(vrf *infradb.Vrf) (string, bool) {
 		log.Printf("FRR Deleted event")
 		delCmd1 := fmt.Sprintf("no router bgp %+v vrf %s", localas, path.Base(vrf.Name))
 		delCmd2 := fmt.Sprintf("no vrf %s", path.Base(vrf.Name))
-		data, err = frr.FrrBgpCmd(ctx, fmt.Sprintf("configure terminal\n %s\n exit\n", delCmd1), false)
+		_, err = frr.FrrBgpCmd(ctx, fmt.Sprintf("configure terminal\n %s\n exit\n", delCmd1), false)
 		if err != nil {
-			log.Printf("FRR: Error  %s\n", data)
-			return fmt.Sprintf("FRR: Error  %s\n", data), false
+			log.Printf("FRR: Error  %s\n", err)
+			return fmt.Sprintf("FRR: Error  %s\n", err), false
 		}
 		err = frr.Save(ctx)
 		if err != nil {
 			log.Printf("FRR(tearDownVrf): Failed to run save command: %v\n", err)
 		}
-		data, err = frr.FrrZebraCmd(ctx, fmt.Sprintf("configure terminal\n %s\n exit\n", delCmd2), false)
+		_, err = frr.FrrZebraCmd(ctx, fmt.Sprintf("configure terminal\n %s\n exit\n", delCmd2), false)
 		if err != nil {
-			log.Printf("FRR: Error  %s\n", data)
-			return fmt.Sprintf("FRR: Error  %s\n", data), false
+			log.Printf("FRR: Error  %s\n", err)
+			return fmt.Sprintf("FRR: Error  %s\n", err), false
 		}
 		err = frr.Save(ctx)
 		if err != nil {
