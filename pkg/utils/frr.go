@@ -7,7 +7,6 @@ package utils
 import (
 	"bufio"
 	"context"
-	"errors"
 	"fmt"
 	"os/exec"
 	"strings"
@@ -140,9 +139,9 @@ func (n *FrrWrapper) FrrZebraCmd(ctx context.Context, command string, cmdTypeSho
 	// ports defined here https://docs.frrouting.org/en/latest/setup.html#services
 	cmdOutput, cmdError := n.TelnetDialAndCommunicate(ctx, command, zebra)
 	if cmdError != nil {
-		return cmdOutput, cmdError
+		return "", cmdError
 	} else if checkFrrResult(cmdOutput, cmdTypeShow) {
-		return cmdOutput, errors.New("error while running FrrZebraCmd")
+		return "", fmt.Errorf("%s", cmdOutput)
 	}
 	return cmdOutput, cmdError
 }
@@ -152,9 +151,9 @@ func (n *FrrWrapper) FrrBgpCmd(ctx context.Context, command string, cmdTypeShow 
 	// ports defined here https://docs.frrouting.org/en/latest/setup.html#services
 	cmdOutput, cmdError := n.TelnetDialAndCommunicate(ctx, command, bgpd)
 	if cmdError != nil {
-		return cmdOutput, cmdError
+		return "", cmdError
 	} else if checkFrrResult(cmdOutput, cmdTypeShow) {
-		return cmdOutput, errors.New("error while running FrrBgpCmd")
+		return "", fmt.Errorf("%s", cmdOutput)
 	}
 	return cmdOutput, cmdError
 }
