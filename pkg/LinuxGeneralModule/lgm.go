@@ -462,7 +462,6 @@ func setUpBridge(lb *infradb.LogicalBridge) (string, bool) {
 //nolint:funlen,gocognit
 func setUpVrf(vrf *infradb.Vrf) (string, bool) {
 	IPMtu := fmt.Sprintf("%+v", ipMtu)
-	var addKey int
 	if path.Base(vrf.Name) == "GRD" {
 		vrf.Metadata.RoutingTable = make([]*uint32, 2)
 		vrf.Metadata.RoutingTable[0] = new(uint32)
@@ -475,21 +474,15 @@ func setUpVrf(vrf *infradb.Vrf) (string, bool) {
 	vrf.Metadata.RoutingTable[0] = new(uint32)
 	var routingtable uint32
 	name := vrf.Name
-	for {
-		routingtable, _ = RouteTableGen.GetID(name, 0)
-		log.Printf("LGM assigned id %+v for vrf name %s\n", routingtable, vrf.Name)
-		isbusy, err := routingtableBusy(routingtable)
-		if err != nil {
-			log.Printf("LGM : Error occurred when checking if routing table %d is busy: %+v\n", routingtable, err)
-			return fmt.Sprintf("LGM : Error occurred when checking if routing table %d is busy: %+v\n", routingtable, err), false
-		}
-		if !isbusy {
-			log.Printf("LGM: Routing Table %d is not busy\n", routingtable)
-			break
-		}
-		log.Printf("LGM: Routing Table %d is busy\n", routingtable)
-		addKey++
-		name = fmt.Sprintf("%s%d", name, addKey)
+	routingtable, _ = RouteTableGen.GetID(name, 0)
+	log.Printf("LGM assigned id %+v for vrf name %s\n", routingtable, vrf.Name)
+	isbusy, err := routingtableBusy(routingtable)
+	if err != nil {
+		log.Printf("LGM : Error occurred when checking if routing table %d is busy: %+v\n", routingtable, err)
+		return "", false
+	}
+	if !isbusy {
+		log.Printf("LGM: Routing Table %d is not busy\n", routingtable)
 	}
 	var vtip string
 	if !reflect.ValueOf(vrf.Spec.VtepIP).IsZero() {
