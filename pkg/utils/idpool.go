@@ -2,8 +2,7 @@
 // Copyright (c) 2022-2023 Intel Corporation, or its subsidiaries.
 // Copyright (C) 2023 Nordix Foundation.
 
-// Package linuxgeneralmodule is the main package of the application
-
+// Package utils has some utility functions and interfaces
 package utils
 
 import (
@@ -133,11 +132,12 @@ func deleteRef(refSet []interface{}, ref interface{}) []interface{} {
 // ReleaseID get the reference id
 func (ip *IDPool) ReleaseID(key interface{}, ref interface{}) (uint32, uint32) {
 	log.Printf("IDPool:ReleaseID  Releasing id for key %v", key)
-	id := ip.idsInUse[key]
-	if ref == nil {
+	ok := ip.idsInUse[key]
+	if ok == 0 {
 		log.Printf("No id to release for key %v", key)
 		return 0, 0
 	}
+	id := ok
 	refSet := ip.refs[id]
 	if !reflect.ValueOf(refSet).IsZero() && !reflect.ValueOf(ref).IsZero() {
 		refSet = deleteRef(refSet, ref)
