@@ -371,6 +371,10 @@ func Initialize() {
 	ipMtu = config.GlobalConfig.LinuxFrr.IPMtu
 	ctx = context.Background()
 	RouteTableGen = utils.IDPoolInit("RTtable", routingTableMin, routingTableMax)
+	if reflect.DeepEqual(RouteTableGen, utils.IDPool{}) {
+		log.Printf("LGM: Failed in the assigning id \n")
+		return
+	}
 	nlink = utils.NewNetlinkWrapperWithArgs(false)
 	// Set up the static configuration parts
 	_, err := nlink.LinkByName(ctx, brTenant)
