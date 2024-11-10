@@ -588,9 +588,9 @@ func (route *RouteStruct) GetVrfOperStatus() infradb.VrfOperStatus {
 // dumpRouteDB dump the route database
 func dumpRouteDB() string {
 	var s string
-	log.Printf("netlink: Dump Route table:\n")
+
 	s = "Route table:\n"
-	for _, n := range latestRoutes {
+	for _, n := range routes {
 		var via string
 		if n.Route0.Gw == nil {
 			via = strNone
@@ -598,11 +598,9 @@ func dumpRouteDB() string {
 			via = n.Route0.Gw.String()
 		}
 		str := fmt.Sprintf("Route(vrf=%s dst=%s type=%s proto=%s metric=%d  via=%s dev=%s nhid= %+v Table= %d)", n.Vrf.Name, n.Route0.Dst.String(), n.NlType, n.getProto(), n.Route0.Priority, via, nameIndex[n.Route0.LinkIndex], n.Nexthops, n.Route0.Table)
-		log.Println(str)
 		s += str
 		s += "\n"
 	}
-	log.Printf("\n\n\n")
 	s += "\n\n"
 	return s
 }
