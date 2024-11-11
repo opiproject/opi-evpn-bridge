@@ -469,7 +469,7 @@ func setUpVrf(vrf *infradb.Vrf) (string, bool) {
 	if path.Base(vrf.Name) == "GRD" {
 		return "", true
 	}
-	if *vrf.Spec.Vni != 0 {
+	if vrf.Spec.Vni != nil {
 		// Configure the vrf in FRR and set up BGP EVPN for it
 		vrfName := fmt.Sprintf("vrf %s", path.Base(vrf.Name))
 		vniID := fmt.Sprintf("vni %s", strconv.Itoa(int(*vrf.Spec.Vni)))
