@@ -640,7 +640,7 @@ func tearDownVrf(vrf *infradb.Vrf) (string, bool) {
 		log.Printf("FRR(tearDownVrf): Failed to run save command: %v\n", err)
 	}
 	// Clean up FRR last
-	if *vrf.Spec.Vni != 0 {
+	if vrf != nil && *vrf.Spec.Vni != 0 {
 		log.Printf("FRR Deleted event")
 		delCmd1 := fmt.Sprintf("no router bgp %+v vrf %s", localas, path.Base(vrf.Name))
 		delCmd2 := fmt.Sprintf("no vrf %s", path.Base(vrf.Name))
