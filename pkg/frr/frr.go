@@ -462,8 +462,6 @@ func DeInitialize() {
 }
 
 // setUpVrf sets up the vrf
-//
-//nolint:funlen,gocognit
 func setUpVrf(vrf *infradb.Vrf) (string, bool) {
 	// This function must not be executed for the vrf representing the GRD
 	if path.Base(vrf.Name) == "GRD" {
