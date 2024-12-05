@@ -174,21 +174,18 @@ func (l2n *L2NexthopStruct) deepEqual(l2nOld *L2NexthopStruct, nc bool) bool {
 // dumpL2NexthDB dump the l2 nexthop entries
 func dumpL2NexthDB() string {
 	var s string
-	log.Printf("netlink: Dump L2 Nexthop table:\n")
 	s = "L2 Nexthop table:\n"
 	var ip string
-	for _, n := range latestL2Nexthop {
+	for _, n := range l2Nexthops {
 		if n.Dst == nil {
 			ip = strNone
 		} else {
 			ip = n.Dst.String()
 		}
 		str := fmt.Sprintf("L2Nexthop(id=%d dev=%s vlan=%d dst=%s type=%d #fDB entries=%d Resolved=%t) ", n.ID, n.Dev, n.VlanID, ip, n.Type, len(n.FdbRefs), n.Resolved)
-		log.Println(str)
 		s += str
 		s += "\n"
 	}
-	log.Printf("\n\n\n")
 	s += "\n\n"
 	return s
 }

@@ -202,15 +202,12 @@ func (fdb *FdbEntryStruct) deepEqual(fdbOld *FdbEntryStruct, nc bool) bool {
 // dumpFDB dump the fdb entries
 func dumpFDB() string {
 	var s string
-	log.Printf("netlink: Dump fDB table:\n")
 	s = "fDB table:\n"
-	for _, n := range latestFDB {
+	for _, n := range fDB {
 		str := fmt.Sprintf("MacAddr(vlan=%d mac=%s state=%s type=%d l2nh_id=%d) ", n.VlanID, n.Mac, n.State, n.Type, n.Nexthop.ID)
-		log.Println(str)
 		s += str
 		s += "\n"
 	}
-	log.Printf("\n\n\n")
 	s += "\n\n"
 	return s
 }
