@@ -37,24 +37,24 @@ type IDPool struct {
 }
 
 // IDPoolInit initialize mod ptr pool
-func IDPoolInit(name string, min uint32, max uint32) IDPool {
+func IDPoolInit(name string, min uint32, max uint32) (IDPool, bool) {
+	if max < min {
+		log.Printf("IDPool: Failed to Init pool for %s\n", name)
+		return IDPool{}, false
+	}
 	var pool IDPool
 	pool.name = name
 	var index int
 	pool.unusedIDs = make([]uint32, (max-min)+1)
-	if min > 0 {
-		for value := max; value >= min; value-- {
-			pool.unusedIDs[index] = value
-			index++
-		}
-	} else {
-		return IDPool{}
+	for value := max; value >= min; value-- {
+		pool.unusedIDs[index] = value
+		index++
 	}
 	pool.size = len(pool.unusedIDs)
 	pool.idsInUse = make(map[interface{}]uint32)
 	pool.idsForReuse = make(map[interface{}]uint32)
 	pool.refs = make(map[uint32]map[interface{}]bool)
-	return pool
+	return pool, true
 }
 
 // GetPoolStatus get status of a pool
@@ -66,8 +66,7 @@ func (ip *IDPool) GetPoolStatus() string {
 func (ip *IDPool) assignid(key interface{}) uint32 {
 	// Check if there was an id assigned for that key earlier
 	var id uint32
-	ok := ip.idsForReuse[key]
-	if ok != 0 {
+	if _, ok := ip.idsForReuse[key]; ok {
 		// Re-use the old id
 		delete(ip.idsForReuse, key)
 	} else {
@@ -97,15 +96,12 @@ func (ip *IDPool) assignid(key interface{}) uint32 {
 
 // GetID get the mod ptr id from pool
 func (ip *IDPool) GetID(key interface{}, ref interface{}) (uint32, uint32) {
+	var ok bool
 	var id uint32
-	ok := ip.idsInUse[key]
-	if ok == 0 {
-		id = ip.assignid(key)
-		if id == 0 {
+	if id, ok = ip.idsInUse[key]; !ok {
+		if id = ip.assignid(key); id == 0 {
 			return 0, 0
 		}
-	} else {
-		id = ok
 	}
 	if ref != nil {
 		log.Printf("IDPool: GetID  Assigning key : %+v , id  %+v for ref %v", id, key, ref)
@@ -121,13 +117,13 @@ func (ip *IDPool) GetID(key interface{}, ref interface{}) (uint32, uint32) {
 
 // ReleaseID get the reference id
 func (ip *IDPool) ReleaseID(key interface{}, ref interface{}) (uint32, uint32) {
+	var ok bool
+	var id uint32
 	log.Printf("IDPool:ReleaseID  Releasing id for key %v", key)
-	ok := ip.idsInUse[key]
-	if ok == 0 {
+	if id, ok = ip.idsInUse[key]; !ok {
 		log.Printf("No id to release for key %v", key)
 		return 0, 0
 	}
-	id := ok
 	refSet := ip.refs[id]
 	if !reflect.ValueOf(refSet).IsZero() && !reflect.ValueOf(ref).IsZero() {
 		delete(refSet, ref)
