@@ -360,6 +360,7 @@ var RouteTableGen utils.IDPool
 // Initialize initializes the config, logger and subscribers
 func Initialize() {
 	eb := eventbus.EBus
+	var ok bool
 	for _, subscriberConfig := range config.GlobalConfig.Subscribers {
 		if subscriberConfig.Name == lgmComp {
 			for _, eventType := range subscriberConfig.Events {
@@ -370,8 +371,7 @@ func Initialize() {
 	brTenant = "br-tenant"
 	ipMtu = config.GlobalConfig.LinuxFrr.IPMtu
 	ctx = context.Background()
-	RouteTableGen = utils.IDPoolInit("RTtable", routingTableMin, routingTableMax)
-	if reflect.DeepEqual(RouteTableGen, utils.IDPool{}) {
+	if RouteTableGen, ok = utils.IDPoolInit("RTtable", routingTableMin, routingTableMax); !ok {
 		log.Printf("LGM: Failed in the assigning id \n")
 		return
 	}
