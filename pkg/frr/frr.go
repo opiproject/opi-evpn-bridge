@@ -513,14 +513,12 @@ func setUpVrf(vrf *infradb.Vrf) (string, bool) {
 		l2VpnCmd := strings.Split(cp, "json")
 		l2VpnCmd = strings.Split(l2VpnCmd[1], hname)
 		cp = l2VpnCmd[0]
-		if regexp.MustCompile(`^[a-zA-Z0-9]*$`).MatchString(cp) {
-			cp = cp[3 : len(cp)-3]
-		} else {
+		if regexp.MustCompile(`({}){1}`).MatchString(cp) {
 			log.Printf("FRR: unable to get the command %s\n", cmd)
 			return fmt.Sprintf("FRR: unable to get the command %s\n", cmd), false
 		}
 		var bgpL2vpn bgpl2VpnCmd
-		err1 := json.Unmarshal([]byte(fmt.Sprintf("{%v}", cp)), &bgpL2vpn)
+		err1 := json.Unmarshal([]byte(cp), &bgpL2vpn)
 		if err1 != nil {
 			log.Printf("error-%v", err)
 		}
