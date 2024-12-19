@@ -537,15 +537,14 @@ func setUpVrf(vrf *infradb.Vrf) (string, bool) {
 		cp = bgpCmd[0]
 
 		var bgpVrf bgpVrfCmd
-		if len(cp) != 7 {
-			cp = cp[5 : len(cp)-5]
-		} else {
+		if strings.Contains(cp, "warning") {
 			log.Printf("FRR: unable to get the command \"%s\"\n", cmd)
 			return fmt.Sprintf("FRR: unable to get the command \"%s\"\n", cmd), false
 		}
-		err1 = json.Unmarshal([]byte(fmt.Sprintf("{%v}", cp)), &bgpVrf)
+		err1 = json.Unmarshal([]byte(cp), &bgpVrf)
 		if err1 != nil {
 			log.Printf("error-%v", err)
+			return fmt.Sprintf("FRR: unable to unmarshal \"%s\"\n", cmd), false
 		}
 		log.Printf("FRR: Executed show bgp vrf %s json\n", vrf.Name)
 		details := fmt.Sprintf("{ \"rd\":\"%s\",\"rmac\":\"%s\",\"importRts\":[\"%s\"],\"exportRts\":[\"%s\"],\"localAS\":%d }", bgpL2vpn.Rd, bgpL2vpn.Rmac, bgpL2vpn.ImportRts, bgpL2vpn.ExportRts, bgpVrf.LocalAS)
