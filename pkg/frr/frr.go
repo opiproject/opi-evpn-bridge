@@ -15,7 +15,6 @@ import (
 	"os/exec"
 	"os/user"
 	"path"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -513,19 +512,16 @@ func setUpVrf(vrf *infradb.Vrf) (string, bool) {
 		l2VpnCmd := strings.Split(cp, "json")
 		l2VpnCmd = strings.Split(l2VpnCmd[1], hname)
 		cp = l2VpnCmd[0]
-		if regexp.MustCompile(`({}){1}`).MatchString(cp) {
-			log.Printf("FRR: unable to get the command %s\n", cmd)
-			return fmt.Sprintf("FRR: unable to get the command %s\n", cmd), false
-		}
 		var bgpL2vpn bgpl2VpnCmd
 		err1 := json.Unmarshal([]byte(cp), &bgpL2vpn)
 		if err1 != nil {
-			log.Printf("error-%v", err)
+			log.Printf("FRR: unable to get the command %s\n", cmd)
+			return fmt.Sprintf("FRR: Failed in unmarshal the command %s\n", cmd), false
 		}
 		cmd = fmt.Sprintf("show bgp vrf %s json", path.Base(vrf.Name))
 		cp, err = frr.FrrBgpCmd(ctx, cmd, true)
 		if err != nil {
-			log.Printf("error-%v", err)
+			log.Printf("FRR:  unable to get the command %s-%v", cmd, err)
 		}
 		err = frr.Save(ctx)
 		if err != nil {
@@ -537,13 +533,9 @@ func setUpVrf(vrf *infradb.Vrf) (string, bool) {
 		cp = bgpCmd[0]
 
 		var bgpVrf bgpVrfCmd
-		if strings.Contains(cp, "warning") {
-			log.Printf("FRR: unable to get the command \"%s\"\n", cmd)
-			return fmt.Sprintf("FRR: unable to get the command \"%s\"\n", cmd), false
-		}
 		err1 = json.Unmarshal([]byte(cp), &bgpVrf)
 		if err1 != nil {
-			log.Printf("error-%v", err)
+			log.Printf("FRR: unable to get the command %s \"%s\"\n", cp, cmd)
 			return fmt.Sprintf("FRR: unable to unmarshal \"%s\"\n", cmd), false
 		}
 		log.Printf("FRR: Executed show bgp vrf %s json\n", vrf.Name)
