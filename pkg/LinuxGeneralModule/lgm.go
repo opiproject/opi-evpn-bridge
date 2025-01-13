@@ -478,7 +478,7 @@ func setUpVrf(vrf *infradb.Vrf) (string, bool) {
 	vrf.Metadata.RoutingTable[0] = new(uint32)
 	var routingtable uint32
 	name := vrf.Name
-	routingtable, _ = RouteTableGen.GetID(name, 0)
+	routingtable = RouteTableGen.GetID(name)
 	log.Printf("LGM assigned id %+v for vrf name %s\n", routingtable, vrf.Name)
 	isbusy, err := routingtableBusy(routingtable)
 	if err != nil {
