@@ -95,7 +95,21 @@ func (ip *IDPool) assignid(key interface{}) uint32 {
 }
 
 // GetID get the mod ptr id from pool
-func (ip *IDPool) GetID(key interface{}, ref interface{}) (uint32, uint32) {
+func (ip *IDPool) GetID(key interface{}) uint32 {
+	var ok bool
+	var id uint32
+	if id, ok = ip.idsInUse[key]; !ok {
+		if id = ip.assignid(key); id == 0 {
+			log.Printf("IDPool: GetID Assigning failed id %v for key %v ", id, key)
+			return 0
+		}
+		log.Printf("IDPool: GetID Assigning id %v for key %v ", id, key)
+	}
+	return id
+}
+
+// GetIDWithRef get the mod ptr id from pool with Referenbce
+func (ip *IDPool) GetIDWithRef(key interface{}, ref interface{}) (uint32, uint32) {
 	var ok bool
 	var id uint32
 	if id, ok = ip.idsInUse[key]; !ok {
@@ -115,11 +129,26 @@ func (ip *IDPool) GetID(key interface{}, ref interface{}) (uint32, uint32) {
 	return id, uint32(0)
 }
 
-// ReleaseID get the reference id
-func (ip *IDPool) ReleaseID(key interface{}, ref interface{}) (uint32, uint32) {
+// ReleaseID get the reference id 
+func (ip *IDPool) ReleaseID(key interface{}) uint32 {
 	var ok bool
 	var id uint32
 	log.Printf("IDPool:ReleaseID  Releasing id for key %v", key)
+	if id, ok = ip.idsInUse[key]; !ok {
+		log.Printf("No id to release for key %v", key)
+		return 0
+	}
+	delete(ip.idsInUse, key)
+	ip.idsForReuse[key] = id
+	log.Printf("IDPool:ReleaseID Id %v has been released", id)
+	return id
+}
+
+// ReleaseIDWithRef get the reference id
+func (ip *IDPool) ReleaseIDWithRef(key interface{}, ref interface{}) (uint32, uint32) {
+	var ok bool
+	var id uint32
+	log.Printf("IDPool:ReleaseIDWithRef  Releasing id for key %v", key)
 	if id, ok = ip.idsInUse[key]; !ok {
 		log.Printf("No id to release for key %v", key)
 		return 0, 0
@@ -132,9 +161,9 @@ func (ip *IDPool) ReleaseID(key interface{}, ref interface{}) (uint32, uint32) {
 		delete(ip.idsInUse, key)
 		delete(ip.refs, id)
 		ip.idsForReuse[key] = id
-		log.Printf("IDPool:ReleaseID Id %v has been released", id)
+		log.Printf("IDPool:ReleaseIDWithId Id %v has been released", id)
 	} else {
-		log.Printf("IDPool:ReleaseID Keep id:%+v remaining references %+v", id, len(refSet))
+		log.Printf("IDPool:ReleaseIDWithRef Keep id:%+v remaining references %+v", id, len(refSet))
 	}
 	if ref != nil {
 		return id, uint32(len(refSet))
