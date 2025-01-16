@@ -129,7 +129,7 @@ func (ip *IDPool) GetIDWithRef(key interface{}, ref interface{}) (uint32, uint32
 	return id, uint32(0)
 }
 
-// ReleaseID get the reference id 
+// ReleaseID get the reference id
 func (ip *IDPool) ReleaseID(key interface{}) uint32 {
 	var ok bool
 	var id uint32
