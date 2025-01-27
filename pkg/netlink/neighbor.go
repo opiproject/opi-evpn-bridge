@@ -291,7 +291,6 @@ func (neigh NeighStruct) neighborAnnotate() NeighStruct {
 // dumpNeighDB dump the neighbor entries
 func dumpNeighDB() string {
 	var s string
-	log.Printf("netlink: Dump Neighbor table:\n")
 	s = "Neighbor table:\n"
 	for _, n := range latestNeighbors {
 		var Proto string
@@ -301,7 +300,6 @@ func dumpNeighDB() string {
 			Proto = n.Protocol
 		}
 		str := fmt.Sprintf("Neighbor(vrf=%s dst=%s lladdr=%s dev=%s proto=%s state=%s Type : %d) ", n.VrfName, n.Neigh0.IP.String(), n.Neigh0.HardwareAddr.String(), nameIndex[n.Neigh0.LinkIndex], Proto, getStateStr(n.Neigh0.State), n.Type)
-		log.Println(str)
 		s += str
 		s += "\n"
 	}

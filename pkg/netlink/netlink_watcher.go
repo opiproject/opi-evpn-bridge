@@ -8,6 +8,7 @@ package netlink
 import (
 	"context"
 	"log"
+	sync "sync"
 
 	"time"
 
@@ -17,6 +18,9 @@ import (
 	"github.com/opiproject/opi-evpn-bridge/pkg/infradb"
 	"github.com/opiproject/opi-evpn-bridge/pkg/utils"
 )
+
+// Define a global mutex
+var mu sync.Mutex
 
 // deleteLatestDB deletes the latest db snap
 func deleteLatestDB() {
@@ -98,6 +102,14 @@ func annotateDBEntries() {
 	annotateMap(latestL2Nexthop)
 }
 
+// DumpDatabases reads the latest netlink state
+func DumpDatabases() (string, error) {
+	mu.Lock()
+	defer mu.Unlock() // Ensure the mutex is unlocked when the function exits
+	dump, err := dumpDBs()
+	return dump, err
+}
+
 // readLatestNetlinkState reads the latest netlink state
 func readLatestNetlinkState() {
 	grdVrf, err := infradb.GetVrf("//network.opiproject.org/vrfs/GRD")
@@ -116,11 +128,13 @@ func readLatestNetlinkState() {
 			m[i].addFdbEntry()
 		}
 	}
-	dumpDBs()
 }
 
 // resyncWithKernel fun resyncs with kernal db
 func resyncWithKernel() {
+	mu.Lock()
+	defer mu.Unlock() // Ensure the mutex is unlocked when the function exits
+
 	// Build a new DB snapshot from netlink and other sources
 	readLatestNetlinkState()
 	// Annotate the latest DB entries
@@ -133,6 +147,7 @@ func resyncWithKernel() {
 	nexthops = latestNexthop
 	fDB = latestFDB
 	l2Nexthops = latestL2Nexthop
+
 	deleteLatestDB()
 }
 
@@ -188,6 +203,8 @@ func getlink() {
 	}
 }
 
+const grpcPort uint16 = 50152
+
 // Initialize function intializes config
 func Initialize() {
 	pollInterval = config.GlobalConfig.Netlink.PollInterval
@@ -201,6 +218,8 @@ func Initialize() {
 		log.Printf("netlink: netlink_monitor disabled")
 		return
 	}
+
+	go RunMgmtGrpcServer(grpcPort)
 	for i := 0; i < len(config.GlobalConfig.Interfaces.PhyPorts); i++ {
 		phyPorts[config.GlobalConfig.Interfaces.PhyPorts[i].Rep] = config.GlobalConfig.Interfaces.PhyPorts[i].Vsi
 	}
