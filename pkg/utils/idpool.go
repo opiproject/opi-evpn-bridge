@@ -8,7 +8,6 @@ package utils
 import (
 	"fmt"
 	"log"
-	"reflect"
 )
 
 // IDPool structure
@@ -108,18 +107,15 @@ func (ip *IDPool) GetID(key interface{}) uint32 {
 	return id
 }
 
-// GetIDWithRef get the mod ptr id from pool with Referenbce
+// GetIDWithRef get the mod ptr id from pool with Reference
 func (ip *IDPool) GetIDWithRef(key interface{}, ref interface{}) (uint32, uint32) {
-	var ok bool
 	var id uint32
-	if id, ok = ip.idsInUse[key]; !ok {
-		if id = ip.assignid(key); id == 0 {
-			return 0, 0
-		}
+	if id = ip.GetID(key); id == 0 {
+		return 0, 0
 	}
 	if ref != nil {
 		log.Printf("IDPool: GetID  Assigning key : %+v , id  %+v for ref %v", id, key, ref)
-		if reflect.ValueOf(ip.refs[id]).IsZero() {
+		if ip.refs[id] == nil {
 			ip.refs[id] = make(map[interface{}]bool, 0)
 		}
 		ip.refs[id][ref] = true
@@ -133,11 +129,15 @@ func (ip *IDPool) GetIDWithRef(key interface{}, ref interface{}) (uint32, uint32
 func (ip *IDPool) ReleaseID(key interface{}) uint32 {
 	var ok bool
 	var id uint32
-	log.Printf("IDPool:ReleaseID  Releasing id for key %v", key)
 	if id, ok = ip.idsInUse[key]; !ok {
 		log.Printf("No id to release for key %v", key)
 		return 0
 	}
+	if ip.refs[id] != nil {
+		log.Printf("IDPool:ReleaseID %d for  key %v is having references cannot be released,use ReleaseIDWithRef function instead", id, key)
+		return 0
+	}
+	log.Printf("IDPool:ReleaseID  Releasing id for key %v", key)
 	delete(ip.idsInUse, key)
 	ip.idsForReuse[key] = id
 	log.Printf("IDPool:ReleaseID Id %v has been released", id)
@@ -148,13 +148,13 @@ func (ip *IDPool) ReleaseID(key interface{}) uint32 {
 func (ip *IDPool) ReleaseIDWithRef(key interface{}, ref interface{}) (uint32, uint32) {
 	var ok bool
 	var id uint32
-	log.Printf("IDPool:ReleaseIDWithRef  Releasing id for key %v", key)
 	if id, ok = ip.idsInUse[key]; !ok {
 		log.Printf("No id to release for key %v", key)
 		return 0, 0
 	}
+	log.Printf("IDPool:ReleaseIDWithRef  Releasing id for key %v", key)
 	refSet := ip.refs[id]
-	if !reflect.ValueOf(refSet).IsZero() && !reflect.ValueOf(ref).IsZero() {
+	if refSet != nil && ref != nil {
 		delete(refSet, ref)
 	}
 	if len(refSet) == 0 {
