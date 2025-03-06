@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"net"
-	"os"
 	"reflect"
 	"sync/atomic"
 
@@ -162,31 +161,20 @@ func netMaskToInt(mask int) (netmaskint [4]uint8) {
 }
 
 // dumpDBs dumps the databse
-func dumpDBs() {
-	file, err := os.OpenFile("netlink_dump", os.O_WRONLY|os.O_CREATE, 0600)
-	if err != nil {
-		panic(err)
-	}
-	if err := os.Truncate("netlink_dump", 0); err != nil {
-		log.Printf("netlink: Failed to truncate: %v", err)
-	}
+func dumpDBs() (string, error) {
 	str := dumpRouteDB()
-	log.Printf("\n")
+
 	str += dumpNexthDB()
-	log.Printf("\n")
+
 	str += dumpNeighDB()
-	log.Printf("\n")
+
 	str += dumpFDB()
-	log.Printf("\n")
+
 	str += dumpL2NexthDB()
-	_, err = file.WriteString(str)
-	if err != nil {
-		log.Printf("netlink: %v", err)
+	if str == "" {
+		return str, fmt.Errorf("no entries in database")
 	}
-	err = file.Close()
-	if err != nil {
-		log.Printf("netlink: error closing file: %v", err)
-	}
+	return str, nil
 }
 
 // checkProto checks the proto type
