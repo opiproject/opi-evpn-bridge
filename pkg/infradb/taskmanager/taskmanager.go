@@ -114,7 +114,7 @@ func (t *TaskManager) StatusUpdated(name, objectType, resourceVersion, notificat
 
 // ReplayFinished notifies that the replay of objects has finished
 func (t *TaskManager) ReplayFinished() {
-	close(t.replayChan)
+	t.replayChan <- struct{}{}
 	log.Println("ReplayFinished(): Replay has finished.")
 }
 
