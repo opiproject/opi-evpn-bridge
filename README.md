@@ -155,3 +155,11 @@ docker run -v "$PWD":/src -w /src vektra/mockery --config=utils/mocks/.mockery.y
 ![OPI EVPN Bridge Diagram for L3VXLAN Symmetric IRB](./docs/OPI-EVPN-L3-Symmetric-IRB.png)
 ![OPI EVPN Bridge Diagram for L2VXLAN in_Symmetric IRB](./docs/OPI-EVPN-L2-VXLAN-In-Symmetric-IRB-setup.png)
 ![OPI EVPN Bridge Diagram for Leaf1_Detailed_View](./docs/OPI-EVPN-Leaf1-Detailed-View.png)
+
+---
+
+## Funding & Initiative
+KeeCEK is part of the Important Projects of Common European Interest – Cloud Infrastructure and Services (8ra/IPCEI-CIS) initiative. 8ra/IPCEI-CIS aims to establish a Multi-Provider Cloud-Edge Continuum across Europe – a cloud ecosystem designed to revolutionize data processing in the next generation of cloud and edge infrastructure and services. The initiative represents a united European effort and stands under a common governance mandated by the community of industrial partners and member states.<br><br>
+**More info:** [https://8ra.com/ipcei-cis/](https://8ra.com/ipcei-cis/)
+
+![Funding](https://github.com/opi-evpn-bridge/docs/BMWE2025_NextGenEU_gef_en_RGB.png)
