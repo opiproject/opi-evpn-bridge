@@ -292,7 +292,7 @@ services:
       /entrypoint.sh ls localhost:50151 opi_api.network.evpn_gw.v1alpha1.BridgePortService.DeleteBridgePort -l && \
       /entrypoint.sh ls localhost:50151 opi_api.network.evpn_gw.v1alpha1.BridgePortService.UpdateBridgePort -l && \
       echo toremove && \
-      apt update && apt install iproute2 -y && \
+      rm -f /etc/apt/sources.list.d/nodesource.list && apt update && apt install iproute2 -y && \
       echo create && \
       /entrypoint.sh call --json_input --json_output localhost:50151 CreateVrf            "{\"vrf_id\"            : \"blue\",          \"vrf\" :             {\"spec\" : {               \"loopback_ip_prefix\": {\"addr\": {\"af\": \"IP_AF_INET\", \"v4_addr\": 167772418}, \"len\": 32}, \"vtep_ip_prefix\": {\"addr\": {\"af\": \"IP_AF_INET\", \"v4_addr\": 167772162}, \"len\": 32} }} }" && \
       /entrypoint.sh call --json_input --json_output localhost:50151 CreateVrf            "{\"vrf_id\"            : \"green\",         \"vrf\" :             {\"spec\" : {\"vni\" : 100, \"loopback_ip_prefix\": {\"addr\": {\"af\": \"IP_AF_INET\", \"v4_addr\": 167772674}, \"len\": 32}, \"vtep_ip_prefix\": {\"addr\": {\"af\": \"IP_AF_INET\", \"v4_addr\": 167772162}, \"len\": 32} }} }" && \
