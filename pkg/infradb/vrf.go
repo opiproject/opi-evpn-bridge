@@ -63,21 +63,23 @@ type Vrf struct {
 	Metadata        *VrfMetadata
 	Svis            map[string]bool
 	ResourceVersion string
+	IsGRD           bool  // identifies GRD VRF internally
 }
 
 // build time check that struct implements interface
 var _ EvpnObject[*pb.Vrf] = (*Vrf)(nil)
 
 // NewVrfWithArgs creates a vrf object by passing arguments
-func NewVrfWithArgs(name string, vni *uint32, loopbackIP, vtepIP *net.IPNet) (*Vrf, error) {
+func NewVrfWithArgs(name string, vni *uint32, loopbackIP, vtepIP *net.IPNet, isGRD bool) (*Vrf, error) {
 	components := make([]common.Component, 0)
 	vrf := &Vrf{
-		Spec:            &VrfSpec{},
-		Status:          &VrfStatus{},
-		Metadata:        &VrfMetadata{},
-		Svis:            make(map[string]bool),
-		ResourceVersion: generateVersion(),
-	}
+	Spec:            &VrfSpec{},
+	Status:          &VrfStatus{},
+	Metadata:        &VrfMetadata{},
+	Svis:            make(map[string]bool),
+	ResourceVersion: generateVersion(),
+	IsGRD:           isGRD,  // set GRD flag
+}
 
 	if name == "" {
 		err := fmt.Errorf("NewVrfWithArgs(): Vrf name cannot be empty")

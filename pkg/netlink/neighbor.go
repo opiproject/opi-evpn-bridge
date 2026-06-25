@@ -271,18 +271,20 @@ func (neigh NeighStruct) neighborAnnotate() NeighStruct {
 			neigh.Metadata["l2_nh"] = fdbEntry.Nexthop
 			neigh.Type = VXLAN // confirm this later
 		}
-	} else if path.Base(neigh.VrfName) == "GRD" && phyFlag && neigh.Protocol != zebraStr {
-		vrf, _ := infradb.GetVrf("//network.opiproject.org/vrfs/GRD")
-		r, ok := lookupRoute(neigh.Neigh0.IP, vrf)
-		if ok {
-			if r.Nexthops[0].nexthop.LinkIndex == neigh.Neigh0.LinkIndex {
-				neigh.Type = PHY
-				neigh.Metadata["vport_id"] = phyPorts[nameIndex[neigh.Neigh0.LinkIndex]]
+	} else if phyFlag && neigh.Protocol != zebraStr {
+		vrf, _ := infradb.GetVrf(neigh.VrfName)
+		if vrf != nil && vrf.IsGRD {
+			r, ok := lookupRoute(neigh.Neigh0.IP, vrf)
+			if ok {
+				if r.Nexthops[0].nexthop.LinkIndex == neigh.Neigh0.LinkIndex {
+					neigh.Type = PHY
+					neigh.Metadata["vport_id"] = phyPorts[nameIndex[neigh.Neigh0.LinkIndex]]
+				} else {
+					neigh.Type = IGNORE
+				}
 			} else {
-				neigh.Type = IGNORE
+				neigh.Type = OTHER
 			}
-		} else {
-			neigh.Type = OTHER
 		}
 	}
 	return neigh

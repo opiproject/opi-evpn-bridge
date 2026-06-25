@@ -274,7 +274,7 @@ func runGatewayServer(grpcPort uint16, httpPort uint16) {
 
 // createGrdVrf creates the grd vrf with vni 0
 func createGrdVrf() error {
-	grdVrf, err := infradb.NewVrfWithArgs("//network.opiproject.org/vrfs/GRD", nil, nil, nil)
+	grdVrf, err := infradb.NewVrfWithArgs("//network.opiproject.org/vrfs/GRD", nil, nil, nil, true)
 	if err != nil {
 		log.Printf("CreateGrdVrf(): Error in initializing GRD VRF object %+v\n", err)
 		return err
