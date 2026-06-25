@@ -466,7 +466,7 @@ func setUpBridge(lb *infradb.LogicalBridge) (string, bool) {
 //nolint:funlen,gocognit
 func setUpVrf(vrf *infradb.Vrf) (string, bool) {
 	IPMtu := fmt.Sprintf("%+v", ipMtu)
-	if path.Base(vrf.Name) == "GRD" {
+	if vrf.IsGRD {
 		vrf.Metadata.RoutingTable = make([]*uint32, 2)
 		vrf.Metadata.RoutingTable[0] = new(uint32)
 		vrf.Metadata.RoutingTable[1] = new(uint32)
@@ -782,7 +782,7 @@ func tearDownVrf(vrf *infradb.Vrf) (string, bool) {
 		return fmt.Sprintf("LGM : Link %s not found %+v\n", vrf.Name, err1), true
 	}
 
-	if path.Base(vrf.Name) == "GRD" {
+	if vrf.IsGRD {
 		return "", true
 	}
 	routingtable := *vrf.Metadata.RoutingTable[0]

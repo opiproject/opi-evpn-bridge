@@ -463,7 +463,7 @@ func DeInitialize() {
 // setUpVrf sets up the vrf
 func setUpVrf(vrf *infradb.Vrf) (string, bool) {
 	// This function must not be executed for the vrf representing the GRD
-	if path.Base(vrf.Name) == "GRD" {
+	if vrf.IsGRD {
 		return "", true
 	}
 	if vrf.Spec.Vni != nil {
@@ -613,7 +613,7 @@ func tearDownSvi(svi *infradb.Svi) (string, bool) {
 // tearDownVrf tears down vrf
 func tearDownVrf(vrf *infradb.Vrf) (string, bool) {
 	// This function must not be executed for the vrf representing the GRD
-	if path.Base(vrf.Name) == "GRD" {
+	if vrf.IsGRD {
 		return "", true
 	}
 

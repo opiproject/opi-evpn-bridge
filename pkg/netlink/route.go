@@ -451,7 +451,7 @@ func (route *RouteStruct) annotate() {
 	}
 	if len(route.Nexthops) != 0 {
 		nexthop := route.Nexthops[0]
-		if route.Vrf.Spec.Vni == nil { // GRD
+		if route.Vrf.IsGRD { // GRD
 			switch nexthop.NhType {
 			case PHY:
 				route.Metadata["direction"] = RXTX
