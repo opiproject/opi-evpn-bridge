@@ -431,7 +431,11 @@ func setUpBridge(lb *infradb.LogicalBridge) (string, bool) {
 			log.Printf("LGM: Failed to get link information for %s: %v\n", brTenant, err)
 			return fmt.Sprintf("LGM: Failed to get link information for %s: %v\n", brTenant, err), false
 		}
-		vxlan := &netlink.Vxlan{LinkAttrs: netlink.LinkAttrs{Name: link, MTU: ipMtu}, VxlanId: int(*lb.Spec.Vni), Port: 4789, Learning: false, SrcAddr: lb.Spec.VtepIP.IP}
+		var SrcAddr net.IP
+		if lb.Spec.VtepIP != nil {
+			SrcAddr = lb.Spec.VtepIP.IP
+		}
+		vxlan := &netlink.Vxlan{LinkAttrs: netlink.LinkAttrs{Name: link, MTU: ipMtu}, VxlanId: int(*lb.Spec.Vni), Port: 4789, Learning: false, SrcAddr: SrcAddr}
 		if err := nlink.LinkAdd(ctx, vxlan); err != nil {
 			log.Printf("LGM: Failed to create Vxlan linki %s: %v\n", link, err)
 			return fmt.Sprintf("LGM: Failed to create Vxlan linki %s: %v\n", link, err), false
@@ -489,7 +493,7 @@ func setUpVrf(vrf *infradb.Vrf) (string, bool) {
 		log.Printf("LGM: Routing Table %d is not busy\n", routingtable)
 	}
 	var vtip string
-	if !reflect.ValueOf(vrf.Spec.VtepIP).IsZero() {
+	if vrf.Spec.VtepIP != nil {
 		vtip = fmt.Sprintf("%+v", vrf.Spec.VtepIP.IP)
 		// Verify that the specified VTEP IP exists as local IP
 		err := nlink.RouteListIPTable(ctx, vtip)
@@ -618,7 +622,10 @@ func setUpVrf(vrf *infradb.Vrf) (string, bool) {
 
 		// Create the VXLAN link in the external bridge
 
-		SrcVtep := vrf.Spec.VtepIP.IP
+		var SrcVtep net.IP
+		if vrf.Spec.VtepIP != nil {
+			SrcVtep = vrf.Spec.VtepIP.IP
+		}
 		vxlanErr := nlink.LinkAdd(ctx, &netlink.Vxlan{
 			LinkAttrs: netlink.LinkAttrs{Name: vxlanStr + path.Base(vrf.Name), MTU: ipMtu}, VxlanId: int(*vrf.Spec.Vni), SrcAddr: SrcVtep, Learning: false, Proxy: true, Port: 4789})
 		if vxlanErr != nil {

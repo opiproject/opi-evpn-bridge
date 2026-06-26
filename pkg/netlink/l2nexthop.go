@@ -116,7 +116,9 @@ func (l2n *L2NexthopStruct) annotate() {
 			//# Remote EVPN MAC address learned on the VXLAN interface
 			//# The L2 nexthop must have a destination IP address in dst
 			l2n.Resolved = false
-			l2n.Metadata["local_vtep_ip"] = *lb.Spec.VtepIP
+			if lb.Spec.VtepIP != nil {
+				l2n.Metadata["local_vtep_ip"] = *lb.Spec.VtepIP
+			}
 			l2n.Metadata["remote_vtep_ip"] = l2n.Dst
 			l2n.Metadata["vni"] = *lb.Spec.Vni
 			//# The below physical nexthops are needed to transmit the VXLAN-encapsuleted packets
