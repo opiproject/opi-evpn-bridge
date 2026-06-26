@@ -338,8 +338,10 @@ func (nexthop *NexthopStruct) annotate() {
 		if len(rmac) == 0 {
 			nexthop.Resolved = false
 		}
-		vtepip := v.Spec.VtepIP.IP
-		nexthop.Metadata["local_vtep_ip"] = vtepip.String()
+		if v.Spec.VtepIP != nil {
+			vtepip := v.Spec.VtepIP.IP
+			nexthop.Metadata["local_vtep_ip"] = vtepip.String()
+		}
 		nexthop.Metadata["vni"] = *nexthop.Vrf.Spec.Vni
 		if nexthop.Neighbor.Type == PHY {
 			r, ok := lookupRoute(nexthop.nexthop.Gw, v)

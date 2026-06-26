@@ -14,10 +14,8 @@ import (
 
 	// "time"
 	pb "github.com/opiproject/opi-api/network/evpn-gw/v1alpha1/gen/go"
-	"github.com/opiproject/opi-evpn-bridge/pkg/config"
 	"github.com/opiproject/opi-evpn-bridge/pkg/infradb/common"
 	"github.com/opiproject/opi-evpn-bridge/pkg/infradb/subscriberframework/eventbus"
-	"github.com/opiproject/opi-evpn-bridge/pkg/utils"
 )
 
 // VrfOperStatus operational Status for VRFs
@@ -131,13 +129,10 @@ func NewVrf(in *pb.Vrf) (*Vrf, error) {
 	lip := net.IPNet{IP: loopip, Mask: net.CIDRMask(int(in.Spec.LoopbackIpPrefix.Len), 32)}
 
 	// Parse vtep IP
-	if in.Spec.VtepIpPrefix != nil {
+	if in.Spec.VtepIpPrefix != nil && in.Spec.VtepIpPrefix.Addr != nil {
 		vtepip := make(net.IP, 4)
 		binary.BigEndian.PutUint32(vtepip, in.Spec.VtepIpPrefix.Addr.GetV4Addr())
 		vip = &net.IPNet{IP: vtepip, Mask: net.CIDRMask(int(in.Spec.VtepIpPrefix.Len), 32)}
-	} else {
-		tmpVtepIP := utils.GetIPAddress(config.GlobalConfig.LinuxFrr.DefaultVtep)
-		vip = &tmpVtepIP
 	}
 
 	subscribers := eventbus.EBus.GetSubscribers("vrf")
