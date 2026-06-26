@@ -543,3 +543,68 @@ func Test_ListVrfs(t *testing.T) {
 		})
 	}
 }
+
+func Test_ListVrfs_Pagination(t *testing.T) {
+	ctx := context.Background()
+	env := newTestEnv(ctx, t)
+	defer env.Close()
+	client := pb.NewVrfServiceClient(env.conn)
+
+	// Create 2 VRFs
+	vrf1 := &pb.Vrf{
+		Name: resourceIDToFullName("vrf-1"),
+		Spec: testVrf.Spec,
+	}
+	vrf2 := &pb.Vrf{
+		Name: resourceIDToFullName("vrf-2"),
+		Spec: testVrf.Spec,
+	}
+	_, err := env.opi.createVrf(vrf1)
+	if err != nil {
+		t.Fatalf("failed to create vrf1: %v", err)
+	}
+	_, err = env.opi.createVrf(vrf2)
+	if err != nil {
+		t.Fatalf("failed to create vrf2: %v", err)
+	}
+
+	// 1. Get first page, PageSize = 1
+	req1 := &pb.ListVrfsRequest{PageSize: 1}
+	res1, err := client.ListVrfs(ctx, req1)
+	if err != nil {
+		t.Fatalf("ListVrfs page 1 failed: %v", err)
+	}
+
+	// Assert only 1 VRF is returned, and NextPageToken is NOT empty
+	if len(res1.GetVrfs()) != 1 {
+		t.Errorf("expected 1 vrf in page 1, got %d", len(res1.GetVrfs()))
+	}
+	if res1.GetNextPageToken() == "" {
+		t.Errorf("expected next page token to be non-empty")
+	}
+
+	// 2. Get second page, PageSize = 1, PageToken = res1.GetNextPageToken()
+	req2 := &pb.ListVrfsRequest{PageSize: 1, PageToken: res1.GetNextPageToken()}
+	res2, err := client.ListVrfs(ctx, req2)
+	if err != nil {
+		t.Fatalf("ListVrfs page 2 failed: %v", err)
+	}
+
+	// Assert only 1 VRF is returned (the second one) and NextPageToken IS empty
+	if len(res2.GetVrfs()) != 1 {
+		t.Errorf("expected 1 vrf in page 2, got %d", len(res2.GetVrfs()))
+	}
+	if res2.GetNextPageToken() != "" {
+		t.Errorf("expected next page token to be empty, got %q", res2.GetNextPageToken())
+	}
+
+	// Check that we got all elements uniquely
+	allVrfs := append(res1.GetVrfs(), res2.GetVrfs()...)
+	names := make(map[string]bool)
+	for _, v := range allVrfs {
+		names[v.GetName()] = true
+	}
+	if len(names) != 2 {
+		t.Errorf("expected 2 unique VRFs, got: %v", names)
+	}
+}
