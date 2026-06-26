@@ -72,7 +72,7 @@ func (s *Server) DeleteVrf(_ context.Context, in *pb.DeleteVrfRequest) (*emptypb
 			return nil, err
 		}
 		if !in.AllowMissing {
-			err = status.Errorf(codes.NotFound, "unable to find key %s", in.Name)
+			err = status.Errorf(codes.NotFound, "unable to find %s", in.Name)
 			log.Printf("DeleteVrf(): Vrf with id %v: Not Found %v", in.Name, err)
 			return nil, err
 		}
@@ -102,7 +102,7 @@ func (s *Server) UpdateVrf(_ context.Context, in *pb.UpdateVrfRequest) (*pb.Vrf,
 			return nil, err
 		}
 		if !in.AllowMissing {
-			err = status.Errorf(codes.NotFound, "unable to find key %s", in.Vrf.Name)
+			err = status.Errorf(codes.NotFound, "unable to find %s", in.Vrf.Name)
 			log.Printf("UpdateVrf(): Vrf with id %v: Not Found %v", in.Vrf.Name, err)
 			return nil, err
 		}
@@ -160,7 +160,7 @@ func (s *Server) GetVrf(_ context.Context, in *pb.GetVrfRequest) (*pb.Vrf, error
 			log.Printf("Failed to interact with store: %v", err)
 			return nil, err
 		}
-		err = status.Errorf(codes.NotFound, "unable to find key %s", in.Name)
+		err = status.Errorf(codes.NotFound, "unable to find %s", in.Name)
 		log.Printf("GetVrf(): Vrf with id %v: Not Found %v", in.Name, err)
 		return nil, err
 	}
