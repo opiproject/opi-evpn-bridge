@@ -527,3 +527,68 @@ func Test_ListLogicalBridges(t *testing.T) {
 		})
 	}
 }
+
+func Test_ListLogicalBridges_Pagination(t *testing.T) {
+	ctx := context.Background()
+	env := newTestEnv(ctx, t)
+	defer env.Close()
+	client := pb.NewLogicalBridgeServiceClient(env.conn)
+
+	// Create 2 LogicalBridges
+	lb1 := &pb.LogicalBridge{
+		Name: resourceIDToFullName("bridge-1"),
+		Spec: testLogicalBridge.Spec,
+	}
+	lb2 := &pb.LogicalBridge{
+		Name: resourceIDToFullName("bridge-2"),
+		Spec: testLogicalBridge.Spec,
+	}
+	_, err := env.opi.createLogicalBridge(lb1)
+	if err != nil {
+		t.Fatalf("failed to create lb1: %v", err)
+	}
+	_, err = env.opi.createLogicalBridge(lb2)
+	if err != nil {
+		t.Fatalf("failed to create lb2: %v", err)
+	}
+
+	// 1. Get first page, PageSize = 1
+	req1 := &pb.ListLogicalBridgesRequest{PageSize: 1}
+	res1, err := client.ListLogicalBridges(ctx, req1)
+	if err != nil {
+		t.Fatalf("ListLogicalBridges page 1 failed: %v", err)
+	}
+
+	// Assert only 1 bridge is returned, and NextPageToken is NOT empty
+	if len(res1.GetLogicalBridges()) != 1 {
+		t.Errorf("expected 1 logical bridge in page 1, got %d", len(res1.GetLogicalBridges()))
+	}
+	if res1.GetNextPageToken() == "" {
+		t.Errorf("expected next page token to be non-empty")
+	}
+
+	// 2. Get second page, PageSize = 1, PageToken = res1.GetNextPageToken()
+	req2 := &pb.ListLogicalBridgesRequest{PageSize: 1, PageToken: res1.GetNextPageToken()}
+	res2, err := client.ListLogicalBridges(ctx, req2)
+	if err != nil {
+		t.Fatalf("ListLogicalBridges page 2 failed: %v", err)
+	}
+
+	// Assert only 1 bridge is returned (the second one) and NextPageToken IS empty
+	if len(res2.GetLogicalBridges()) != 1 {
+		t.Errorf("expected 1 logical bridge in page 2, got %d", len(res2.GetLogicalBridges()))
+	}
+	if res2.GetNextPageToken() != "" {
+		t.Errorf("expected next page token to be empty, got %q", res2.GetNextPageToken())
+	}
+
+	// Check that we got all elements uniquely
+	allLbs := append(res1.GetLogicalBridges(), res2.GetLogicalBridges()...)
+	names := make(map[string]bool)
+	for _, v := range allLbs {
+		names[v.GetName()] = true
+	}
+	if len(names) != 2 {
+		t.Errorf("expected 2 unique logical bridges, got: %v", names)
+	}
+}

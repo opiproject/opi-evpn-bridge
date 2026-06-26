@@ -545,3 +545,78 @@ func Test_ListBridgePorts(t *testing.T) {
 		})
 	}
 }
+
+func Test_ListBridgePorts_Pagination(t *testing.T) {
+	ctx := context.Background()
+	env := newTestEnv(ctx, t)
+	defer env.Close()
+	client := pb.NewBridgePortServiceClient(env.conn)
+
+	// Create referenced logical bridge
+	testLogicalBridgeFull := pb.LogicalBridge{
+		Name: testLogicalBridgeName,
+		Spec: testLogicalBridge.Spec,
+	}
+	_, err := env.lbServer.TestCreateLogicalBridge(&testLogicalBridgeFull)
+	if err != nil {
+		t.Fatalf("failed to create logical bridge: %v", err)
+	}
+
+	// Create 2 BridgePorts
+	bp1 := &pb.BridgePort{
+		Name: resourceIDToFullName("port-1"),
+		Spec: testBridgePort.Spec,
+	}
+	bp2 := &pb.BridgePort{
+		Name: resourceIDToFullName("port-2"),
+		Spec: testBridgePort.Spec,
+	}
+	_, err = env.opi.createBridgePort(bp1)
+	if err != nil {
+		t.Fatalf("failed to create bp1: %v", err)
+	}
+	_, err = env.opi.createBridgePort(bp2)
+	if err != nil {
+		t.Fatalf("failed to create bp2: %v", err)
+	}
+
+	// 1. Get first page, PageSize = 1
+	req1 := &pb.ListBridgePortsRequest{PageSize: 1}
+	res1, err := client.ListBridgePorts(ctx, req1)
+	if err != nil {
+		t.Fatalf("ListBridgePorts page 1 failed: %v", err)
+	}
+
+	// Assert only 1 bridge port is returned, and NextPageToken is NOT empty
+	if len(res1.GetBridgePorts()) != 1 {
+		t.Errorf("expected 1 bridge port in page 1, got %d", len(res1.GetBridgePorts()))
+	}
+	if res1.GetNextPageToken() == "" {
+		t.Errorf("expected next page token to be non-empty")
+	}
+
+	// 2. Get second page, PageSize = 1, PageToken = res1.GetNextPageToken()
+	req2 := &pb.ListBridgePortsRequest{PageSize: 1, PageToken: res1.GetNextPageToken()}
+	res2, err := client.ListBridgePorts(ctx, req2)
+	if err != nil {
+		t.Fatalf("ListBridgePorts page 2 failed: %v", err)
+	}
+
+	// Assert only 1 bridge port is returned (the second one) and NextPageToken IS empty
+	if len(res2.GetBridgePorts()) != 1 {
+		t.Errorf("expected 1 bridge port in page 2, got %d", len(res2.GetBridgePorts()))
+	}
+	if res2.GetNextPageToken() != "" {
+		t.Errorf("expected next page token to be empty, got %q", res2.GetNextPageToken())
+	}
+
+	// Check that we got all elements uniquely
+	allPorts := append(res1.GetBridgePorts(), res2.GetBridgePorts()...)
+	names := make(map[string]bool)
+	for _, v := range allPorts {
+		names[v.GetName()] = true
+	}
+	if len(names) != 2 {
+		t.Errorf("expected 2 unique bridge ports, got: %v", names)
+	}
+}

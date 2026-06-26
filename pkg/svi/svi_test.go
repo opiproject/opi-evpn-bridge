@@ -648,3 +648,88 @@ func Test_ListSvis(t *testing.T) {
 		})
 	}
 }
+
+func Test_ListSvis_Pagination(t *testing.T) {
+	ctx := context.Background()
+	env := newTestEnv(ctx, t)
+	defer env.Close()
+	client := pb.NewSviServiceClient(env.conn)
+
+	// Create referenced VRF
+	testVrfFull := pb.Vrf{
+		Name: testVrfName,
+		Spec: testVrf.Spec,
+	}
+	_, err := env.vrfServer.TestCreateVrf(&testVrfFull)
+	if err != nil {
+		t.Fatalf("failed to create vrf: %v", err)
+	}
+
+	// Create referenced logical bridge
+	testLogicalBridgeFull := pb.LogicalBridge{
+		Name: testLogicalBridgeName,
+		Spec: testLogicalBridge.Spec,
+	}
+	_, err = env.lbServer.TestCreateLogicalBridge(&testLogicalBridgeFull)
+	if err != nil {
+		t.Fatalf("failed to create logical bridge: %v", err)
+	}
+
+	// Create 2 SVIs
+	svi1 := &pb.Svi{
+		Name: resourceIDToFullName("svi-1"),
+		Spec: testSvi.Spec,
+	}
+	svi2 := &pb.Svi{
+		Name: resourceIDToFullName("svi-2"),
+		Spec: testSvi.Spec,
+	}
+	_, err = env.opi.createSvi(svi1)
+	if err != nil {
+		t.Fatalf("failed to create svi1: %v", err)
+	}
+	_, err = env.opi.createSvi(svi2)
+	if err != nil {
+		t.Fatalf("failed to create svi2: %v", err)
+	}
+
+	// 1. Get first page, PageSize = 1
+	req1 := &pb.ListSvisRequest{PageSize: 1}
+	res1, err := client.ListSvis(ctx, req1)
+	if err != nil {
+		t.Fatalf("ListSvis page 1 failed: %v", err)
+	}
+
+	// Assert only 1 SVI is returned, and NextPageToken is NOT empty
+	if len(res1.GetSvis()) != 1 {
+		t.Errorf("expected 1 svi in page 1, got %d", len(res1.GetSvis()))
+	}
+	if res1.GetNextPageToken() == "" {
+		t.Errorf("expected next page token to be non-empty")
+	}
+
+	// 2. Get second page, PageSize = 1, PageToken = res1.GetNextPageToken()
+	req2 := &pb.ListSvisRequest{PageSize: 1, PageToken: res1.GetNextPageToken()}
+	res2, err := client.ListSvis(ctx, req2)
+	if err != nil {
+		t.Fatalf("ListSvis page 2 failed: %v", err)
+	}
+
+	// Assert only 1 SVI is returned (the second one) and NextPageToken IS empty
+	if len(res2.GetSvis()) != 1 {
+		t.Errorf("expected 1 svi in page 2, got %d", len(res2.GetSvis()))
+	}
+	if res2.GetNextPageToken() != "" {
+		t.Errorf("expected next page token to be empty, got %q", res2.GetNextPageToken())
+	}
+
+	// Check that we got all elements uniquely
+	allSvis := append(res1.GetSvis(), res2.GetSvis()...)
+	names := make(map[string]bool)
+	for _, v := range allSvis {
+		names[v.GetName()] = true
+	}
+	if len(names) != 2 {
+		t.Errorf("expected 2 unique SVIs, got: %v", names)
+	}
+}
