@@ -72,7 +72,7 @@ func (s *Server) DeleteBridgePort(_ context.Context, in *pb.DeleteBridgePortRequ
 			return nil, err
 		}
 		if !in.AllowMissing {
-			err = status.Errorf(codes.NotFound, "unable to find key %s", in.Name)
+			err = status.Errorf(codes.NotFound, "unable to find %s", in.Name)
 			log.Printf("DeleteBridgePort(): BridgePort with id %v: Not Found %v", in.Name, err)
 			return nil, err
 		}
@@ -101,7 +101,7 @@ func (s *Server) UpdateBridgePort(_ context.Context, in *pb.UpdateBridgePortRequ
 			return nil, err
 		}
 		if !in.AllowMissing {
-			err = status.Errorf(codes.NotFound, "unable to find key %s", in.BridgePort.Name)
+			err = status.Errorf(codes.NotFound, "unable to find %s", in.BridgePort.Name)
 			log.Printf("UpdateBridgePort(): BridgePort with id %v: Not Found %v", in.BridgePort.Name, err)
 			return nil, err
 		}
@@ -159,7 +159,7 @@ func (s *Server) GetBridgePort(_ context.Context, in *pb.GetBridgePortRequest) (
 			log.Printf("Failed to interact with store: %v", err)
 			return nil, err
 		}
-		err = status.Errorf(codes.NotFound, "unable to find key %s", in.Name)
+		err = status.Errorf(codes.NotFound, "unable to find %s", in.Name)
 		log.Printf("GetBridgePort(): BridgePort with id %v: Not Found %v", in.Name, err)
 		return nil, err
 	}

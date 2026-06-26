@@ -72,7 +72,7 @@ func (s *Server) DeleteSvi(_ context.Context, in *pb.DeleteSviRequest) (*emptypb
 			return nil, err
 		}
 		if !in.AllowMissing {
-			err = status.Errorf(codes.NotFound, "unable to find key %s", in.Name)
+			err = status.Errorf(codes.NotFound, "unable to find %s", in.Name)
 			log.Printf("DeleteSvi(): Svi with id %v: Not Found %v", in.Name, err)
 			return nil, err
 		}
@@ -102,7 +102,7 @@ func (s *Server) UpdateSvi(_ context.Context, in *pb.UpdateSviRequest) (*pb.Svi,
 			return nil, err
 		}
 		if !in.AllowMissing {
-			err = status.Errorf(codes.NotFound, "unable to find key %s", in.Svi.Name)
+			err = status.Errorf(codes.NotFound, "unable to find %s", in.Svi.Name)
 			log.Printf("UpdateSvi(): Svi with id %v: Not Found %v", in.Svi.Name, err)
 			return nil, err
 		}
@@ -160,7 +160,7 @@ func (s *Server) GetSvi(_ context.Context, in *pb.GetSviRequest) (*pb.Svi, error
 			log.Printf("Failed to interact with store: %v", err)
 			return nil, err
 		}
-		err = status.Errorf(codes.NotFound, "unable to find key %s", in.Name)
+		err = status.Errorf(codes.NotFound, "unable to find %s", in.Name)
 		log.Printf("GetSvi(): Svi with id %v: Not Found %v", in.Name, err)
 		return nil, err
 	}

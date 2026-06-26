@@ -74,7 +74,7 @@ func (s *Server) DeleteLogicalBridge(_ context.Context, in *pb.DeleteLogicalBrid
 			return nil, err
 		}
 		if !in.AllowMissing {
-			err = status.Errorf(codes.NotFound, "unable to find key %s", in.Name)
+			err = status.Errorf(codes.NotFound, "unable to find %s", in.Name)
 			log.Printf("DeleteLogicalBridge(): LogicalBridge with id %v: Not Found %v", in.Name, err)
 			return nil, err
 		}
@@ -105,7 +105,7 @@ func (s *Server) UpdateLogicalBridge(_ context.Context, in *pb.UpdateLogicalBrid
 			return nil, err
 		}
 		if !in.AllowMissing {
-			err = status.Errorf(codes.NotFound, "unable to find key %s", in.LogicalBridge.Name)
+			err = status.Errorf(codes.NotFound, "unable to find %s", in.LogicalBridge.Name)
 			log.Printf("UpdateLogicalBridge(): LogicalBridge with id %v: Not Found %v", in.LogicalBridge.Name, err)
 			return nil, err
 		}
@@ -163,7 +163,7 @@ func (s *Server) GetLogicalBridge(_ context.Context, in *pb.GetLogicalBridgeRequ
 			log.Printf("Failed to interact with store: %v", err)
 			return nil, err
 		}
-		err = status.Errorf(codes.NotFound, "unable to find key %s", in.Name)
+		err = status.Errorf(codes.NotFound, "unable to find %s", in.Name)
 		log.Printf("GetLogicalBridge(): LogicalBridge with id %v: Not Found %v", in.Name, err)
 		return nil, err
 	}
