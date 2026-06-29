@@ -1,6 +1,11 @@
 with-expecter: True
 boilerplate-file: pkg/utils/mocks/boilerplate.txt
+dir: pkg/utils
+output: pkg/utils/mocks
+outpkg: mocks
 packages:
   github.com/opiproject/opi-evpn-bridge/pkg/utils:
     interfaces:
       Netlink:
+      Frr:
+      
